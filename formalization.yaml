@@ -1,0 +1,245 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mathlib-initiative/formalization.yaml/main/schema/formalization.schema.json
+# formalization.yaml (v0.4): https://github.com/mathlib-initiative/formalization.yaml
+
+version: "v0.4"
+
+project:
+  name: "Graph Minors I to XXII"
+  description: >-
+    A Lean 4 formalization of the Graph Minors series of N. Robertson and P. D. Seymour. It proves
+    every numbered result of the twenty-two papers, and the three main results of the series: the
+    graph minor theorem (Wagner's conjecture), the structure theorem for graphs that exclude a
+    non-planar graph (Graph Minors XVI, (1.3)), and an algorithm that decides the k disjoint paths
+    problem in time O(n^3) for each fixed k (the main result of Graph Minors XIII, page 65).
+    The results that the papers cite from outside the series are proved as well, among them
+    Kruskal's tree theorem, Wagner's theorem on graphs with no K_5 minor, the classification of
+    surfaces, and Thomason's bound 2.68 p sqrt(log_2 p) for complete minors, for every p. Where a
+    paper is wrong as printed, the library proves a corrected form, and corrections/ describes each
+    correction.
+  authors: ["MohammadTaghi Hajiaghayi", "Mahdi JafariRaviz"]
+  responsible_maintainers: ["Mahdi JafariRaviz"]
+  license: "Apache-2.0"
+
+sources:
+  - title: "Graph Minors. I. Excluding a forest"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(83)90079-5"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. II. Algorithmic aspects of tree-width"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0196-6774(86)90023-4"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. III. Planar tree-width"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(84)90013-3"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. IV. Tree-width and well-quasi-ordering"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(90)90120-o"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. V. Excluding a planar graph"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(86)90030-4"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. VI. Disjoint paths across a disc"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(86)90031-6"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. VII. Disjoint paths on a surface"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(88)90070-6"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. VIII. A Kuratowski theorem for general surfaces"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(90)90121-f"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. IX. Disjoint crossed paths"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(90)90063-6"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. X. Obstructions to tree-decomposition"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/0095-8956(91)90061-n"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XI. Circuits on a surface"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1994.1007"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XII. Distance on a surface"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1995.1034"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XIII. The disjoint paths problem"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1995.1006"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XIV. Extending an embedding"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1995.1042"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XV. Giant steps"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1996.0059"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XVI. Excluding a non-planar graph"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/s0095-8956(03)00042-x"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XVII. Taming a vortex"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1006/jctb.1999.1919"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XVIII. Tree-decompositions and well-quasi-ordering"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/s0095-8956(03)00067-4"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XIX. Well-quasi-ordering on a surface"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/j.jctb.2003.08.005"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XX. Wagner's conjecture"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/j.jctb.2004.08.001"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Graph Minors. XXI. Graphs with unique linkages"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/j.jctb.2008.08.003"
+    type: "article"
+    location: "all numbered results, with the pages of the authors' version of April 18, 2011"
+    relationship: "formalizes"
+  - title: "Graph Minors. XXII. Irrelevant vertices in linkage problems"
+    authors: ["Neil Robertson", "Paul D. Seymour"]
+    id: "doi:10.1016/j.jctb.2007.12.007"
+    type: "article"
+    location: "all numbered results"
+    relationship: "formalizes"
+  - title: "Quickly excluding a planar graph"
+    authors: ["Neil Robertson", "Paul D. Seymour", "Robin Thomas"]
+    id: "doi:10.1006/jctb.1994.1073"
+    type: "article"
+    location: "the results that Graph Minors X and XIII cite"
+    relationship: "formalizes"
+  - title: "An extremal function for contractions of graphs"
+    authors: ["Andrew Thomason"]
+    id: "doi:10.1017/S0305004100061521"
+    type: "article"
+    location: "Lemma 1, page 262"
+    relationship: "adapts"
+  - title: "On the two paths theorem and the two disjoint paths problem"
+    authors: ["Samuel Humeau", "Damien Pous"]
+    id: "arXiv:2505.16431v2"
+    type: "article"
+    location: "the two paths theorem"
+    relationship: "formalizes"
+
+automation:
+  methods:
+    - method: "agent"
+
+classification:
+  arxiv: ["math.CO", "cs.DM", "cs.DS", "cs.LO"]
+  msc2020: ["05C83", "05C10", "05C38", "05C85", "68V15"]
+
+status:
+  scope: "Every numbered result of Graph Minors I to XXII, and the three main results of the series."
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: ["propext", "Classical.choice", "Quot.sound"]
+  main_results:
+    - declaration: "GraphMinor.graph_minor_theorem"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+    - declaration: "GraphMinor.structure_theorem"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+    - declaration: "GraphMinor.disjoint_paths_algorithm"
+      file: "Solution.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator.json"
+    - declaration: "GraphMinor.thomason_bound"
+      file: "SolutionThomason.lean"
+      sorry_count: 0
+      axioms: ["propext", "Classical.choice", "Quot.sound"]
+      comparator_config: "comparator-thomason.json"
+
+fidelity:
+  divergences: >-
+    Where a paper is wrong as printed, the Lean theorem proves a corrected form: a misprint
+    corrected (119), a statement mistake replaced by the form that its later uses need (30), a
+    hypothesis added for a degenerate case (14), or a proof gap filled (60). Where a paper omits a
+    proof, leaves it to the reader or only sketches it, the Lean proof gives the argument (106
+    places). Each of these is described in corrections/, with the page of the paper. Graphs are Mathlib's Graph type and may have loops
+    and parallel edges, as in the papers. The algorithm of Graph Minors XIII (page 65) is stated for a
+    word RAM whose words have c log n bits, with time measured in steps of this machine. Graph
+    Minors XIII uses Shiloach's algorithm for two disjoint paths, which its source gives only in
+    outline. The library replaces it with a crossing extractor and a linear-time planarity test,
+    each with a written proof in docs/. The results cited from outside the series are proved,
+    some by other proofs than the original ones. The README lists them.
+
+review:
+  status: "self-assessed"
+
+alignment:
+  namespace: "GraphMinor"
+  statements:
+    - source: "Graph Minors IV, (1.1), proved in Graph Minors XX"
+      lean: "GraphMinor.graph_minor_theorem"
+      module: "Solution.lean"
+      status: "proved"
+    - source: "Graph Minors XVI, 1.3, page 46"
+      lean: "GraphMinor.structure_theorem"
+      module: "Solution.lean"
+      status: "proved"
+    - source: "Graph Minors XIII, the main result, page 65 (not numbered in the paper)"
+      lean: "GraphMinor.disjoint_paths_algorithm"
+      module: "Solution.lean"
+      status: "proved"
+    - source: "Graph Minors XIII, (5.5), page 83, a result of Thomason (1984), for every p >= 1"
+      lean: "GraphMinor.thomason_bound"
+      module: "SolutionThomason.lean"
+      status: "proved"

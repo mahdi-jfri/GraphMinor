@@ -1,0 +1,1139 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amssymb,amsthm,mathtools,booktabs,microtype}
+\usepackage{enumitem}
+\usepackage[noend]{algpseudocode}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=MidnightBlue,urlcolor=MidnightBlue,citecolor=MidnightBlue]{hyperref}
+\hypersetup{pdftitle={Extracting a crossing in time O(nm)},pdfauthor={MohammadTaghi Hajiaghayi and Mahdi JafariRaviz}}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+
+\newtheorem*{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem*{factT}{Fact T}
+\newtheorem*{factP}{Fact P}
+
+\DeclareMathOperator{\Planar}{Planar}
+\DeclareMathOperator{\BridgeCross}{BridgeCross}
+\DeclareMathOperator{\Classify}{Classify}
+\newcommand{\cR}{\mathcal R}
+\newcommand{\vin}[1]{#1_{\mathrm{in}}}
+\newcommand{\vout}[1]{#1_{\mathrm{out}}}
+\newcommand{\ans}[1]{\texttt{#1}}
+
+\title{\textbf{Extracting a crossing in time $O(nm)$}}
+\author{MohammadTaghi Hajiaghayi \and Mahdi JafariRaviz}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Let $C$ be a cycle in a finite simple graph $G$ with $n$ vertices and $m$
+edges. We give an algorithm that either finds two vertex-disjoint $C$-paths
+whose ends alternate around $C$, or correctly reports that there are none. It
+runs in time $O(nm)$. The algorithm deletes parts of the graph behind
+separators of order at most three, contracts edges, and lifts the crossing it
+finds in the small graph back to $G$. Besides graph searches and bounded flows,
+it uses one more primitive: a Boolean linear-time planarity test. In the Lean
+formalization of the Graph Minors series, this algorithm replaces the two
+paths algorithm of Shiloach that Graph Minors XIII uses in (8.1).
+\end{abstract}
+
+\section*{Introduction}
+
+All graphs in this note are finite and simple. For a set $U$ of vertices of a
+graph $K$, we write $N_K(U)$ for the set of vertices outside $U$ that have a
+neighbor in $U$. For a set $X$ of vertices, $K[X]$ is the subgraph induced by
+$X$.
+
+Let $C$ be a cycle of a graph $G$. A \emph{$C$-path} is a path with at least
+one edge whose two ends lie on $C$ and whose other vertices do not. A
+\emph{crossing} of $C$ is a pair of vertex-disjoint $C$-paths, one with ends
+$a,b$ and the other with ends $c,d$, such that $a,c,b,d$ occur in this cyclic
+order around $C$. The cycle $C$ is \emph{crossed} if it has a crossing, and
+\emph{crossless} otherwise. These are the definitions of Humeau and Pous
+\cite[Definition~2.4, page~7]{HP25}.
+
+\begin{theorem}
+There is an algorithm that, given a graph $G$ with $n$ vertices and $m$ edges
+and a cycle $C$ of $G$, returns a crossing of $C$ if $C$ is crossed, and
+reports that $C$ is crossless otherwise. Its running time is $O(nm)$.
+\end{theorem}
+
+\paragraph{Where the theorem is used.}
+Algorithm (8.1) of Graph Minors XIII \cite[page~93]{GM13} finds a cross in a
+society. It builds an auxiliary graph and applies an algorithm of Shiloach
+\cite{Sh80} to find two vertex-disjoint paths joining $s_1,t_1$ and $s_2,t_2$.
+Shiloach's paper describes the algorithm through a sequence of reductions, and
+on page~454 it says: ``We have not written the solution as an explicit, long,
+and tedious algorithm.'' For distinct vertices $s_1,s_2,t_1,t_2$ of a graph
+$H$, two vertex-disjoint paths joining $s_1,t_1$ and $s_2,t_2$ are exactly a
+crossing of the cycle $s_1s_2t_1t_2$ in the graph obtained from $H$ by adding
+the four edges of this cycle \cite[Section~1.2, pages~2--3]{HP25}. So the
+theorem supplies this step of (8.1). In the Lean formalization of the Graph
+Minors series, the algorithm of this note is used in place of Shiloach's
+algorithm (Section~\ref{sec:lean}).
+
+\paragraph{Outline.}
+The algorithm runs once on $(G,C)$. Section~\ref{sec:facts} states the facts we
+use from outside. Sections~\ref{sec:root} to~\ref{sec:clean} give a flow
+primitive, a reversible replacement at a separator of order at most three, and
+an initial cleaning. Sections~\ref{sec:bridges} and~\ref{sec:classify} classify
+a clean instance in linear time. The classification either finds a crossing,
+or shows that there is none, or finds that the graph is nonplanar, which
+implies that the cycle is crossed. In the last case, Sections~\ref{sec:sparse}
+to~\ref{sec:loop} shrink the graph by contracting edges, until the
+classification finds a crossing. The main technical point is that a trial
+contraction can be checked and repaired with a bounded number of flow searches
+(Sections~\ref{sec:twocut} and~\ref{sec:repair}). Section~\ref{sec:lift} lifts
+the crossing back to $G$, and Section~\ref{sec:time} counts the work.
+Section~\ref{sec:remarks} lists the assumptions and describes the reference
+implementation \texttt{crossing\_algorithm.py} and its tests.
+Section~\ref{sec:lean} describes the Lean formalization.
+
+\section{The external facts used}\label{sec:facts}
+
+Besides Menger's theorem for vertex-disjoint paths and the elementary flow
+computation of Section~\ref{sec:flow}, we use the following facts.
+
+\subsection*{The two paths theorem: the consequence we need}
+
+\begin{factT}
+Let $C$ be a cycle of a graph $K$. If $C$ is crossless and $K$ is nonplanar,
+then there is a nonempty set $U\subseteq V(K)\setminus V(C)$ with
+$|N_K(U)|\le 3$.
+\end{factT}
+
+Fact~T follows from the generalized two paths theorem of Humeau and Pous
+\cite[Theorem~1.3, page~2]{HP25}. To state it, we recall webs
+\cite[Definition~2.1, page~6]{HP25}. A \emph{rib} with frame $C$ is a planar
+graph with a plane embedding in which the outer face is bounded by the cycle
+$C$, every inner face is a triangle, and every triangle bounds an inner face.
+A \emph{web} with frame $C$ is obtained from a rib with frame $C$ by adding,
+for each triangle $T$ of the rib, a clique, possibly with no vertices, whose
+vertices are adjacent to the three vertices of $T$ and to no other vertex
+outside the clique. A graph $H$ with a cycle $C$ is \emph{maximally
+$C$-crossless} if $C$ is crossless in $H$ but crossed in every graph obtained
+from $H$ by adding one edge. The generalized two paths theorem says that $H$ is
+a web with frame $C$ if and only if $H$ is maximally $C$-crossless. We use only
+the direction proved in \cite[Lemma~4.3, page~13]{HP25}: a maximally
+$C$-crossless graph is a web with frame $C$.
+
+\begin{proof}[Proof of Fact T]
+Suppose that $C$ is crossless in $K$. Add edges between vertices of $K$, one at
+a time, as long as $C$ stays crossless. Since $K$ is finite, this stops with a
+maximally $C$-crossless graph $H$ on the vertex set of $K$, and $H$ is a web
+with frame $C$. If no clique of the web has a vertex, then $H$ is its rib,
+which is planar, and so is its subgraph $K$. Since $K$ is nonplanar, some
+clique, filling a triangle $T$, has a vertex. Let $U$ be the vertex set of
+this clique. Then $U$ is nonempty, and it is disjoint from $V(C)$ because $C$
+consists of rib vertices. Since $K$ is a subgraph of $H$ on the same vertex
+set, $N_K(U)\subseteq N_H(U)=V(T)$, and so $|N_K(U)|\le3$.
+\end{proof}
+
+This is the only consequence of the two paths theorem that we use.
+
+\subsection*{The Boolean planarity primitive}
+
+\begin{factP}
+On an adjacency-list representation of a graph $K$, a deterministic procedure
+$\Planar(K)$ returns whether $K$ is planar in time $O(|V(K)|+|E(K)|)$.
+\end{factP}
+
+The procedure need not return an embedding or a Kuratowski subdivision.
+Hopcroft and Tarjan \cite{HT74} gave the first linear-time planarity test. The
+companion note \cite{HJ26} proves a Boolean left-right test of this kind in
+full, and the reference implementation uses that test.
+
+\subsection*{Euler's bound}
+
+We also use Euler's bound: a planar graph with $N\ge3$ vertices has at most
+$3N-6$ edges, and a bipartite planar graph with $N\ge3$ vertices has at most
+$2N-4$ edges. In particular, $K_{3,3}$ is nonplanar: a bipartite planar graph
+on six vertices has at most eight edges, whereas $K_{3,3}$ has nine.
+
+\section{The root condition and the bounded-flow primitive}\label{sec:root}
+
+An \emph{instance} $(K,D)$ consists of a graph $K$ and a cycle $D$ of $K$. Add
+a new vertex $x$, adjacent to every vertex of $D$, and write $J=K+x$. We call
+$x$ the \emph{apex}. It is used only in auxiliary computations.
+
+For $k\ge1$, we say that $\cR_k(J,x)$ holds if $J-S$ is connected for every set
+$S\subseteq V(J)\setminus\{x\}$ with $|S|<k$. All these separators exclude
+$x$. We do not claim ordinary $k$-connectivity, which would also consider
+separators that contain $x$.
+
+We call $(K,D)$ \emph{clean} when $\cR_4(K+x,x)$ holds. A \emph{four-fan} from
+a vertex $v$ to $D$ consists of four paths that share only their first vertex
+$v$ and end at four distinct vertices of $D$. Because every vertex of $D$ is
+adjacent to $x$, Menger's theorem gives
+\begin{equation*}
+(K,D)\text{ is clean}
+\quad\Longleftrightarrow\quad
+\text{every vertex }v\notin V(D)\text{ has a four-fan to }D.
+\end{equation*}
+Indeed, $\cR_4(J,x)$ says that no vertex is separated from $x$ by at most three
+vertices other than itself and $x$. A vertex of $D$ is adjacent to $x$. For a
+vertex $v\notin V(D)$, which is not adjacent to $x$, Menger's theorem turns
+this into four paths from $v$ to $x$ that share only $v$ and $x$. Cutting each
+of these paths at its first vertex of $D$ gives a four-fan, and extending the
+paths of a four-fan by their edges to $x$ gives four such paths back.
+
+\subsection{Exact bounded-flow computation}\label{sec:flow}
+
+Every flow query below has a source $z$ and the sink $x$, where $z$ is not
+adjacent to $x$, and asks for $k\le4$ internally vertex-disjoint paths from
+$z$ to $x$. We build the split network.
+\begin{itemize}[nosep]
+\item Replace each vertex $v$ by two nodes $\vin v$ and $\vout v$.
+\item Give the arc $\vin v\to\vout v$ capacity $1$, except at $z$ and $x$,
+where its capacity is $k+1$.
+\item For every edge $uv$, add the arcs $\vout u\to\vin v$ and $\vout v\to\vin u$,
+each of capacity $k+1$.
+\item Use the source $\vout z$ and the sink $\vin x$.
+\end{itemize}
+Starting with the zero flow, we search the residual graph for a path from the
+source to the sink and augment one unit along it. We stop after $k$
+augmentations or after an unsuccessful search. Thus each query uses at most
+$k$ residual searches, each on a graph of size $O(|V|+|E|)$. Any augmenting
+paths work.
+
+If the computation stops below $k$, its minimum cut consists of arcs
+$\vin v\to\vout v$ of capacity $1$, because every other arc has capacity $k+1$,
+more than the value of the cut. These arcs give a vertex separator of that size
+between $z$ and $x$.
+
+\subsection{Computing a minimum cut with maximum source side}\label{sec:maxcut}
+
+One later step, Lemma~\ref{lem:twocut}, needs a particular minimum separator.
+
+After a failed bounded-flow computation, let $W$ be the set of nodes of the
+network that \emph{cannot reach the sink in the residual graph}. We compute
+$W$ by a search from the sink along reversed residual arcs, and take the
+complement. By a standard property of maximum flows, $W$ is the largest source
+side of a minimum network cut: it contains the source side of every minimum
+cut. Let
+\begin{equation*}
+S=\{v:\ \vin v\in W,\ \vout v\notin W\},
+\end{equation*}
+let $R_x$ be the component of $x$ in $J-S$, and let
+\begin{equation*}
+U=V(J)\setminus\bigl(S\cup R_x\bigr).
+\end{equation*}
+In general, the \emph{open source side} of a vertex separator $S'$ between $z$
+and $x$ is the set of vertices outside $S'$ that are not in the component of
+$x$ in $J-S'$. So $U$ is the open source side of $S$.
+
+\emph{This $U$ contains the open source side of every minimum vertex separator
+between $z$ and $x$.} To see this, let $S'$ be a minimum vertex separator
+between $z$ and $x$, with open source side $U'$. The nodes $\vin u,\vout u$ for
+$u\in U'$, together with the nodes $\vin s$ for $s\in S'$, form the source side
+of a network cut of capacity $|S'|$. So this cut is minimum, and its source
+side is contained in $W$. Now take a path of $J$ from a vertex of $U'$ to $x$
+that avoids $S$. The corresponding path in the network starts in $W$ and ends
+at the sink, which is not in $W$, so it uses an arc that leaves $W$. That arc is
+not an arc $\vin v\to\vout v$ with $v\notin S$, by the definition of $S$. It is
+not an arc of capacity $k+1$ either, since such an arc would make the capacity
+of the minimum cut larger than its value. This is a contradiction. Hence no
+vertex of $U'$ is joined to $x$ in $J-S$, and no vertex of $U'$ is in $S$,
+because its node $\vout u$ lies in $W$. Therefore $U'\subseteq U$.
+
+This fixes the choice of the cut completely. \emph{An arbitrary minimum cut
+does not suffice for Lemma~\ref{lem:twocut}.}
+
+\section{A reversible replacement at a small separator}\label{sec:replace}
+
+The following operation is used throughout.
+
+Let $A\subseteq V(K)\setminus V(D)$ be a connected set, and let $S=N_K(A)$,
+with $|S|\le 3$. The \emph{replacement} deletes $A$ and adds every missing edge
+of the clique on $S$. We record the graph before the operation, the set $A$,
+and the set $S$.
+
+\begin{lemma}[Replacement preserves crossing existence]\label{lem:replace}
+If $D$ is crossed before the replacement, then it is crossed afterward. A
+crossing afterward can be lifted to a crossing before the replacement with at
+most one ordinary path search.
+\end{lemma}
+
+\begin{proof}
+\emph{Forward direction.} A crossing path that enters $A$ must use at least two
+distinct vertices of $S$, since neither of its ends lies in $A$. Since
+$|S|\le3$, the two disjoint crossing paths cannot both enter $A$. For the path
+that enters $A$, if there is one, replace the segment between its first and
+last visits to $S$ by the clique edge between these two vertices. This
+introduces no new vertices, keeps the ends of the path, and keeps the two paths
+disjoint.
+
+\emph{Reverse direction.} If neither returned path uses a newly added edge, we
+keep both. Otherwise exactly one path uses new edges, because two disjoint
+paths that both use new clique edges would need four distinct vertices of $S$.
+Let $p$ and $q$ be the first and last vertices of $S$ on this path. Here
+$p\ne q$, since a new edge joins two vertices of $S$. We search for a path from
+$p$ to $q$ in $K[A\cup\{p,q\}]$. Such a path exists because $A$ is connected
+and both $p$ and $q$ have neighbors in $A$. We replace the whole segment
+between $p$ and $q$ by this path. Its inner vertices lie in $A$, which neither
+returned path used, and they include no vertex of $S$ or $D$. Thus the new
+path is simple, the two paths stay disjoint, the ends do not change, and they
+still alternate around $D$.
+\end{proof}
+
+We also allow deleting several components of $K-S$ at once, all with
+neighborhood $S$, provided we record one of them. The recorded component is
+connected and has a neighbor at every vertex of $S$. The forward proof is
+unchanged, and the reverse search uses the recorded component.
+
+\begin{lemma}[Replacement preserves connectivity statements on retained vertices]\label{lem:retain}
+Let $T$ be a set of retained vertices. Every path of the old graph that avoids
+$T$ and has retained ends gives a path of the new graph between the same ends
+that avoids $T$. This holds with or without the apex.
+\end{lemma}
+
+\begin{proof}
+Replace each excursion of the path through a deleted component by the edge of
+the boundary clique between the vertices where the path enters and leaves the
+component, or delete the excursion if these two vertices are equal. These
+boundary vertices lie on the path, so they are not in $T$. The result is a walk
+of the new graph that avoids $T$, and shortcutting repeated vertices gives a
+path. The apex is not affected, because a deleted component contains no vertex
+of $D$.
+\end{proof}
+
+Therefore every statement proved earlier that a retained vertex cannot be
+separated from $x$ by at most a given number of other vertices stays true
+after the replacement. Lemma~\ref{lem:retain} concerns ordinary connectivity
+and does not use the two paths theorem.
+
+\section{Initial cleaning}\label{sec:clean}
+
+First we discard the components of $G$ that do not contain $C$, since they
+cannot contain a $C$-path. We start with the instance $(K,D)$, where $K$ is the
+component of $G$ that contains $C$, and $D=C$.
+
+Then we process the vertices of $K$ that are not on $C$ in any fixed order,
+skipping vertices that have already been deleted. For each such vertex $v$
+that is still present:
+\begin{enumerate}[nosep]
+\item In $K+x$, run the bounded-flow computation asking for four paths from
+$v$ to $x$.
+\item If it succeeds, continue with the next vertex.
+\item Otherwise, obtain a separator $S$ of size at most three.
+\item Find the component $A$ of $K-S$ that contains $v$.
+\item Replace $A$ by the clique on its actual neighborhood $N_K(A)$, using
+Lemma~\ref{lem:replace}.
+\end{enumerate}
+
+The component $A$ contains no cycle vertex. Indeed, every cycle vertex that is
+still present is adjacent to $x$, whereas $S$ separates $v$ from $x$. Since
+$N_K(A)\subseteq S$, Lemma~\ref{lem:replace} applies.
+
+Every successful four-path query stays true afterward, by
+Lemma~\ref{lem:retain}. Every unsuccessful query deletes the vertex it asked
+about. Thus, after at most $n$ bounded-flow queries, every remaining vertex off
+the cycle has four paths to $x$ that share only their ends, and the remaining
+instance is clean by the equivalence of Section~\ref{sec:root}.
+
+Every replacement deletes at least one vertex and adds at most three edges. We
+record the replacements for the lifting at the end.
+
+\section{A linear procedure for crossings in distinct cycle bridges}\label{sec:bridges}
+
+We need the following procedure for any instance $(K,D)$:
+\begin{quote}
+Return a crossing whose two paths use distinct $D$-bridges, or correctly report
+that no such crossing exists.
+\end{quote}
+A \emph{$D$-bridge} is either
+\begin{itemize}[nosep]
+\item a component of $K-V(D)$, together with its edges to $D$, or
+\item a single \emph{chord}: an edge that is not an edge of $D$ and has both
+ends on $D$.
+\end{itemize}
+Different component bridges have disjoint sets of inner vertices, and a chord
+is its own bridge. Every $D$-path is a chord or has all its inner vertices in
+one component of $K-V(D)$, so it uses exactly one bridge. The
+\emph{attachments} of a component bridge are the vertices of $D$ adjacent to
+the component, and the attachments of a chord are its two ends. The ends of a
+$D$-path are attachments of the bridge it uses.
+
+\subsection{Candidate endpoint pairs}\label{sec:candidates}
+
+We compute the attachment list of every bridge in cyclic order. This takes time
+$O(n+m)$: compute the components off the cycle, then scan the vertices of $D$
+in order and append the identifiers of their incident components, suppressing
+repeated incidences at the same cycle vertex.
+
+For a bridge with attachment list $t_0,t_1,\ldots,t_{h-1}$, we generate the
+pairs
+\begin{equation*}
+\{t_i,t_{i+1}\},
+\qquad
+\{t_i,t_{i+2}\},
+\end{equation*}
+with indices modulo $h$, and omit pairs whose two elements are equal.
+Duplicates may be kept. These pairs are the \emph{candidates} of the bridge.
+There are at most twice as many candidates as attachments.
+
+\begin{lemma}[These candidates detect every crossing between two bridges]\label{lem:candidates}
+Let $A$ and $B$ be the attachment sets of two distinct bridges. Suppose that
+$A$ contains $a_1,a_2$ and $B$ contains $b_1,b_2$ such that the pairs
+$\{a_1,a_2\}$ and $\{b_1,b_2\}$ alternate around $D$. Then some candidate of
+the first bridge alternates with some candidate of the second.
+\end{lemma}
+
+\begin{proof}
+There are $A$-attachments in both open arcs of $D$ determined by $b_1$ and
+$b_2$. Around $b_2$, choose the nearest $A$-attachment strictly before it and
+the nearest one strictly after it. These two attachments lie in the two
+different open arcs, so they alternate with $b_1,b_2$. In the cyclic
+$A$-attachment list they are consecutive, unless $b_2\in A$, in which case
+exactly one attachment, namely $b_2$, lies between them. Hence they form an
+$A$-candidate that alternates with $b_1,b_2$.
+
+Applying the same argument to $B$, relative to this $A$-candidate, gives a
+$B$-candidate that alternates with it.
+\end{proof}
+
+The candidates at distance two are needed to handle shared attachments.
+
+\subsection{Finding differently colored alternating candidates in linear time}\label{sec:sweep}
+
+Number the vertices of $D$ as $0,\ldots,c-1$ in cyclic order. We represent a
+candidate as a triple
+\begin{equation*}
+(l,r,\gamma),\qquad l<r,
+\end{equation*}
+where $l$ and $r$ are the numbers of its two attachments and $\gamma$, its
+\emph{color}, is the identifier of its bridge. Two candidates $(l',r',\gamma')$
+and $(l,r,\gamma)$ alternate around $D$ exactly when $l'<l<r'<r$ or
+$l<l'<r<r'$.
+
+Sort the candidates by increasing $l$, breaking ties by decreasing $r$. Two
+stable counting sorts do this in linear time.
+
+We maintain a stack of blocks, each block containing candidates of one color,
+with the following invariants.
+\begin{enumerate}[nosep]
+\item Adjacent blocks have different colors.
+\item Every right endpoint in a block is at most every right endpoint in the
+block immediately below it.
+\item Before a candidate with left endpoint $l$ is processed, every stored
+candidate has right endpoint greater than $l$.
+\end{enumerate}
+
+For a new candidate $I=(l,r,\gamma)$:
+\begin{enumerate}[nosep]
+\item Delete the candidates with right endpoint at most $l$ from the top block.
+Pop the top block if it becomes empty, and repeat with the new top block.
+\item Let $B$ be the first block from the top whose color differs from
+$\gamma$. By invariant~1, this is the top block or the second block.
+\item If $B$ exists and its minimum right endpoint $r'$ satisfies $r'<r$,
+return $I$ and the candidate in $B$ that attains this minimum.
+\item Otherwise, append $I$ to the top block if its color is $\gamma$, and
+push a new block containing $I$ if not.
+\end{enumerate}
+
+\paragraph{Correctness.}
+In step~3, the returned earlier candidate $(l',r',\gamma')$ satisfies
+\begin{equation*}
+l'<l<r'<r.
+\end{equation*}
+Here $l'\le l$ by the sorting order, $l<r'$ by invariant~3, and $r'<r$ by the
+test. The strict inequality $l'<l$ follows from the tie-breaking order: an
+earlier candidate with the same left endpoint would have right endpoint at
+least $r$. So the two candidates alternate, and they have different colors.
+
+The endpoint-order invariant~2 makes the tested minimum no greater than the
+right endpoint of any stored candidate of a different color. Thus a failed
+test excludes every differently colored crossing between the new candidate and
+a stored one. A candidate that alternates with a later one has right endpoint
+greater than the left endpoint of the later one, so step~1 has not deleted it
+when the later one is processed. Therefore the sweep finds a differently
+colored alternating pair whenever one exists. A failed test also gives exactly
+the inequality needed to preserve invariant~2 when appending or pushing.
+
+Cleanup needs to inspect only the top block. If that block keeps an active
+candidate, then by invariant~2 every right endpoint in every lower block is at
+least its right endpoint, so these candidates are active too.
+
+\paragraph{Linear bound.}
+At any sweep position, one bridge has at most six active candidates. A cut of
+the cyclic attachment list at the sweep position separates it into two
+consecutive blocks. At most two pairs at cyclic distance one and four pairs at
+cyclic distance two cross this cut, counting duplicates. Therefore every stack
+block has size at most six. Each candidate is inserted once and removed at most
+once.
+
+\paragraph{The two paths.}
+When an alternating pair of candidates of different colors is found, we make
+two searches. For a component bridge with component $A$ and selected endpoints
+$p,q$, we search in $K[A\cup\{p,q\}]$. For a chord, we use its edge. The two
+searches may return arbitrary paths: their inner vertices belong to different
+bridges, and the four selected endpoints are distinct.
+
+We call this whole procedure $\BridgeCross(K,D)$. It takes time $O(n+m)$ and,
+when it succeeds, two path searches.
+
+\subsection{Why this procedure is complete on planar graphs}\label{sec:lemma4}
+
+Suppose that a crossing $Q,R$ has the inner vertices of both paths in the same
+component $A$ of $K-V(D)$. Connect an inner vertex of $Q$ to an inner vertex of
+$R$ by a path inside $A$, and shorten it so that its inner vertices avoid
+$Q\cup R$.
+
+The cycle, the two crossing paths and this connector form a subdivision of
+$K_{3,3}$. Let $q$ and $r$ be the ends of the connector on $Q$ and $R$, and let
+$q_1,r_1,q_2,r_2$ be the ends of the crossing in cyclic order, with $q_1,q_2$
+the ends of $Q$. The bipartition of the six branch vertices is
+\begin{equation*}
+\{q_1,q_2,r\},
+\qquad
+\{r_1,r_2,q\}.
+\end{equation*}
+The nine branch paths are the four arcs of the cycle, the four halves of $Q$
+and $R$, and the connector.
+
+This is impossible in a planar graph, by Euler's bound in
+Section~\ref{sec:facts}. A chord already forms a separate bridge.
+Consequently:
+
+\begin{lemma}\label{lem:planar}
+Every crossing in a planar graph uses distinct cycle bridges. Therefore
+$\BridgeCross$ is complete on planar inputs.
+\end{lemma}
+
+\section{Classifying a clean instance}\label{sec:classify}
+
+For a clean instance $(K,D)$, we run the following procedure.
+\begin{algorithmic}[1]
+\Function{Classify}{$K,D$}
+\If{$\BridgeCross(K,D)$ returns a crossing}
+\State \Return \ans{WITNESS} and that crossing
+\EndIf
+\If{$\Planar(K)$}
+\State \Return \ans{NO}
+\EndIf
+\State \Return \ans{YES}
+\EndFunction
+\end{algorithmic}
+
+The answer \ans{YES} means that a crossing exists, but no crossing has been
+found yet. The classification is exact.
+\begin{itemize}[nosep]
+\item \ans{WITNESS} is correct by construction.
+\item \ans{NO} is correct by Lemma~\ref{lem:planar}.
+\item For \ans{YES}, the graph $K$ is nonplanar. If $D$ were crossless, Fact~T
+would give a nonempty set $U$ of vertices off the cycle with
+$|N_K(U)|\le3$. Then $N_K(U)$ would separate $U$ from $x$ in $K+x$,
+contradicting cleanliness.
+\end{itemize}
+
+Thus classification takes linear time. The remaining work is to turn a
+nonplanar \ans{YES} answer into paths by making the graph smaller.
+
+\section{Sparsifying without losing a positive answer}\label{sec:sparse}
+
+We need a sparse graph, so that a bounded number of vertices of bounded degree
+can be examined.
+
+\subsection{Four BFS forests preserve all cuts of order at most three}\label{sec:forests}
+
+A breadth-first search scans vertices in the order of a queue. When it scans a
+vertex $s$, it marks every unmarked neighbor of $s$, selects the edge joining
+it to $s$, and appends it to the queue. A \emph{BFS spanning forest} of a graph
+consists of the selected edges, where a new search, with a new root, starts at
+each vertex that is still unmarked when its turn comes in a fixed order.
+
+Given a graph $J$, we compute four forests in succession.
+\begin{enumerate}[nosep]
+\item Take a BFS spanning forest $F_1$ of $J$.
+\item Delete its edges and take a BFS spanning forest $F_2$ of the rest.
+\item Delete those edges and take $F_3$.
+\item Delete those edges and take $F_4$.
+\end{enumerate}
+Let $F=F_1\cup F_2\cup F_3\cup F_4$.
+
+This is the scan-first construction of sparse certificates of Cheriyan, Kao and
+Thurimella \cite{CKT93}. The following proof gives the exact strong property
+that we need.
+
+\begin{lemma}[Strong certificate]\label{lem:forests}
+Let $F$ be the union of $k$ successive BFS forests of $J$, taken as above. For
+every set $S$ of vertices with $|S|<k$, the graphs $F-S$ and $J-S$ have
+exactly the same components.
+\end{lemma}
+
+\begin{proof}
+Suppose otherwise. Then there is a partition
+\begin{equation*}
+V(J)=A\;\dot\cup\;S\;\dot\cup\;B
+\end{equation*}
+such that $F$ has no edge between $A$ and $B$, but $J$ has an edge $ab$ with
+$a\in A$ and $b\in B$. Take $A$ to be one component of $F-S$ that is not a
+component of $J-S$, and let $B$ contain all other components.
+
+Before the forest $F_i$ is computed, we maintain parts $A_i\supseteq A$ and
+$B_i\supseteq B$ and a remaining separator $S_i$, which partition $V(J)$, with
+the following properties:
+\begin{itemize}[nosep]
+\item the vertex $a$ is in $A_i$, and $b$ is in $B_i$;
+\item the edge $ab$ is still in the residual graph, that is, it has not been
+selected by an earlier forest;
+\item no edge of the current or any later forest joins $A_i$ to $B_i$.
+\end{itemize}
+Initially $A_1=A$, $B_1=B$ and $S_1=S$.
+
+In the residual component that contains $ab$, the current spanning tree
+connects $a$ to $b$. Since it has no edge between $A_i$ and $B_i$, it contains
+a vertex of $S_i$. Let $s$ be the first such vertex scanned.
+
+Suppose that the root of this tree lies in $A_i$. Then no vertex of $B_i$ was
+marked before $s$ was scanned. Otherwise, the tree path from the root to that
+vertex would contain a proper ancestor in $S_i$, and this ancestor was scanned
+before that vertex was marked, contradicting the choice of $s$.
+
+Therefore, when $s$ is scanned, every residual neighbor of $s$ in $B_i$ is
+unmarked, and the search selects every edge from $s$ to $B_i$. We move $s$ into
+$A_i$. All crossing edges that this move creates have just been selected and
+removed, so no later forest contains them.
+
+The case where the root lies in $B_i$ is symmetric. If the root lies in $S_i$,
+it is $s$. All its neighbors are unmarked when it is scanned, so all its
+incident edges are selected, and $s$ can be moved to either side.
+
+Each forest removes one vertex from the separator and preserves the properties. The edge
+$ab$ is never selected, because it always joins the two parts. After $|S|$
+forests the separator is empty. Since $|S|<k$, there is a next forest. It must
+connect $a$ and $b$, but it has no edge between the two parts, which now cover
+$V(J)$. This is a contradiction.
+
+The proof uses simplicity when $s$ is scanned: marking an unmarked neighbor
+selects its unique edge from $s$.
+\end{proof}
+
+The four passes take time $O(n+m)$. On $n+1$ vertices, their union has at most
+$4n$ edges.
+
+\subsection{The sparsification step}\label{sec:sparsify}
+
+Suppose that the current clean graph $K$ is nonplanar and has $N$ vertices and
+$M$ edges.
+
+If $M\le16N$, we do nothing. Otherwise:
+\begin{enumerate}[nosep]
+\item Compute the four-forest certificate of $J=K+x$.
+\item Keep its edges that do not contain the apex.
+\item Keep all edges of $D$.
+\item Keep any $3N-5$ edges of $K$.
+\item Delete all other edges of $K$.
+\end{enumerate}
+
+The kept graph has at most
+\begin{equation*}
+4N+N+(3N-5)=8N-5
+\end{equation*}
+edges.
+
+Adding all edges from the apex to the cycle gives a graph that contains the
+certificate and is contained in $J$. By Lemma~\ref{lem:forests}, removing at
+most three vertices other than $x$ leaves the same components in all three
+graphs, so the kept graph is still clean. Its $3N-5$ kept edges of $K$ make it
+nonplanar by Euler's bound. As in Section~\ref{sec:classify}, Fact~T then
+shows that $D$ is still crossed.
+
+This step only deletes edges, so a crossing found later needs no special
+lifting across it.
+
+\section{The maximum two-cut lemma}\label{sec:twocut}
+
+This is the central separator lemma.
+
+\begin{lemma}\label{lem:twocut}
+Let $B$ be a graph with a vertex $x$ such that $\cR_2(B,x)$ holds. Let $z\ne x$
+be a vertex whose minimum vertex separators from $x$ have size two. Choose
+$S=\{p,q\}$ with maximum open source side
+\begin{equation*}
+U=V(B)\setminus\bigl(S\cup R_x\bigr),
+\end{equation*}
+as in Section~\ref{sec:maxcut}, where $R_x$ is the component of $x$ in $B-S$.
+Then neither $p$ nor $q$ can be separated from $x$ by at most two other
+vertices.
+\end{lemma}
+
+\begin{proof}
+Suppose that $p$ can be separated from $x$ by at most two other vertices.
+Since $\cR_2(B,x)$ holds, a minimum such separator $T$ has size exactly two.
+Let $Y$ be the union of the components of $B-T$ that do not contain $x$, so
+$p\in Y$.
+
+Consider the separations
+\begin{align*}
+(A_1,B_1)&=\bigl(U\cup S,\ V(B)\setminus U\bigr),\\
+(A_2,B_2)&=\bigl(Y\cup T,\ V(B)\setminus Y\bigr).
+\end{align*}
+Their join and meet are
+\begin{equation*}
+\bigl(A_1\cup A_2,\ B_1\cap B_2\bigr),
+\qquad
+\bigl(A_1\cap A_2,\ B_1\cup B_2\bigr).
+\end{equation*}
+They are separations. Their orders add up to four, since a vertex-by-vertex
+count shows that the orders of the join and the meet add up to the orders of
+the two given separations.
+
+The meet has order at least two.
+\begin{itemize}[nosep]
+\item If $U\cap Y\ne\varnothing$, the open left side of the meet is nonempty,
+and $x$ lies on its open right side. A meet of order zero or one would
+contradict $\cR_2(B,x)$.
+\item If $U\cap Y=\varnothing$, the minimality of $S$ gives a neighbor $h\in U$
+of $p$, since otherwise $\{q\}$ would separate $z$ from $x$. Since $p\in Y$
+and $h\notin Y$, the edge $ph$ forces $h\in T$. The two distinct vertices $p$
+and $h$ both belong to the separator of the meet.
+\end{itemize}
+
+Therefore the join has order at most two. Its open source side is $U\cup Y$,
+which contains $z$, does not contain $x$, and strictly contains $U$, because
+$p\in Y\setminus U$.
+
+So the separator of the join is a minimum separator between $z$ and $x$, and
+its open source side contains $U\cup Y$, which strictly contains $U$. This
+contradicts the choice of $U$ in Section~\ref{sec:maxcut}. The argument for $q$
+is the same.
+\end{proof}
+
+The graph $B$ need not be $2$-connected: $x$ may be a cut vertex. Every
+separator used in the proof excludes $x$.
+
+\section{Repairing one trial contraction with boundedly many searches}\label{sec:repair}
+
+Start with a clean instance $(K,D)$. Choose an edge $uv$ of one of these forms:
+\begin{itemize}[nosep]
+\item the vertex $u$ is not on $D$, and $v$ is arbitrary;
+\item the vertices $u$ and $v$ are both on $D$, and they are consecutive on $D$.
+\end{itemize}
+Contract $uv$ to a new vertex $w$, suppressing loops and duplicate edges. If
+$u\notin V(D)$, the cycle is unchanged. If both ends are on $D$, remove $u$
+from the cyclic list and keep the name $v$ for $w$.
+
+Let $H$ be the contracted graph and $J=H+x$. Set
+\begin{equation*}
+M=N_K(u)\setminus\{v\}.
+\end{equation*}
+These are the \emph{original markers}. They stay fixed for the whole trial.
+
+\subsection{What the contraction guarantees}\label{sec:guarantees}
+
+The old augmented graph $K+x$ satisfied $\cR_4$. Therefore:
+\begin{enumerate}[nosep]
+\item The property $\cR_3(J,x)$ holds. A separator of size at most two that contains $w$
+lifts to at most three old vertices, namely $u$, $v$ and the rest of the
+separator. A separator that avoids $w$ lifts unchanged.
+\item Every separator of size at most three that excludes $x$ and disconnects
+$J$ contains $w$.
+\item For
+\begin{equation*}
+B=J-w,
+\end{equation*}
+the property $\cR_2(B,x)$ holds.
+\end{enumerate}
+In each case, a separator of $J$ that avoids $w$ also separates $K+x$, because
+contracting the edge $uv$ does not change whether the rest of the graph is
+connected. Property~3 follows from property~1, since a separator of $B$ of size
+at most one, together with $w$, would separate $J$.
+
+Furthermore, every component $Q$ of $J-\{w,p,q\}$ that does not contain $x$,
+for vertices $p,q$, contains a marker. Indeed, if $Q$ had no old neighbor of
+$u$, then in the old augmented graph all neighbors of $Q$ would lie in
+$\{v,p,q\}$. That would violate the old $\cR_4$.
+
+Each replacement made below changes $J$ and $B$. Properties 1, 2 and 3 say that
+certain vertices are joined to $x$ after certain sets of retained vertices are
+deleted. So, by Lemma~\ref{lem:retain}, they stay true for the current $J$ and
+$B=J-w$ after every replacement.
+
+\subsection{Exact restoration procedure}\label{sec:restore}
+
+We process the fixed list $M$, once for each marker. For a marker $z$:
+\begin{enumerate}[nosep]
+\item If $z$ has been deleted, skip it.
+\item If $z$ is on the current cycle, skip it. Its edge to $x$ keeps it out of
+every component that does not contain $x$.
+\item Form $B=J-w$.
+\item Run the bounded-flow computation for three internally disjoint paths
+from $z$ to $x$ in $B$.
+\item If it succeeds, continue with the next marker.
+\item Otherwise, obtain the minimum two-cut $\{p,q\}$ with maximum open source
+side $U$, as in Section~\ref{sec:maxcut}.
+\item Delete all vertices of $U$ from $H$, and complete the triangle
+$\{w,p,q\}$.
+\item Record one component of $B-\{p,q\}$ inside $U$, for example the
+component containing $z$, as the connected representative for the later
+lifting.
+\end{enumerate}
+
+The failed flow has value exactly two, by $\cR_2(B,x)$.
+
+\subsection{Why each replacement is valid}\label{sec:valid}
+
+Each deleted component $A$ of $B-\{p,q\}$ inside $U$ has exactly the
+neighborhood
+\begin{equation*}
+N_J(A)=\{w,p,q\}.
+\end{equation*}
+It has a neighbor at both $p$ and $q$: otherwise one vertex would separate it
+from $x$ in $B$, violating $\cR_2(B,x)$. It has a neighbor at $w$: otherwise
+$\{p,q\}$ would separate it from $x$ in $J$, violating $\cR_3(J,x)$. It
+contains no vertex of the current cycle, since every cycle vertex outside
+$\{w,p,q\}$ is still adjacent to $x$.
+
+Thus Lemma~\ref{lem:replace} applies, in its version that deletes several
+components with a common neighborhood.
+
+\subsection{Why no additional markers are needed}\label{sec:markers}
+
+We call a retained vertex \emph{good} if no set of at most three other
+vertices, excluding $x$, separates it from $x$. Otherwise it is \emph{bad}. A
+\emph{bad component} is a component, not containing $x$, of the graph obtained
+from $J$ by deleting at most three vertices other than $x$. All its vertices
+are bad.
+
+At every replacement made during restoration, the three boundary vertices
+$w,p,q$ are good.
+\begin{itemize}[nosep]
+\item The vertex $w$ is good, because by property~2 of
+Section~\ref{sec:guarantees} every separator of size at most three contains
+$w$.
+\item By Lemma~\ref{lem:twocut}, applied to $B$, the vertices $p$ and $q$
+cannot be separated from $x$ in $B$ by at most two vertices. Since every
+separator of $J$ of size at most three contains $w$, they are good in $J$.
+\end{itemize}
+Goodness stays true under later replacements, by Lemma~\ref{lem:retain}.
+
+Now consider a bad component after such a replacement. It cannot contain any of
+the good boundary vertices. Therefore it contains no end of a newly added
+clique edge, and it has no old edge into the deleted part, whose neighbors are
+$w,p,q$. So it was already \emph{the same component, with the same vertex
+set}, before the replacement.
+
+Consequently it keeps its old marker. This proves, by induction, that every
+bad component during restoration contains an original marker that is still
+present. At the start of restoration this holds by the last statement of
+Section~\ref{sec:guarantees}, since by properties 1 and 2 every bad component
+comes from a separator $\{w,p,q\}$. After the marker list is exhausted:
+\begin{itemize}[nosep]
+\item a remaining marker whose flow succeeded is good, because a separator of
+$J$ of size at most three would contain $w$, and the rest of it would
+separate $z$ from $x$ in $B$;
+\item a marker whose flow failed was deleted;
+\item a skipped cycle marker is good, because it is adjacent to $x$.
+\end{itemize}
+A remaining bad component would therefore contain a good vertex, which is a
+contradiction. So no bad component remains, and the instance is clean.
+
+\begin{lemma}\label{lem:restore}
+Restoration returns a clean instance that has a crossing if and only if the
+contracted instance has one, and it uses at most $|M|$ flow queries for three
+paths.
+\end{lemma}
+
+The bound holds even for a trial that is rejected in the end. There is no
+hidden search over all remaining vertices.
+
+\section{The complete contraction algorithm}\label{sec:loop}
+
+After the initial cleaning, call $\Classify$.
+\begin{itemize}[nosep]
+\item On \ans{NO}, report that $C$ is crossless.
+\item On \ans{WITNESS}, lift the crossing through the recorded initial
+replacements and return it.
+\item On \ans{YES}, the current graph is clean, nonplanar and crossed.
+\end{itemize}
+
+We repeat the following iteration while in the last state.
+
+\paragraph{One iteration.}
+\begin{enumerate}[nosep]
+\item \emph{Sparsify} as in Section~\ref{sec:sparsify}, if needed. The graph
+stays clean, nonplanar and crossed, and now $M\le16N$.
+\item Choose any five distinct vertices of degree at most $64$.
+\item For each chosen vertex $u$:
+\begin{itemize}[nosep]
+\item if $u\notin V(D)$, try every incident edge $uv$;
+\item if $u\in V(D)$, try its two cycle edges, except that contractions of
+cycle edges are skipped when $|D|=4$.
+\end{itemize}
+\item For each trial:
+\begin{itemize}[nosep]
+\item copy the current instance;
+\item contract $uv$;
+\item restore cleanliness as in Section~\ref{sec:repair}, using the markers
+$N_K(u)\setminus\{v\}$;
+\item call $\Classify$ on the restored instance.
+\end{itemize}
+\item On \ans{NO}, discard that trial.
+\item On \ans{WITNESS}, lift the crossing through the replacements and the
+contraction of that trial, then through all earlier accepted operations, and
+return it.
+\item On \ans{YES}, accept that trial and begin the next iteration.
+\end{enumerate}
+
+All choices in the graph and all orders of adjacency lists may be fixed
+arbitrarily.
+
+\subsection{Five vertices of low degree always exist}\label{sec:five}
+
+A nonplanar graph has at least five vertices. For $5\le N\le9$, every vertex has
+degree at most eight. For $N\ge10$, the number of vertices of degree at least
+$65$ is at most
+\begin{equation*}
+\frac{2M}{65}\le\frac{32N}{65}<\frac N2.
+\end{equation*}
+Thus more than $N/2\ge5$ vertices have degree at most $64$. No exhaustive base
+case for small instances is needed.
+
+\subsection{At least one trial is positive}\label{sec:positive}
+
+Fix any crossing of $D$. It has exactly four ends. So at least one of the five
+chosen vertices, say $u$, is not one of these ends. There are three cases.
+\begin{itemize}[nosep]
+\item \emph{The vertex $u$ is off the cycle and lies on a crossing path.}
+Contract an edge of that path at $u$. The crossing survives.
+\item \emph{The vertex $u$ is off the cycle and lies on neither path.}
+Contract any edge at $u$. The crossing survives. Such an edge exists, because
+cleanliness implies that every vertex off the cycle has degree at least four.
+\item \emph{The vertex $u$ is on the cycle.} Then neither crossing path uses
+it. Contract either cycle edge at $u$. The cyclic order of the four ends of the
+crossing does not change. Here $|D|\ge5$, since $D$ contains the four ends and
+$u$, so this trial is not skipped.
+\end{itemize}
+Restoration preserves the existence of a crossing, by
+Lemma~\ref{lem:replace}. Since the classification is exact, it accepts at least
+one trial.
+
+Every accepted trial contracts an edge and so decreases the number of vertices.
+Thus the procedure terminates. It cannot end in a nonplanar positive state with
+fewer than five vertices, so before that happens the classification returns a
+crossing.
+
+\section{Lifting contractions}\label{sec:lift}
+
+For completeness, here are all the lifts through contractions.
+
+The record stores the graph and the cycle before the contraction, and the edge
+$uv$. At most one returned crossing path uses the new vertex $w$, since the
+two paths are disjoint.
+
+\paragraph{Both ends off the cycle.}
+If $w$ is unused, keep the paths. Otherwise let $a$ and $b$ be the vertices
+before and after $w$ on its path. In the recorded graph, choose
+\begin{equation*}
+u_a\in\{u,v\}\text{ adjacent to }a,
+\qquad
+u_b\in\{u,v\}\text{ adjacent to }b.
+\end{equation*}
+If $u_a=u_b$, replace $w$ by that vertex. Otherwise replace it by $u_a,u_b$,
+using the edge $uv$. The added vertices do not occur on the other path or
+elsewhere on this path.
+
+\paragraph{One end on the cycle.}
+The algorithm orients this case so that $u\notin V(D)$ and $v\in V(D)$, and
+keeps $w=v$. If $w$ is used, it is an end of a crossing path. Suppose that the
+path starts at $w$. If its first edge comes from $v$ in the recorded graph,
+keep the end $v$. If it comes from $u$, replace the beginning by $v,u$,
+followed by that edge. For a path that ends at $w$, reverse the order. The only
+vertex added inside the path is $u$, which is off the cycle.
+
+\paragraph{Both ends on the cycle.}
+Then $u$ and $v$ were consecutive on the recorded cycle. If $w$ is used, it is
+an end of a crossing path. Choose whichever of $u,v$ is adjacent, in the
+recorded graph, to the next vertex of the path, and use it as the end.
+\emph{Do not insert the cycle edge $uv$ into the path.} Replacing one cycle
+position by one of two consecutive positions keeps the cyclic order of the
+four distinct ends, since no other end lies between those two positions.
+
+Thus every contraction lifts without a search. Reversing all accepted
+operations gives two disjoint $C$-paths in the original graph, with
+alternating ends.
+
+\section{Search count and total running time}\label{sec:time}
+
+Let $n_0$ and $m_0$ be the numbers of vertices and edges of the component that
+contains the original cycle. This component is connected and contains a
+cycle, so $m_0\ge n_0$.
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Operation & Number\\
+\midrule
+Initial flow queries for four paths & at most $n_0$\\
+Accepted contraction iterations & at most $n_0$\\
+Trials per iteration & at most $5\cdot64=320$\\
+Flow queries for three paths per trial & at most $63$\\
+BFS forests per sparsification & four\\
+Boolean planarity tests & at most $320n_0+1$\\
+Searches constructing the final bridge crossing & two\\
+Searches reversing separator replacements & at most $n_0$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A flow query for three paths uses at most three residual searches. On failure,
+finding the maximum cut side and the relevant components takes a bounded
+number of further linear traversals. Thus the total number of residual and
+ordinary graph searches is $O(n_0)$.
+
+The planarity tests are \emph{separate linear-time calls}. We do not count them
+as ordinary path searches.
+
+Every accepted separator replacement deletes at least one vertex and adds at
+most three edges. Contractions add no edges before simplification. Temporary
+trials make only a bounded number of replacements. Consequently every graph
+that is searched has size
+\begin{equation*}
+O(n_0+m_0).
+\end{equation*}
+
+All remaining work is linear per bounded-flow query or per trial: graph
+copies, contraction and simplification, bridge construction, counting sorts,
+stack operations, certificate construction, and path splicing. Storing
+complete snapshots is allowed, since the stack of accepted operations contains
+only $O(n_0)$ operations.
+
+Therefore the total time is
+\begin{equation*}
+O\bigl(n_0(n_0+m_0)\bigr)
+=
+O(n_0m_0)
+\subseteq O(nm).
+\end{equation*}
+
+\section{Assumptions, critical choices, and tests}\label{sec:remarks}
+
+The algorithm runs on the given pair $(G,C)$. It assumes only that $G$ is finite
+and simple and that $C$ is a cycle of $G$.
+
+The following choices matter:
+\begin{itemize}[nosep]
+\item BFS (scan-first) forests for the certificate. Arbitrary spanning forests
+do not suffice.
+\item A minimum two-cut with \emph{maximum open source side} during
+restoration.
+\item Contractions only of edges at a vertex off the cycle, or of edges between
+consecutive cycle vertices.
+\end{itemize}
+
+The file \texttt{crossing\_algorithm.py} in this folder is a reference
+implementation in Python. It has the interface
+\begin{verbatim}
+from crossing_algorithm import find_crossing
+
+result = find_crossing(n, edges, cycle)
+# None, or (path1, path2)
+\end{verbatim}
+It uses the planarity test of the companion note \cite{HJ26}, from the file
+\texttt{planarity\_linear.py} in the folder \texttt{docs/planarity}, and no
+other library outside the Python standard library. The default call follows
+the algorithm above. After sparsifying, it also calls $\BridgeCross$ once more,
+which is not in the algorithm above and does not change the bounds. The
+optional mode \texttt{audit=True} checks cleanliness again after every trial.
+This mode is for testing, and it does not meet the bound $O(nm)$. Python sets
+and dictionaries are not the arrays of a word RAM, so the implementation
+illustrates the algorithm but does not prove its time bound.
+
+We tested the implementation as follows. On 9{,}000 random instances with at
+most $19$ vertices, the answer agreed with an exhaustive search for a crossing,
+with the audit mode on. These instances include 3{,}731 runs of the
+contraction loop with 15{,}296 trials, many of them with restoration
+replacements. On 40 dense random instances with $36$ to $45$ vertices, the
+sparsification step ran 35 times. Every returned crossing is checked against
+the original graph before it is returned. Separately, on 100{,}000 random
+instances, $\BridgeCross$ agreed with a direct check for alternating
+attachments of two distinct bridges. These tests check the implementation. The
+correctness and the time bound follow from the lemmas above.
+
+\section{The Lean formalization}\label{sec:lean}
+
+The Lean formalization of this note is in the repository \texttt{GraphMinor}.
+\begin{itemize}[nosep]
+\item The folder \path{GraphMinor/Crossing} proves the mathematics of
+Sections~\ref{sec:facts} to~\ref{sec:lift}, apart from Fact~P. The file
+\path{GraphMinor/Crossing/Statements.lean} states the claims of
+Sections~\ref{sec:root}, \ref{sec:replace}, \ref{sec:clean}, \ref{sec:sparse},
+\ref{sec:twocut}, \ref{sec:repair}, \ref{sec:loop} and~\ref{sec:lift} as
+propositions, each with the passage it formalizes. Fact~T is proved in
+\path{GraphMinor/Crossing/PlanarFactT.lean} from the formalization of
+Humeau and Pous in the folder \path{GraphMinor/HP25}.
+\item In the folder \path{GraphMinor/Compute}, the files
+\path{Crossing*.lean} and \path{SpecsCrossing*.lean} give word-RAM programs
+for all steps and prove their correctness and running times. The whole
+algorithm is \texttt{CrossingExtractorStatement}, proved as
+\texttt{crossingExtractor\_of}.
+\item The file \path{GraphMinor/Compute/SpecsCrossingReductionProved.lean}
+derives from it the two paths statement \texttt{Shiloach80Statement} used in
+(8.1), by the reduction recalled in the introduction. The file
+\path{GraphMinor/Compute/DisjointPathsFinal.lean} proves the main result of
+Graph Minors XIII, \texttt{disjointPathsStatement\_proved}, with no hypotheses.
+\end{itemize}
+
+The Lean formalization differs from this note in the following places.
+\begin{itemize}[nosep]
+\item \emph{The model of computation.} The note counts searches and argues
+that the rest of the work is linear per search. The Lean proves executions of
+fixed word-RAM programs, with explicit word sizes, memory layouts and record
+buffers, and bounds their numbers of steps. A search count alone does not show
+that a program with bounded words meets the time bound.
+\item \emph{The planarity test.} Fact~P is the Lean statement
+\texttt{PlanarityTestStatement}. It is not assumed: it is proved, as
+\texttt{planarityTestStatement\_proved}, from the companion note \cite{HJ26}.
+\item \emph{The use in Graph Minors XIII.} The algorithm of this note returns
+paths. The Lean uses it for the step of (8.1), and then assembles the
+algorithm for the main result of Graph Minors XIII, which decides the disjoint
+paths problem for a fixed number of terminal pairs. That final program returns
+a Boolean answer, as the problem is stated in Graph Minors XIII, page~65. It is
+not required to return the paths.
+\end{itemize}
+
+{\small
+\begin{thebibliography}{GM13}
+
+\bibitem[CKT93]{CKT93}
+J.~Cheriyan, M.-Y.~Kao and R.~Thurimella,
+Scan-first search and sparse certificates: an improved parallel algorithm for
+$k$-vertex connectivity,
+\emph{SIAM J. Comput.} \textbf{22} (1993), 157--174.
+
+\bibitem[GM13]{GM13}
+N.~Robertson and P.~D.~Seymour,
+Graph Minors. XIII. The disjoint paths problem,
+\emph{J. Combin. Theory Ser. B} \textbf{63} (1995), 65--110.
+
+\bibitem[HJ26]{HJ26}
+M.~Hajiaghayi and M.~JafariRaviz,
+A Boolean linear-time planarity test,
+note, November 2026, file \path{docs/planarity/planarity_test.tex} of the
+repository \texttt{GraphMinor}.
+
+\bibitem[HP25]{HP25}
+S.~Humeau and D.~Pous,
+On the two paths theorem and the two disjoint paths problem,
+arXiv:2505.16431v2 (14 August 2025).
+
+\bibitem[HT74]{HT74}
+J.~Hopcroft and R.~Tarjan,
+Efficient planarity testing,
+\emph{J. ACM} \textbf{21} (1974), 549--568.
+
+\bibitem[Sh80]{Sh80}
+Y.~Shiloach,
+A polynomial solution to the undirected two paths problem,
+\emph{J. ACM} \textbf{27} (1980), 445--456.
+
+\end{thebibliography}}
+
+\end{document}

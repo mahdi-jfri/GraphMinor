@@ -1,0 +1,865 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=26mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amssymb,amsthm,mathtools,booktabs,microtype}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[colorlinks=true,linkcolor=MidnightBlue,urlcolor=MidnightBlue,citecolor=MidnightBlue]{hyperref}
+\hypersetup{pdftitle={A uniform bound for complete graph minors},pdfauthor={MohammadTaghi Hajiaghayi and Mahdi JafariRaviz}}
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{2em}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem*{maintheorem}{Main Theorem}
+\newtheorem*{thomasonlemma}{Thomason's lemma}
+
+\DeclareMathOperator{\atanh}{atanh}
+\newcommand{\E}{\mathbb E}
+\newcommand{\Prb}{\mathbb P}
+\newcommand{\floor}[1]{\left\lfloor#1\right\rfloor}
+\newcommand{\ceil}[1]{\left\lceil#1\right\rceil}
+\newcommand{\dd}{\mathrm d}
+
+\title{\textbf{A uniform bound for complete graph minors}}
+\author{MohammadTaghi Hajiaghayi \and Mahdi JafariRaviz}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Graph Minors XIII states, as a result of Thomason, that for every integer
+$p\ge1$ every non-null simple graph $G$ with
+$|E(G)|\ge2.68\,p\sqrt{\log_2p}\,|V(G)|$ has a $K_p$ minor. Thomason's paper
+gives the constant $2.68$ only for large $p$. We prove that for every integer
+$p\ge51$, every non-null simple graph $G$ with
+$|E(G)|\ge(16/5)\,p\sqrt{\ln p}\,|V(G)|$ has a $K_p$ minor. Since
+$(16/5)\sqrt{\ln2}<2.68$, this gives the statement of Graph Minors XIII for
+every $p\ge51$. The proof uses Thomason's density reduction and a random
+partition of the vertex set into many small blocks at once. Two certificates,
+checked with exact rational arithmetic, cover $51\le p\le10^{44}$, and an
+analytic argument covers $\ln p\ge100$.
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+All graphs in this note are finite and simple. For a graph $G$ we write
+$v(G)=|V(G)|$ and $e(G)=|E(G)|$. A graph is non-null if it has at least one
+vertex, and the density of a non-null graph $G$ is $d(G)=e(G)/v(G)$. We write
+$\ln$ for the natural logarithm and $\log_2$ for the logarithm to base $2$.
+
+Graph Minors XIII \cite[(5.5), page~83]{gm13} states the following, as a
+result of Thomason \cite{thomason}.
+\begin{quote}
+\textbf{(5.5)} \emph{Let $p\ge1$ be an integer, and let $G$ be a non-null
+simple graph with $|E(G)|\ge2.68\,p(\log_2(p))^{1/2}|V(G)|$. Then $G$ has a
+$K_p$-minor.}
+\end{quote}
+Thomason's paper gives the constant $2.68$ only asymptotically, that is, for
+all sufficiently large $p$ \cite[page~264]{thomason}. In this note we prove a
+bound of the same form that holds for every $p\ge51$.
+
+\begin{maintheorem}
+For every integer $p\ge51$, every non-null graph $G$ with
+$d(G)\ge\frac{16}{5}\,p\sqrt{\ln p}$ has a $K_p$ minor.
+\end{maintheorem}
+
+The Main Theorem gives (5.5) for every $p\ge51$. Indeed,
+$\sqrt{\ln p}=\sqrt{\ln2}\,\sqrt{\log_2p}$, so it suffices that
+$(16/5)\sqrt{\ln2}\le2.68=67/25$. We have $\ln2<7/10$, because
+$e^{7/10}>1+7/10+(7/10)^2/2+(7/10)^3/6>2$, and therefore
+\begin{equation*}
+ \left(\frac{16}{5}\right)^2\ln2<\left(\frac{16}{5}\right)^2\frac{7}{10}
+ =7.168<7.1824=\left(\frac{67}{25}\right)^2.
+\end{equation*}
+Numerically, $(16/5)\sqrt{\ln2}=2.6641747557\ldots$, so that
+$(16/5)\,p\sqrt{\ln p}=2.6641747557\ldots\,p\sqrt{\log_2p}$.
+
+For $1\le p\le50$, the statement (5.5) is proved in the Lean formalization
+only, by a different argument, and this note does not cover these cases. The
+note makes no claim about the constant $16/5$ for $p\le50$.
+
+Wood \cite[Theorem~1]{wood} proves an explicit bound of the same form for
+every $p\ge2$: every graph of density at least $4.5\,p\sqrt{\ln p}$ has a $K_p$
+minor. His proof builds the branch sets one after another, and it adds
+vertices to each branch set to make it connected. Here we choose all
+candidate branch sets at once, as the blocks of one random partition. We
+then discard the disconnected blocks, and enough further blocks to remove
+the missing adjacencies, and we bound the expected number of discarded
+blocks. No vertex is added to a block, so the proportion of nonneighbors of
+a vertex stays the same during the construction.
+
+The proof goes as follows. Section~\ref{sec:reduction} recalls Thomason's
+density reduction. It reduces the Main Theorem for $p$ to finding a
+$K_{p-2}$ minor in small graphs in which every vertex has few nonneighbors.
+Section~\ref{sec:partition} gives the tool for these graphs: a random
+partition of the vertices into blocks (Lemmas~\ref{lem:partition}
+and~\ref{lem:mixed}), with an explicit lower bound $B$ on the expected
+number of blocks that form a complete minor. It remains to show that
+$B>p-3$. Section~\ref{sec:finite} checks this for $51\le p\le109$ with a
+finite certificate, Section~\ref{sec:medium} for $110\le p\le10^{44}$ with a
+certificate that covers whole intervals of $p$ at once, and
+Section~\ref{sec:tail} for $\ln p\ge100$ by hand.
+Section~\ref{sec:proof} puts the three ranges together, and
+Section~\ref{sec:lean} describes how the Lean formalization uses this note.
+Appendix~\ref{app:reduction} proves the density reduction.
+
+\section{The density reduction}\label{sec:reduction}
+
+Let $\alpha_0>1$ be the solution of $\alpha_0=1+\ln(2\alpha_0)$. It is
+unique, because the function $x-1-\ln(2x)$ has derivative $1-1/x>0$ for
+$x>1$, is negative at $x=1$, and tends to infinity. We use the following form
+of Lemma~1 of Thomason \cite[page~262]{thomason}.
+
+\begin{thomasonlemma}
+Let $p\ge2$ and $c\ge3$ be integers. Suppose that every non-null graph $H$
+with
+\begin{equation}\label{eq:thomason}
+ v(H)\le c\qquad\text{and}\qquad 2\delta(H)-v(H)\ge\floor{c/\alpha_0}-3
+\end{equation}
+has a $K_{p-2}$ minor. Then every non-null graph of density at least $c$ has
+a $K_p$ minor.
+\end{thomasonlemma}
+
+Thomason states the lemma with a real parameter $r$, and we take
+$r=c/\alpha_0$, so that $\alpha_0r=c$ is an integer. The proof makes two
+neighborhood reductions, and the two vertices chosen in them give the two
+extra branch sets. Appendix~\ref{app:reduction} gives a complete proof of the
+lemma in the form above. In \cite{thomason} the lemma is stated in terms of
+an extremal function. Below we apply it only with an integer $c$ strictly less than the
+density of the graph, so no question about a boundary case arises if one
+uses his formulation instead.
+
+We do not need the value of $\alpha_0$, only the bound $\alpha_0<67/25$. To
+prove it, recall that $x-1-\ln(2x)$ is strictly increasing for $x>1$ and
+vanishes at $\alpha_0$. At $x=67/25$ it equals $42/25-\ln(134/25)$, which is
+positive because
+\begin{equation*}
+ e^{42/25}>
+ \sum_{j=0}^{7}\frac{(42/25)^j}{j!}
+ =\frac{134}{25}+\frac{110787181}{30517578125}
+ >\frac{134}{25}.
+\end{equation*}
+So $\alpha_0<67/25$. For an integer $c\ge3$ put
+\begin{equation}\label{eq:R}
+ R=\floor{\frac{25c}{67}}-1.
+\end{equation}
+
+Let $H$ satisfy \eqref{eq:thomason}, let $n=v(H)$, and let
+$q=n-1-\delta(H)$, which is the largest number of nonneighbors of a vertex of
+$H$. Here and below, a vertex is not counted as a nonneighbor of itself.
+Since $c/\alpha_0>25c/67$, the second condition in \eqref{eq:thomason}
+implies $2\delta(H)-n\ge R-2$. As $2\delta(H)-n=n-2-2q$, this says that
+$n-2q\ge R$. Together with $n\le c$ we get
+\begin{equation}\label{eq:parameters}
+ R\le n\le c\qquad\text{and}\qquad 0\le q\le\frac{n-R}{2}.
+\end{equation}
+We call a non-null graph $H$ with $n$ vertices a \emph{reduced graph} (for
+$c$) if $R\le n\le c$ and every vertex of $H$ has at most $(n-R)/2$
+nonneighbors. If $n=R$ or $n=R+1$, then $q=0$, so a reduced graph of this
+order is complete.
+
+Now let $p\ge51$, and put
+\begin{equation}\label{eq:D}
+ C=\frac{16}{5},\qquad D=Cp\sqrt{\ln p},\qquad c=\ceil{D}-1.
+\end{equation}
+Then $D-1\le c<D$, and $c\ge3$ since $D>4$. A graph as in the Main Theorem
+has density at least $D$, and so at least $c$. By Thomason's lemma and
+\eqref{eq:parameters}, the Main Theorem for $p$ follows once every reduced
+graph for this $c$ has a $K_{p-2}$ minor. In Section~\ref{sec:finite} the
+certificate may instead give any integer $c\ge3$ with $c<D$, and the same
+reduction applies. The bound $c\ge D-1$ is not needed there.
+
+\section{A random partition into blocks}\label{sec:partition}
+
+To find a large complete minor in a reduced graph $H$, we split a random set
+of vertices into blocks of $k$ vertices each. Every vertex has few
+nonneighbors, so a random block is likely to be connected and to dominate
+almost all of $H$. Then two blocks are likely to be adjacent. We delete the
+blocks that fail, and the remaining blocks form a complete minor.
+
+For a set $S$ of vertices of a graph $H$, let $U(S)=V(H)\setminus N_H[S]$ be
+the set of vertices that are neither in $S$ nor adjacent to a vertex of $S$.
+We say that $S$ does not dominate these vertices. A $K_m$ model in $H$ is a
+family of $m$ pairwise disjoint nonempty sets of vertices, each inducing a
+connected subgraph, with an edge between every two of them. A graph has a
+$K_m$ minor if and only if it has a $K_m$ model.
+
+\begin{lemma}\label{lem:partition}
+Let $H$ be a graph with $n$ vertices in which every vertex has at most $q$
+nonneighbors. Let $k$ be an integer with $2\le k<n$, put $N=\floor{n/k}$ and
+$\pi=q/n$, and suppose that $N\ge2$. Let $A>0$, and put
+\begin{align}
+ F&=(2^{k-1}-1)\left(\frac{q}{n-k+1}\right)^{k-1},\qquad
+ M=\binom N2\left(\frac{An\pi^k}{n-k}\right)^k,\notag\\
+ B&=N(1-F-A^{-1})-M.\label{eq:B}
+\end{align}
+If $B>m-1$ for an integer $m$, then $H$ has a $K_m$ minor.
+\end{lemma}
+
+The three loss terms come from blocks that are disconnected ($NF$), blocks
+that do not dominate enough vertices ($N/A$), and pairs of blocks with no
+edge between them ($M$).
+
+\begin{proof}
+Take a uniformly random ordering of $V(H)$. Let $S_1$ be the set of its first
+$k$ vertices, $S_2$ the set of the next $k$ vertices, and so on up to $S_N$.
+We call these sets blocks. They are disjoint, and each one on its own is a
+uniformly random $k$-subset of $V(H)$.
+
+\emph{Domination.} Fix a block $S_i$ and a vertex $v$. If $v\in U(S_i)$,
+then all $k$ vertices of $S_i$ are nonneighbors of $v$, and $v$ has at most
+$q$ nonneighbors. So
+\begin{equation*}
+ \E|U(S_i)|\le n\binom qk\Big/\binom nk\le n\pi^k,
+\end{equation*}
+where the last step uses $(q-j)/(n-j)\le q/n$ for $0\le j<k$. Call $S_i$
+\emph{good} if $|U(S_i)|\le An\pi^k$. If $q>0$, Markov's inequality shows
+that $S_i$ is not good with probability at most $1/A$. If $q=0$, then
+$U(S_i)$ is empty, so every block is good. In both cases the expected number
+of blocks that are not good is at most $N/A$.
+
+\emph{Connectivity.} If $H[S_i]$ is disconnected, then there is a partition
+of the $k$ positions of $S_i$ into two nonempty parts with no edge of $H$
+between the vertices in the two parts. There are $2^{k-1}-1$ such
+partitions. Fix one, and fix a spanning tree $T$ of the complete bipartite
+graph between its two parts. The tree $T$ has $k-1$ edges, and if no edge of
+$H$ goes across the partition, every edge of $T$ joins two nonadjacent
+vertices of $H$. Root $T$, and reveal the vertices of $S_i$ in an order of
+the positions in which every position comes after its parent. When a
+position other than the root is revealed, at least $n-k+1$ vertices are still
+available, all equally likely, and at most $q$ of them are nonneighbors of
+the vertex at the parent position. So the probability that every edge of $T$
+joins nonadjacent vertices is at most $(q/(n-k+1))^{k-1}$. By the union bound
+over the partitions, $H[S_i]$ is disconnected with probability at most $F$,
+and the expected number of disconnected blocks is at most $NF$.
+
+\emph{Missing pairs.} Let $i<j$. Condition on $S_i$, and suppose that $S_i$
+is good. Given $S_i$, the block $S_j$ is a uniformly random $k$-subset of the
+$n-k$ vertices outside $S_i$. If no edge joins $S_i$ and $S_j$, then
+$S_j\subseteq U(S_i)$. Hence, as $|U(S_i)|\le n-k$,
+\begin{equation*}
+ \Prb\bigl(\text{no edge joins }S_i\text{ and }S_j\bigm|S_i\bigr)
+ \le\binom{|U(S_i)|}{k}\Big/\binom{n-k}{k}
+ \le\left(\frac{|U(S_i)|}{n-k}\right)^k
+ \le\left(\frac{An\pi^k}{n-k}\right)^k.
+\end{equation*}
+Let $Z$ be the number of pairs $i<j$ such that $S_i$ and $S_j$ are both good
+and connected and no edge joins them. Dropping the conditions that $S_j$ is
+good and that both blocks are connected can only increase the probability of
+such a pair. So the bound above, averaged over $S_i$ and summed over the
+$\binom N2$ pairs, gives $\E Z\le M$.
+
+\emph{The model.} Delete every block that is not good or is disconnected.
+Then, for each pair of remaining blocks with no edge between them, delete one
+of the two blocks. This deletes at most $Z$ further blocks. The remaining
+blocks are disjoint, each induces a connected subgraph, and every two of them
+are joined by an edge. So they form a $K_t$ model in $H$, where $t$ is their
+number. By linearity of expectation, $\E t\ge N-N/A-NF-M=B$. Hence some
+ordering gives $t\ge B>m-1$, and since $t$ is an integer, $t\ge m$. So $H$ has
+a $K_m$ minor.
+\end{proof}
+
+The proof uses only the distribution of one block, or of one block given
+another, and linearity of expectation. It does not need any independence
+between the blocks.
+
+\subsection{The best choice of \texorpdfstring{$A$}{A}}
+
+Lemma~\ref{lem:partition} holds for every $A>0$. For $q>0$ we choose $A$ to
+make $N/A+M$ as small as possible. Write $M=c_0A^k$, with
+$c_0=\binom N2(n\pi^k/(n-k))^k$. As a function of $A>0$, the sum
+$N/A+c_0A^k$ is smallest when $A^{k+1}=N/(kc_0)$, and then $c_0A^k=N/(kA)$, so
+that $N/A+M=(1+1/k)N/A$. Put $P=(1+1/k)/A$ for this $A$. Then
+Lemma~\ref{lem:partition} holds with
+\begin{equation}\label{eq:optimized}
+ B=N(1-F-P),\qquad
+ P^{k+1}=\left(1+\frac1k\right)^{k+1}
+ \frac{k(N-1)}2\left(\frac n{n-k}\right)^k\pi^{k^2}.
+\end{equation}
+This also holds for $q=0$, with $F=P=0$. Indeed, then $B=N(1-1/A)$ in
+Lemma~\ref{lem:partition}, and if $N>m-1$, then $N(1-1/A)>m-1$ for every
+large enough $A$.
+
+\subsection{Blocks of sizes 2 and 3}
+
+For some cases of Section~\ref{sec:finite} it helps to use blocks of two
+sizes.
+
+\begin{lemma}\label{lem:mixed}
+Let $H$ be a graph with $n$ vertices in which every vertex has at most $q$
+nonneighbors, and put $\pi=q/n$. Let $N_2,N_3\ge1$ be integers with
+$2N_2+3N_3\le n$, and let $A_2,A_3>0$. Put
+\begin{align*}
+ F_2&=\frac q{n-1},& F_3&=3\left(\frac q{n-2}\right)^2,\\
+ M_{22}&=\binom{N_2}{2}\left(\frac{A_2n}{n-2}\right)^2\pi^4,&
+ M_{33}&=\binom{N_3}{2}\left(\frac{A_3n}{n-3}\right)^3\pi^9,\\
+ M_{23}&=N_2N_3\left(\frac{A_2n}{n-2}\right)^3\pi^6,
+\end{align*}
+and
+\begin{equation}\label{eq:mixed}
+ B=N_2(1-F_2-A_2^{-1})+N_3(1-F_3-A_3^{-1})-M_{22}-M_{23}-M_{33}.
+\end{equation}
+If $B>m-1$ for an integer $m$, then $H$ has a $K_m$ minor.
+\end{lemma}
+
+\begin{proof}
+We follow the proof of Lemma~\ref{lem:partition}. In a uniformly random
+ordering of $V(H)$, the first $2N_2$ vertices form $N_2$ blocks of size $2$,
+called pairs, and the next $3N_3$ vertices form $N_3$ blocks of size $3$,
+called triples. A pair $S$ is good if $|U(S)|\le A_2n\pi^2$, and a triple
+$S$ is good if $|U(S)|\le A_3n\pi^3$. The domination and connectivity bounds of
+Lemma~\ref{lem:partition} with $k=2$ and $k=3$ show that the expected
+numbers of pairs and triples that are not good or are disconnected are at
+most $N_2(F_2+1/A_2)$ and $N_3(F_3+1/A_3)$. For two pairs, or for two
+triples, the bound on missing pairs of Lemma~\ref{lem:partition} gives the
+terms $M_{22}$ and $M_{33}$. For a pair and a triple, condition on the pair
+and suppose that it is good. The triple is then a uniformly random
+$3$-subset of the $n-2$ other vertices, and it has no neighbor in the pair
+only if it lies in the set of vertices that the pair does not dominate. This
+happens with probability at most $(A_2n\pi^2/(n-2))^3$, and summing over the
+$N_2N_3$ choices of a pair and a triple gives $M_{23}$. The rest of the proof
+is the same as for Lemma~\ref{lem:partition}.
+\end{proof}
+
+\section{Exact certificate for \texorpdfstring{$51\le p\le109$}{51 <= p <= 109}}\label{sec:finite}
+
+In this range we check, for each $p$ and each order $n$ of a reduced graph,
+that Lemma~\ref{lem:partition} or Lemma~\ref{lem:mixed} with $m=p-2$ applies.
+Then every reduced graph has a $K_{p-2}$ minor.
+
+The file \texttt{global\_finite\_certificate.jsonl} has one row for each
+integer $p$ from $51$ to $109$. A row gives an integer $c$ and one choice of
+blocks for each order
+\begin{equation*}
+ n=R+2,R+3,\ldots,c,\qquad\text{where }R=\floor{25c/67}-1.
+\end{equation*}
+The checker \texttt{global\_finite\_checker.py} first verifies, with a
+rational lower bound $\ell_p$ on $\ln p$ (Section~\ref{sec:enclosures}), that
+\begin{equation*}
+ c^2<C^2p^2\ell_p\qquad\text{and}\qquad R\ge p-2.
+\end{equation*}
+The first inequality gives $c<D$. The second gives $c\ge3$, since it needs
+$\floor{25c/67}\ge50$, and it handles
+every complete reduced graph, since such a graph has at least $R\ge p-2$
+vertices. By \eqref{eq:parameters}, this includes every reduced graph of
+order $n=R$ or $n=R+1$. For each $n\ge R+2$ the checker uses the bound
+\begin{equation*}
+ q=\floor{\frac{n-R}{2}},
+\end{equation*}
+the largest number of nonneighbors of a vertex that a reduced graph of order
+$n$ allows.
+Lemmas~\ref{lem:partition} and~\ref{lem:mixed} need only an upper bound $q$
+on the number of nonneighbors of each vertex, so a check for this value of
+$q$ covers every reduced graph of order $n$. (Equivalently, every loss term
+in \eqref{eq:B} and \eqref{eq:mixed} is nondecreasing in $q$.)
+
+A uniform entry of a row gives an integer $k$ and a positive rational $A$,
+for Lemma~\ref{lem:partition}. A mixed entry gives integers $N_2,N_3$ and
+positive rationals $A_2,A_3$, for Lemma~\ref{lem:mixed}. For each entry the
+checker verifies the conditions of the lemma, computes $B$ from
+\eqref{eq:B} or \eqref{eq:mixed} with exact fractions, and verifies
+$B>p-3$. It also verifies that the rows cover every $p$ from $51$ to $109$,
+and that each row covers every $n$ from $R+2$ to $c$. The result is as
+follows.
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+Quantity & Verified value\\
+\midrule
+Values of $p$ & $51,52,\ldots,109$\\
+Cases $(p,n)$ checked & $19\,873$\\
+Cases using Lemma~\ref{lem:mixed} & $313$\\
+Lower bound for every $B-(p-3)$ & $1/10$ (strict)\\
+\bottomrule
+\end{tabular}
+\end{center}
+The smallest margin $B-(p-3)$ is about $0.100642159415$. The checker verifies
+with exact fractions that every margin is greater than $1/10$. So
+Lemma~\ref{lem:partition} or Lemma~\ref{lem:mixed} gives a $K_{p-2}$ minor
+in every reduced graph for $51\le p\le109$.
+
+\section{Exact interval certificate for \texorpdfstring{$110\le p\le10^{44}$}{110 <= p <= 10\^{}44}}
+\label{sec:medium}
+
+For larger $p$ we cannot check each value of $p$ on its own. So the second
+certificate covers whole intervals of $p$ at once. Within an interval, it
+also covers the order $n$ of a reduced graph by a few ranges, after dividing
+$n$ by $D$. Every check is again exact.
+
+Fix integers $110\le L\le U$, and let $s_L$ and $s_U$ be rational numbers
+with
+\begin{equation*}
+ s_L\le\sqrt{\ln L}\qquad\text{and}\qquad s_U\ge\sqrt{\ln U}.
+\end{equation*}
+Section~\ref{sec:enclosures} explains how they are computed. Let
+$D_L=CLs_L$, $c_L=\ceil{D_L}-1$ and $R_L=\floor{25c_L/67}-1$. Now let $p$ be
+an integer with $L\le p\le U$, and let $D$, $c$ and $R$ be as in \eqref{eq:D}
+and \eqref{eq:R}. Then $CLs_L\le D\le CUs_U$, because
+$s_L\le\sqrt{\ln L}\le\sqrt{\ln p}\le\sqrt{\ln U}\le s_U$, and $c\ge3$ since
+$D>4$.
+
+We first bound $R/D$ from below. Write $\bar\alpha=67/25$. Since
+$\floor{y}>y-1$ for every real $y$, and $c\ge D-1$,
+\begin{equation*}
+ R>\frac{c}{\bar\alpha}-2\ge\frac D{\bar\alpha}-\left(\frac1{\bar\alpha}+2\right).
+\end{equation*}
+Dividing by $D\ge D_L$ gives the first bound below. Also $c\ge c_L$, because
+$D\ge D_L$, and hence $R\ge R_L$. With $D\le CUs_U$, this gives the second
+bound below when $R_L\ge0$. So
+\begin{equation*}
+ \frac RD\ge\rho:=\max\left\{
+ \frac1{\bar\alpha}-\frac{1/\bar\alpha+2}{D_L},\
+ \frac{R_L}{CUs_U}\right\}.
+\end{equation*}
+The checker verifies $\rho>0$. If the second term is the larger one, it is
+positive, so $R_L>0$ and the second bound applies.
+
+Let $H$ be a reduced graph with $n$ vertices, let $q$ be the largest number of
+nonneighbors of a vertex of $H$, and put $\pi=q/n$ and $x=n/D$. By
+\eqref{eq:parameters}, $R\le n\le c<D$, so $\rho\le x\le1$.
+
+The certificate splits $[\rho,1]$ into intervals $[a,b]$ with rational ends.
+We call an interval of $p$ together with one interval of $x$ a \emph{cell}.
+For a cell put
+\begin{equation*}
+ n_-=CLs_La,\qquad n_+=CUs_Ub,\qquad
+ \pi_+=\frac{1-\rho/b}{2}.
+\end{equation*}
+If $x\in[a,b]$, then $n_-\le n\le n_+$, since $n=xD$. Also $\pi\le\pi_+$,
+because $q\le(n-R)/2$ by \eqref{eq:parameters} and
+$R/n=(R/D)/x\ge\rho/b$. Each cell gives an integer $k\ge2$ and a rational
+$P_+\ge0$. The checker verifies $n_->k$, $n_-/k\ge2$ and $0\le\pi_+<1/2$, so
+that $2\le k<n$ and $N=\floor{n/k}\ge2$, as Lemma~\ref{lem:partition}
+requires.
+
+We use Lemma~\ref{lem:partition} in the form \eqref{eq:optimized}, which
+also covers $q=0$. Since $q/(n-k+1)=\pi/(1-(k-1)/n)$, the connectivity loss
+satisfies $F\le F_+$, where
+\begin{equation*}
+ F_+=(2^{k-1}-1)
+ \left(\frac{\pi_+}{1-(k-1)/n_-}\right)^{k-1}.
+\end{equation*}
+In \eqref{eq:optimized} we have $k(N-1)\le n\le n_+$, and $n/(n-k)$ decreases
+as $n$ increases, so $n/(n-k)\le n_-/(n_--k)$. Hence $P^{k+1}\le Y$, where
+\begin{equation*}
+ Y=\left(1+\frac1k\right)^{k+1}\frac{n_+}{2}
+ \left(\frac{n_-}{n_--k}\right)^k\pi_+^{k^2}.
+\end{equation*}
+The checker verifies $P_+^{k+1}\ge Y$, which gives $P\le P_+$ without
+computing any root. It also verifies $F_++P_+<1$ and
+\begin{equation}\label{eq:celltest}
+ \left(\frac{Cs_La}{k}-\frac1L\right)(1-F_+-P_+)
+ >1-\frac3U.
+\end{equation}
+
+This gives $B>p-3$, as follows. Since $N>n/k-1$, $n\ge aD$ and
+$D\ge Cps_L$, we have
+\begin{equation*}
+ \frac Np>\frac n{kp}-\frac1p\ge\frac{Cs_La}{k}-\frac1L.
+\end{equation*}
+As $1-F-P\ge1-F_+-P_+>0$, this and \eqref{eq:celltest} give
+\begin{equation*}
+ \frac Bp=\frac Np(1-F-P)
+ >\left(\frac{Cs_La}{k}-\frac1L\right)(1-F_+-P_+)
+ >1-\frac3U\ge1-\frac3p,
+\end{equation*}
+which is $B>p-3$.
+
+The file \texttt{global\_medium\_certificate.jsonl} has $88$ intervals of $p$
+and $508$ cells. The checker \texttt{global\_medium\_checker.py} verifies
+that the first interval starts at $110$, that each interval starts one after
+the end of the previous one, and that the last one ends at $10^{44}$. Within
+each interval it verifies that the intervals of $x$ start at the computed
+$\rho$, that each starts where the previous one ends, and that the last one
+ends at $1$. Every cell passes \eqref{eq:celltest}. The smallest margin of
+the left side of \eqref{eq:celltest} above $1-3/U$ is about
+$9.98234667206\times10^{-7}$, and the checker verifies with exact fractions
+that every margin is positive.
+
+\subsection{Exact bounds on logarithms and square roots}\label{sec:enclosures}
+
+For a rational number $z$ with $0\le z<1$ and for $J=24$, put
+\begin{equation*}
+ T_J(z)=2\sum_{j=0}^{J-1}\frac{z^{2j+1}}{2j+1}.
+\end{equation*}
+The series $2\atanh z=\sum_{j\ge0}2z^{2j+1}/(2j+1)$ has positive terms, and
+its tail after $J$ terms is at most the geometric series
+$\sum_{j\ge J}2z^{2j+1}/(2J+1)$. So
+\begin{equation}\label{eq:atanh}
+ T_J(z)\le2\atanh z
+ \le T_J(z)+\frac{2z^{2J+1}}{(2J+1)(1-z^2)}.
+\end{equation}
+For an integer $m\ge1$ let $h=\floor{\log_2m}$, which is one less than the
+number of binary digits of $m$, and put $z=(m-2^h)/(m+2^h)$. Then
+$0\le z<1/3$, and
+\begin{equation*}
+ \ln m=h\ln2+2\atanh z,
+ \qquad \ln2=2\atanh(1/3),
+\end{equation*}
+because $2\atanh z=\ln((1+z)/(1-z))$. Applying \eqref{eq:atanh} to both
+terms gives rational bounds $\ell_m\le\ln m\le u_m$. The finite checker uses
+only the lower bound.
+
+For the interval checker, let $S=10^{12}$, and compute with integer square
+roots
+\begin{equation*}
+ s_m^- =\frac{\floor{\sqrt{\floor{S^2\ell_m}}}}S,
+ \qquad
+ s_m^+ =\frac{\floor{\sqrt{\floor{S^2u_m}}}+1}S.
+\end{equation*}
+Then $s_m^-\le\sqrt{\ell_m}\le\sqrt{\ln m}$, and $s_m^+>\sqrt{u_m}\ge\sqrt{\ln
+m}$ because $(Ss_m^+)^2\ge\floor{S^2u_m}+1>S^2u_m$. The checker takes
+$s_L=s_L^-$ and $s_U=s_U^+$. All quantities that the checkers accept are
+computed with integer or rational arithmetic. The scripts also contain
+generators, which use floating point to propose certificates. The checkers do
+not rely on the generators.
+
+\section{An analytic proof for \texorpdfstring{$\ln p\ge100$}{ln p >= 100}}\label{sec:tail}
+
+For very large $p$ we show $B>p-3$ by hand, with $A=4$. The block size $k$
+grows like $\sqrt{\ln p}$, which makes the connectivity loss and the
+missing-pair loss small. Put $s=\sqrt{\ln p}\ge10$, so that $p=e^{s^2}$. Let
+$H$ be a reduced graph with $n$ vertices, and let $q$ be the largest number of
+nonneighbors of a vertex of $H$. With $c$ and $R$ from \eqref{eq:D} and
+\eqref{eq:R},
+\begin{equation}\label{eq:tailR}
+ R\ge\frac{80}{67}ps-\frac{159}{67}\ge1.19ps,
+ \qquad n\le3.2ps.
+\end{equation}
+The first inequality holds because $R>25c/67-2$ and $c\ge D-1$. The second
+follows from $80/67-119/100=27/6700$ and $ps\ge600$, which holds as
+$p\ge e^{100}$. The bound on $n$ holds
+because $n\le c<D$.
+
+If $q=0$, then $H$ is complete and $n\ge R>p-2$, so $H$ has a $K_{p-2}$
+minor. Suppose $q>0$, and let
+\begin{equation*}
+ \pi=q/n\qquad\text{and}\qquad\lambda=\ln(1/\pi).
+\end{equation*}
+By \eqref{eq:parameters} and \eqref{eq:tailR},
+\begin{equation*}
+ 0<\pi\le\frac{1-R/n}{2}\le\frac{1-1.19/3.2}{2}=\frac{201}{640}<\frac13,
+ \qquad\text{so}\qquad \lambda>\ln3>1.09.
+\end{equation*}
+Here $\ln3=2\atanh(1/2)>1+1/12+1/80+1/448=7379/6720>1.09$, from the first
+four terms of the series. Choose
+\begin{equation*}
+ k=\ceil{\frac{s}{\sqrt\lambda}+1},\qquad
+ N=\floor{n/k},\qquad A=4.
+\end{equation*}
+Since $\lambda>1$, we have $2\le k<s/\sqrt\lambda+2<s+2$. So, by
+\eqref{eq:tailR} and $s/(s+2)\ge10/12$,
+\begin{equation*}
+ \frac nk>\frac{1.19ps}{s+2}\ge\frac{119}{120}p>1000.
+\end{equation*}
+In particular $N\ge2$, $k/n<1/1000$ and $n/(n-k)<1000/999$. As
+$e^{7/10}>\sum_{j=0}^3(7/10)^j/j!>2000/999$ and
+$e^{7/5}>\sum_{j=0}^5(7/5)^j/j!>4000/999$, we get
+\begin{equation}\label{eq:logs}
+ \ln\frac{2n}{n-k+1}<0.7,
+ \qquad \ln\frac{4n}{n-k}<1.4.
+\end{equation}
+
+\subsection{Connectivity loss}
+
+The loss $F$ of Lemma~\ref{lem:partition} satisfies
+\begin{align*}
+ F&<\left(\frac{2q}{n-k+1}\right)^{k-1}
+ <\exp(-(k-1)(\lambda-0.7))\\
+ &\le\exp\left[-s\left(\sqrt\lambda-\frac{0.7}{\sqrt\lambda}\right)\right]
+ < e^{-0.37s}\le e^{-3.7}<0.03.
+\end{align*}
+The first step uses $2^{k-1}-1<2^{k-1}$. The second uses
+$2q/(n-k+1)=\pi\cdot2n/(n-k+1)$ and \eqref{eq:logs}. The third uses
+$k-1\ge s/\sqrt\lambda$ and $\lambda>0.7$. For the fourth, the function
+$\sqrt\lambda-0.7/\sqrt\lambda$ increases with $\lambda$, and at
+$\lambda=1.09$ it equals $0.39/\sqrt{1.09}>0.37$, since
+$0.39^2=0.1521>0.149221=0.37^2\cdot1.09$. The last two steps use $s\ge10$ and
+$e^{3.7}>\sum_{j=0}^5 3.7^j/j!>100/3$.
+
+\subsection{Missing-pair loss}
+
+With $A=4$, the term $M$ of Lemma~\ref{lem:partition} and \eqref{eq:logs}
+give
+\begin{equation*}
+ \frac MN=\frac{N-1}{2}\left(\frac{4n\pi^k}{n-k}\right)^k
+ \le\frac{N-1}{2}\exp(1.4k-k^2\lambda)
+ \le1.6ps\exp(1.4k-k^2\lambda),
+\end{equation*}
+where the last step uses $N-1<n\le3.2ps$. The function $y^2\lambda-1.4y$ is
+increasing for $y\ge0.7/\lambda$, and $k\ge s/\sqrt\lambda+1>0.7/\lambda$.
+Hence
+\begin{align*}
+ k^2\lambda-1.4k
+ &\ge\left(\frac{s}{\sqrt\lambda}+1\right)^2\lambda
+   -1.4\left(\frac{s}{\sqrt\lambda}+1\right)
+ =s^2+\left(2\sqrt\lambda-\frac{1.4}{\sqrt\lambda}\right)s
+       +\lambda-1.4\\
+ &>s^2+0.74s-0.31,
+\end{align*}
+where the last step uses
+$2\sqrt\lambda-1.4/\sqrt\lambda>2\cdot0.37$ from the previous subsection and
+$\lambda>1.09$. Since $p=e^{s^2}$,
+\begin{equation*}
+ \frac MN<1.6s\exp(-0.74s+0.31)<0.02.
+\end{equation*}
+The middle expression decreases for $s\ge10$, since the derivative of
+$se^{-0.74s}$ is $(1-0.74s)e^{-0.74s}$. At $s=10$ it equals
+$16e^{-7.09}$, which is less than $0.02$ because
+$e^{7.09}>\sum_{j=0}^87.09^j/j!>800$. Combining the two losses with
+$A^{-1}=1/4$ gives
+\begin{equation}\label{eq:surviving}
+ B>N(1-0.03-0.25-0.02)=0.70N.
+\end{equation}
+
+\subsection{There are enough blocks}
+
+For $0<\pi\le1/2$,
+\begin{equation*}
+ \frac{\dd}{\dd\pi}\left[\ln(1/\pi)-2(1-2\pi)^2\right]
+ =-\frac1\pi+8(1-2\pi)=-\frac{(4\pi-1)^2}{\pi}\le0.
+\end{equation*}
+So the bracket is at least its value $\ln2$ at $\pi=1/2$, and
+\begin{equation*}
+ \lambda\ge2(1-2\pi)^2+\ln2
+ \ge(2+\ln2)(1-2\pi)^2,
+\end{equation*}
+where the last step uses $(1-2\pi)^2\le1$. The first two terms of the series
+for $2\atanh(1/3)$ give $\ln2>56/81>2/3$, and $0.613^2=0.375769>3/8$. Hence
+\begin{equation*}
+ \frac{1-2\pi}{\sqrt\lambda}
+ \le\frac1{\sqrt{2+\ln2}}<\sqrt{3/8}<0.613.
+\end{equation*}
+Now $n(1-2\pi)=n-2q\ge R\ge1.19ps$ by \eqref{eq:parameters} and
+\eqref{eq:tailR}, and $k<s/\sqrt\lambda+2$. So
+\begin{equation*}
+ \frac nk
+ >\frac{1.19ps}{(1-2\pi)(s/\sqrt\lambda+2)}
+ =\frac{1.19p}{(1-2\pi)/\sqrt\lambda+2(1-2\pi)/s}
+ \ge\frac{1.19p}{0.613+2/s}
+ \ge\frac{1.19p}{0.813}>1.46p.
+\end{equation*}
+Thus $N>n/k-1>1.46p-1$, and \eqref{eq:surviving} gives
+\begin{equation*}
+ B>0.70(1.46p-1)=1.022p-0.7>p-3.
+\end{equation*}
+So Lemma~\ref{lem:partition} with $m=p-2$ gives a $K_{p-2}$ minor in $H$.
+
+\section{Proof of the Main Theorem}\label{sec:proof}
+
+Let $p\ge51$. By Section~\ref{sec:reduction}, it suffices to show that every
+reduced graph has a $K_{p-2}$ minor, for the $c$ of \eqref{eq:D}, or for the
+$c$ of the certificate when $p\le109$. The three ranges are covered as
+follows.
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Range & Argument\\
+\midrule
+$51\le p\le109$ & $19\,873$ exact checks (Section~\ref{sec:finite})\\
+$110\le p\le10^{44}$ & $88$ intervals of $p$ and $508$ exact cells (Section~\ref{sec:medium})\\
+$\ln p\ge100$ & analytic argument (Section~\ref{sec:tail})\\
+\bottomrule
+\end{tabular}
+\end{center}
+The interval checker also verifies $\ell_m>100$ for $m=10^{44}$, with the
+lower bound of Section~\ref{sec:enclosures}. So $\ln p>100$ for every
+$p>10^{44}$, and the three ranges cover every $p\ge51$. In each case
+Lemma~\ref{lem:partition} or Lemma~\ref{lem:mixed} gives a $K_{p-2}$ model in
+every reduced graph, and Thomason's lemma gives the Main Theorem. Together
+with the Lean proof for $p\le50$ (Section~\ref{sec:lean}), this proves (5.5)
+of Graph Minors XIII for every $p\ge1$, with no unspecified threshold on $p$.
+
+The two checkers and their certificates are in the folder
+\texttt{docs/thomason} of the GraphMinor repository
+(\url{https://github.com/mahdi-jfri/GraphMinor}), next to this note. They
+need Python~3.8 or later and no other package. The commands
+\begin{verbatim}
+python3 global_finite_checker.py check global_finite_certificate.jsonl
+python3 global_medium_checker.py check global_medium_certificate.jsonl
+\end{verbatim}
+run the checks of Sections~\ref{sec:finite} and~\ref{sec:medium}, and
+\texttt{python3 verify\_all.py} runs both. The certificate files contain only
+witnesses, that is, the choices of blocks and parameters. The checkers verify
+the coverage of the ranges and every inequality that the proof uses.
+
+\section{The Lean formalization}\label{sec:lean}
+
+The Lean formalization proves (5.5) of Graph Minors XIII for every $p\ge1$,
+as the theorem \texttt{GraphMinor.Thomason.thomason84} in
+\texttt{GraphMinor/Thomason/UniformTheorem.lean}. It splits the proof into
+four ranges of $p$. All file names below are in the folder
+\texttt{GraphMinor/Thomason}.
+
+\emph{The range $p\le50$.} The proof is in \texttt{FiftyCase.lean} and the
+files it imports. It does not follow this note.
+
+\emph{The density reduction.} Thomason's lemma is proved in
+\texttt{DensityReduction.lean}, following \cite{thomason}, for every real
+$a>1$ with $1+\ln(2a)\le a$ in place of $\alpha_0$. The file
+\texttt{UniformReduction.lean} applies it with $a=67/25$, which satisfies
+this condition by the bound $e^{42/25}>134/25$ of
+Section~\ref{sec:reduction}. It gives the reduction to reduced graphs of
+Section~\ref{sec:reduction} with $R=\floor{25c/67}-1$.
+
+\emph{The random partition.} Lemma~\ref{lem:partition} is proved in
+\texttt{UniformPartition.lean}, in a form that allows blocks of different
+sizes. The expectations of the proof are written as averages over all
+injective maps from the positions of the blocks to the vertices
+(\texttt{UniformSamples.lean}, \texttt{UniformBlockCounts.lean},
+\texttt{UniformBlockSums.lean} and \texttt{UniformPairSums.lean}). The file
+\texttt{UniformTwoSizes.lean} specializes it to blocks of two sizes, which
+covers Lemma~\ref{lem:partition} and Lemma~\ref{lem:mixed}, and
+\texttt{UniformCheck.lean} turns its hypothesis into a test on natural
+numbers that Lean's kernel can evaluate.
+
+\emph{The range $51\le p\le109$.} The Lean proof uses the certificate of
+Section~\ref{sec:finite}. The script \texttt{gen\_lean\_finite.py} copies the
+value of $c$ and the block choices of each row of
+\texttt{global\_finite\_certificate.jsonl} unchanged into the files
+\texttt{UniformFinite51.lean} to \texttt{UniformFinite109.lean}, and the
+kernel checks each row (\texttt{rowOK} in \texttt{UniformRows.lean}). The
+only difference is the density test: the kernel checks
+$c\le2.68\,p\sqrt{\log_2p}$ directly, with integers $a$ and $b=1000$ such that
+$2^a\le p^b$ and $10000\,bc^2\le71824\,ap^2$, instead of $c<D$. The file
+\texttt{UniformFiniteRange.lean} collects the rows.
+
+\emph{The range $110\le p\le10^{44}$.} Here the Lean proof uses its own
+certificate in base $2$, not \texttt{global\_medium\_certificate.jsonl}. It
+keeps the density $D=2.68\,p\sqrt{\log_2p}$ of (5.5) itself, with
+$c=\floor{D}$, and follows the method of Section~\ref{sec:medium}. The
+logarithms are bounded by the integer comparisons $2^{a_L}\le L^{1000}$ and
+$U^{1000}\le2^{a_U}$, and each cell also gives a rational upper bound on
+$\pi$. Instead of the best $A$ of \eqref{eq:optimized}, each cell uses
+$A=(k+1)/(kP_+)$, which gives the same bound on the losses and needs no
+root. The certificate is \texttt{medium\_log2\_certificate.jsonl}, with $69$
+intervals and $261$ cells, made and checked by
+\texttt{medium\_log2\_certificate.py}. The script
+\texttt{gen\_lean\_medium.py} writes it into the files
+\texttt{UniformMedium0.lean} to \texttt{UniformMedium6.lean} and
+\texttt{UniformMediumRange.lean}. The kernel checks each interval
+(\texttt{intervalOK} in \texttt{UniformIntervalCheck.lean}), and
+\texttt{UniformCell.lean} and \texttt{UniformIntervals.lean} prove that an
+accepted interval gives a $K_{p-2}$ minor in every reduced graph.
+
+\emph{The range $p>10^{44}$.} The files \texttt{UniformTail.lean} and
+\texttt{UniformLarge.lean} replace Section~\ref{sec:tail} by an argument in
+base $2$. With $s=\sqrt{\log_2p}\ge12$, so that $p=2^{s^2}$, they split the
+range of $\pi=q/n$ into the three pieces $\pi\le1/25$,
+$1/25<\pi\le13/100$ and $13/100<\pi\le63/200$. On each piece they take
+blocks of size $\ceil{ts}+1$, for a fixed $t$ that depends on the piece, and
+$A=4$. The connectivity loss and the missing-pair loss per block are then
+each at most $1/50$, and there are more than $1.41p-1$ blocks, so
+Lemma~\ref{lem:partition} applies with
+$B>0.71(1.41p-1)>p-3$.
+
+\appendix
+\section{Proof of Thomason's lemma}\label{app:reduction}
+
+Let $p\ge2$ and $c\ge3$ be integers, put $r=c/\alpha_0$, and suppose that
+every non-null graph satisfying \eqref{eq:thomason} has a $K_{p-2}$ minor.
+Since $\alpha_0<67/25$, we have $r>1$. Let $G$ be a non-null graph with
+$e(G)\ge c\,v(G)$. We find a $K_p$ minor in two steps. Each step passes to a
+minimal minor and then to the neighborhood of a vertex of minimum degree.
+That vertex then gives one more branch set.
+
+\emph{Step 1.} Among the non-null minors $G_1$ of $G$ with
+$e(G_1)\ge c\,v(G_1)$, choose one with $v(G_1)+e(G_1)$ as small as possible.
+Then no deletion of a vertex, deletion of an edge, or contraction of an edge of
+$G_1$ gives another such minor. We have $e(G_1)=c\,v(G_1)$, since otherwise
+$e(G_1)\ge c\,v(G_1)+1$, as $c$ is an integer, and deleting an edge would keep
+the inequality. As $c\,v(G_1)=e(G_1)\le v(G_1)(v(G_1)-1)/2$, we have
+$v(G_1)\ge2c+1$. Let $z$ be a vertex of minimum degree in $G_1$, and let
+$H_2=G_1[N(z)]$. Then $v(H_2)=\deg z\le2e(G_1)/v(G_1)=2c$. Deleting $z$ leaves
+a graph with $v(G_1)-1$ vertices and $e(G_1)-\deg z$ edges, so minimality
+gives $\deg z\ge c+1$. For each neighbor $w$ of $z$, contracting $zw$ removes
+one vertex and exactly $1+|N(z)\cap N(w)|$ edges, so minimality gives
+$e(G_1)-1-|N(z)\cap N(w)|<c(v(G_1)-1)$, that is, $|N(z)\cap N(w)|\ge c$. So
+every vertex of $H_2$ has degree at least $c$ in $H_2$, and
+\begin{equation*}
+ c+1\le v(H_2)\le2c,\qquad \delta(H_2)\ge c.
+\end{equation*}
+Since $z$ is adjacent to every vertex of $H_2$, a $K_{p-1}$ model in $H_2$
+together with $\{z\}$ is a $K_p$ model in $G_1$.
+
+\emph{Step 2.} For real $x\ge r$ put
+\begin{equation*}
+ \Psi(x)=\frac{rx}{2}\left(\ln\frac xr+1\right).
+\end{equation*}
+This function is increasing, since its derivative is
+$(r/2)(\ln(x/r)+2)>0$. For $r\le x\le2c$ we have $\Psi(x)\le cx/2$, because
+$\ln(x/r)\le\ln(2\alpha_0)=\alpha_0-1$ by the definition of $\alpha_0$, so
+that $r(\ln(x/r)+1)\le\alpha_0r=c$. As $r<c+1\le v(H_2)\le2c$, this gives
+$\Psi(v(H_2))\le c\,v(H_2)/2\le e(H_2)$, where the last step uses
+$\delta(H_2)\ge c$.
+
+Among the minors $J$ of $H_2$ with $v(J)\ge r$ and $e(J)\ge\Psi(v(J))$,
+choose one with $v(J)+e(J)$ as small as possible, and put $n=v(J)$. Such
+minors exist, since $H_2$ itself is one. No graph
+with $r\le n<r+1$ has these properties, because then
+\begin{equation*}
+ \binom n2<\frac{rn}{2}\le\Psi(n).
+\end{equation*}
+So $n\ge r+1$, and deleting a vertex or contracting an edge of $J$ leaves a
+graph with at least $r$ vertices. Since $e(J)$ is an integer and deleting an
+edge does not change $n$, minimality gives $e(J)=\ceil{\Psi(n)}$. The graph $J$ has no isolated vertex, because
+deleting one would keep $e(J)\ge\Psi(n)\ge\Psi(n-1)$, as $\Psi$ is
+increasing.
+
+Let $u$ be a vertex of minimum degree in $J$, and let $H=J[N_J(u)]$. Then $H$
+is non-null, since $u$ is not isolated. Since $n\ge r+1>2$ and
+$n\le v(H_2)\le2c$,
+\begin{equation*}
+ v(H)=\deg u\le\frac{2\ceil{\Psi(n)}}n
+ <\frac{2\Psi(n)+2}{n}\le r\left(\ln\frac nr+1\right)+1.
+\end{equation*}
+As $v(H)$ is an integer, this gives
+\begin{equation*}
+ v(H)\le\ceil{r\left(\ln\frac nr+1\right)}
+ \le\ceil{\alpha_0r}=c,
+\end{equation*}
+where the second step uses $n\le2c$, as in the bound $\Psi(x)\le cx/2$ above.
+For each neighbor $w$ of $u$, contracting $uw$ removes one vertex and
+$1+|N_J(u)\cap N_J(w)|$ edges, so minimality gives
+\begin{equation*}
+ e(J)-1-|N_J(u)\cap N_J(w)|<\Psi(n-1).
+\end{equation*}
+The degree of $w$ in $H$ is $|N_J(u)\cap N_J(w)|$, so
+$\delta(H)>\Psi(n)-\Psi(n-1)-1$. With the bound on $v(H)$ above,
+\begin{align*}
+ 2\delta(H)-v(H)
+ &>2\Psi(n)-2\Psi(n-1)-r\left(\ln\frac nr+1\right)-3\\
+ &=r(n-1)\ln\frac n{n-1}-3>r-4.
+\end{align*}
+The equality follows from the definition of $\Psi$. The last step uses
+$\ln(n/(n-1))>1/n$, which gives $r(n-1)\ln(n/(n-1))>r-r/n>r-1$, as $n>r$.
+Since $2\delta(H)-v(H)$ is an integer, it is at least
+$\floor r-3=\floor{c/\alpha_0}-3$. So $H$ satisfies \eqref{eq:thomason}, and
+by assumption $H$ has a $K_{p-2}$ model. Adding $\{u\}$ to it gives a
+$K_{p-1}$ model in $J$. Since $J$ is a minor of $H_2$, the graph $H_2$ has a
+$K_{p-1}$ minor, and by Step~1 the graph $G_1$ has a $K_p$ minor. As $G_1$ is
+a minor of $G$, so does $G$.
+
+\begin{thebibliography}{RS95}
+\bibitem[RS95]{gm13}
+N.~Robertson and P.~D.~Seymour,
+\emph{Graph Minors. XIII. The disjoint paths problem},
+J. Combin. Theory Ser. B \textbf{63} (1995), 65--110.
+\href{https://doi.org/10.1006/jctb.1995.1006}{doi:10.1006/jctb.1995.1006}.
+The statement (5.5) is on page~83.
+
+\bibitem[Tho84]{thomason}
+A.~Thomason, \emph{An extremal function for contractions of graphs},
+Math. Proc. Cambridge Philos. Soc. \textbf{95} (1984), 261--265.
+\href{https://doi.org/10.1017/S0305004100061521}{doi:10.1017/S0305004100061521}.
+The density reduction is Lemma~1 on page~262, and the asymptotic conclusion
+is on page~264.
+
+\bibitem[Woo26]{wood}
+D.~R.~Wood, \emph{An explicit bound on the extremal function for complete
+graph minors}, arXiv:2610.41060v1, 29 October 2026.
+\url{https://arxiv.org/abs/2610.41060v1}.
+The bound is Theorem~1.
+\end{thebibliography}
+\end{document}
