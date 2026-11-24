@@ -119,6 +119,30 @@ theorem subdiv_inl {ha : ∀ e, a e ∈ H.vertexSet} {hb : ∀ e, b e ∈ H.vert
 theorem subdiv_inr {ha : ∀ e, a e ∈ H.vertexSet} {hb : ∀ e, b e ∈ H.vertexSet} (x : ↥H.edgeSet × Bool) : (Sum.inr x : SV H) ∈ V(subdiv H a b ha hb) :=
   Or.inr (mem_range_self x)
 
+/-- The double subdivision of `H` has at most `|V(H)| + 2|E(H)|` vertices. -/
+theorem subdiv_vertexSet_ncard_le (H : Hypergraph α' β') (a b : ↥H.edgeSet → α')
+    (ha : ∀ e, a e ∈ H.vertexSet) (hb : ∀ e, b e ∈ H.vertexSet) :
+    (subdiv H a b ha hb).vertexSet.ncard ≤ H.vertexSet.ncard + 2 * H.edgeSet.ncard := by
+  haveI : Finite ↥H.edgeSet := H.edgeSet_finite.to_subtype
+  calc (subdiv H a b ha hb).vertexSet.ncard
+      ≤ (Sum.inl '' H.vertexSet).ncard + (range (Sum.inr : ↥H.edgeSet × Bool → SV H)).ncard :=
+        Set.ncard_union_le _ _
+    _ = H.vertexSet.ncard + Nat.card (↥H.edgeSet × Bool) := by
+        rw [Set.ncard_image_of_injective _ Sum.inl_injective,
+          Set.ncard_range_of_injective Sum.inr_injective]
+    _ = H.vertexSet.ncard + 2 * H.edgeSet.ncard := by
+        rw [Nat.card_prod, Nat.card_coe_set_eq, Nat.card_eq_fintype_card, Fintype.card_bool,
+          mul_comm]
+
+/-- The double subdivision of `H` has at most `3|E(H)|` edges. -/
+theorem subdiv_edgeSet_ncard_le (H : Hypergraph α' β') (a b : ↥H.edgeSet → α')
+    (ha : ∀ e, a e ∈ H.vertexSet) (hb : ∀ e, b e ∈ H.vertexSet) :
+    (subdiv H a b ha hb).edgeSet.ncard ≤ 3 * H.edgeSet.ncard := by
+  haveI : Finite ↥H.edgeSet := H.edgeSet_finite.to_subtype
+  change (univ : Set (↥H.edgeSet × Fin 3)).ncard ≤ 3 * H.edgeSet.ncard
+  rw [Set.ncard_univ, Nat.card_prod, Nat.card_coe_set_eq, Nat.card_eq_fintype_card,
+    Fintype.card_fin, mul_comm]
+
 /-- A minor of the double subdivision gives a minor of `H` in the simple graph of `G`. -/
 theorem controlsMinor_of_subdiv [Nonempty α] (hH : H.IsGraph) (hab : ∀ e : ↥H.edgeSet, H.ends e.1 = {a e, b e}) (ha : ∀ e, a e ∈ H.vertexSet) (hb : ∀ e, b e ∈ H.vertexSet)
     {G : Graph α β} (hV : V(G).Finite) (hE : E(G).Finite) {T : Set (Hypergraph α β × Hypergraph α β)}

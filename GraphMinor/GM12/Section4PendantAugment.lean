@@ -23,13 +23,13 @@ namespace GraphMinor.GM12
 open Set Surface GM11
 
 /-- The isolated-vertex step of the target replacement in XII
-(4.3), page 249. The old drawing is retained as a subdrawing. -/
-theorem exists_pendant_augmentation
+(4.3), page 249, with explicit edge-set update for counting. -/
+theorem exists_pendant_augmentation_edges
     {S : Type*} [TopologicalSpace S] [T2Space S]
     (hS : IsClosedSurface S) (Γ : Drawing S) {v : S} (hv : v ∈ Γ.V)
     (hiso : ∀ e, ¬ Γ.toGraph.Inc e v) :
     ∃ (H : Drawing S) (w : S) (e : Set S), Γ.IsSubdrawing H ∧
-      H.V = insert w Γ.V ∧ w ∉ Γ.U ∧ H.toGraph.IsLink e v w := by
+      H.V = insert w Γ.V ∧ H.E = insert e Γ.E ∧ w ∉ Γ.U ∧ H.toGraph.IsLink e v w := by
   have hoff : ∀ e ∈ Γ.E, v ∉ closure e := by
     intro e he hve
     obtain ⟨x, y, hl⟩ := Γ.toGraph.exists_isLink_of_mem_edgeSet he
@@ -64,6 +64,8 @@ theorem exists_pendant_augmentation
     · rintro (hx | hx)
       · exact Or.inr (Or.inr hx)
       · exact Or.inl hx
+  have hHE' : H.E = insert (L \ {v, w}) Γ.E := by
+    rw [hHE, hKE, union_singleton]
   have hlink : K.toGraph.IsLink (L \ {v, w}) v w := by
     refine ⟨?_, Or.inl rfl, Or.inr rfl, ?_⟩
     · rw [hKE]
@@ -71,6 +73,17 @@ theorem exists_pendant_augmentation
     · rw [closure_sdiff_pair hL]
       apply inter_eq_right.mpr
       exact K.V_subset_U
-  exact ⟨H, w, L \ {v, w}, hΓH, hHV, hw, (hKH.isLink_iff hlink.edge_mem).mp hlink⟩
+  exact ⟨H, w, L \ {v, w}, hΓH, hHV, hHE', hw, (hKH.isLink_iff hlink.edge_mem).mp hlink⟩
+
+/-- The isolated-vertex step of the target replacement in XII
+(4.3), page 249. The old drawing is retained as a subdrawing. -/
+theorem exists_pendant_augmentation
+    {S : Type*} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (Γ : Drawing S) {v : S} (hv : v ∈ Γ.V)
+    (hiso : ∀ e, ¬ Γ.toGraph.Inc e v) :
+    ∃ (H : Drawing S) (w : S) (e : Set S), Γ.IsSubdrawing H ∧
+      H.V = insert w Γ.V ∧ w ∉ Γ.U ∧ H.toGraph.IsLink e v w := by
+  obtain ⟨H, w, e, hsub, hHV, _, hw, hl⟩ := exists_pendant_augmentation_edges hS Γ hv hiso
+  exact ⟨H, w, e, hsub, hHV, hw, hl⟩
 
 end GraphMinor.GM12

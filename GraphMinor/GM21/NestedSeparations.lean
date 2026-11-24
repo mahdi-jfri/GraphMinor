@@ -2094,27 +2094,76 @@ theorem vital_linkages_constant_order_nested_separations {p k : ℕ}
     exact inter_subinterval_eq hL'.1.1.1 (hsep i).1.right_le (hsep j).1.left_le
       (hA_le r₀.succ j hsucc_le) (hL'_ij.symm ▸ hM_ij_inter)
 
-/-- Combinatorial subsequence extraction lemma for Graph Minors XXI, (2.6) and (2.7) (page 8 of the
-preprint): for any function `f : ℕ → ℕ` with `1 ≤ f k'` for all `k'`, and any `gap, k₀ : ℕ`, there
-exists `len ≥ 2` such that in any sequence `d : ℕ → ℕ` satisfying `k₀ ≤ d i ≤ k₀ + gap` on
-`[a, a + len)`, there exist `k' ∈ [k₀, k₀ + gap]` and a strictly increasing sequence
-`φ : Fin (f k' + 1) → ℕ` in `[a, a + len)` on which `d` equals `k'` and strictly exceeds `k'`
-between consecutive terms. -/
-lemma exists_monotone_interval_of_le_add (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f k') :
-    ∀ (gap k₀ : ℕ), ∃ len : ℕ, 2 ≤ len ∧
+/-- Explicit length for `exists_monotone_interval_of_le_add`: `∏_{j=0}^{gap} (f (k₀ + j) + 1)`. -/
+@[expose] def monotoneIntervalLen (f : ℕ → ℕ) (gap k₀ : ℕ) : ℕ :=
+  Nat.rec 1 (fun j acc => acc * (f (k₀ + j) + 1)) (gap + 1)
+
+private lemma monotoneIntervalLen_zero (f : ℕ → ℕ) (k₀ : ℕ) :
+    monotoneIntervalLen f 0 k₀ = f k₀ + 1 := by
+  simp [monotoneIntervalLen]
+
+private lemma monotoneIntervalLen_succ (f : ℕ → ℕ) (gap k₀ : ℕ) :
+    monotoneIntervalLen f (gap + 1) k₀ = (f k₀ + 1) * monotoneIntervalLen f gap (k₀ + 1) := by
+  induction gap generalizing k₀ with
+  | zero =>
+    simp [monotoneIntervalLen, Nat.add_assoc]
+  | succ gap ih =>
+    change monotoneIntervalLen f (gap + 1) k₀ * (f (k₀ + (gap + 2)) + 1) =
+      (f k₀ + 1) * (monotoneIntervalLen f gap (k₀ + 1) * (f ((k₀ + 1) + (gap + 1)) + 1))
+    rw [ih k₀, Nat.mul_assoc]
+    have hidx : k₀ + (gap + 2) = (k₀ + 1) + (gap + 1) := by omega
+    rw [hidx]
+
+lemma two_le_monotoneIntervalLen (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f k') (gap k₀ : ℕ) :
+    2 ≤ monotoneIntervalLen f gap k₀ := by
+  induction gap generalizing k₀ with
+  | zero =>
+    rw [monotoneIntervalLen_zero]
+    have := hf k₀
+    omega
+  | succ gap ih =>
+    rw [monotoneIntervalLen_succ]
+    have h1 := hf k₀
+    have h2 := ih (k₀ + 1)
+    have : 2 * 2 ≤ (f k₀ + 1) * monotoneIntervalLen f gap (k₀ + 1) := Nat.mul_le_mul (by omega) h2
+    omega
+
+lemma monotoneIntervalLen_mono {f g : ℕ → ℕ} (hfg : ∀ k, f k ≤ g k)
+    {gap₁ gap₂ k₀ : ℕ} (hgap : gap₁ ≤ gap₂) :
+    monotoneIntervalLen f gap₁ k₀ ≤ monotoneIntervalLen g gap₂ k₀ := by
+  unfold monotoneIntervalLen
+  have h1 : ∀ n, Nat.rec (motive := fun _ => ℕ) 1 (fun j acc => acc * (f (k₀ + j) + 1)) n ≤
+      Nat.rec (motive := fun _ => ℕ) 1 (fun j acc => acc * (g (k₀ + j) + 1)) n := by
+    intro n
+    induction n with
+    | zero => exact le_rfl
+    | succ n ih => exact Nat.mul_le_mul ih (Nat.add_le_add_right (hfg _) 1)
+  have h2 : ∀ n₁ n₂, n₁ ≤ n₂ →
+      Nat.rec (motive := fun _ => ℕ) 1 (fun j acc => acc * (g (k₀ + j) + 1)) n₁ ≤
+      Nat.rec (motive := fun _ => ℕ) 1 (fun j acc => acc * (g (k₀ + j) + 1)) n₂ := by
+    intro n₁ n₂ hle
+    induction hle with
+    | refl => exact le_rfl
+    | @step m _ ih =>
+      exact ih.trans (Nat.le_mul_of_pos_right _ (Nat.succ_pos _))
+  exact (h1 (gap₁ + 1)).trans (h2 (gap₁ + 1) (gap₂ + 1) (Nat.add_le_add_right hgap 1))
+
+/-- Explicit version of `exists_monotone_interval_of_le_add` with length `monotoneIntervalLen f gap k₀`. -/
+lemma exists_monotone_interval_of_le_add_explicit (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f k') :
+    ∀ (gap k₀ : ℕ),
       ∀ (d : ℕ → ℕ) (a : ℕ),
-        (∀ i : ℕ, a ≤ i → i < a + len → k₀ ≤ d i ∧ d i ≤ k₀ + gap) →
+        (∀ i : ℕ, a ≤ i → i < a + monotoneIntervalLen f gap k₀ → k₀ ≤ d i ∧ d i ≤ k₀ + gap) →
         ∃ k' : ℕ, k₀ ≤ k' ∧ k' ≤ k₀ + gap ∧
           ∃ φ : Fin (f k' + 1) → ℕ,
             StrictMono φ ∧
-            (∀ r : Fin (f k' + 1), a ≤ φ r ∧ φ r < a + len ∧ d (φ r) = k') ∧
+            (∀ r : Fin (f k' + 1), a ≤ φ r ∧ φ r < a + monotoneIntervalLen f gap k₀ ∧ d (φ r) = k') ∧
             (∀ r : Fin (f k'), ∀ j : ℕ, φ r.castSucc < j → j < φ r.succ → k' < d j) := by
   intro gap
   induction gap with
   | zero =>
-    intro k₀
+    intro k₀ d a hd
+    rw [monotoneIntervalLen_zero] at hd ⊢
     have hfk : 1 ≤ f k₀ := hf k₀
-    refine ⟨f k₀ + 1, by omega, fun d a hd => ?_⟩
     refine ⟨k₀, le_rfl, le_rfl, fun r => a + r.1, ?_, ?_, ?_⟩
     · intro r₁ r₂ hlt
       change a + r₁.1 < a + r₂.1
@@ -2128,23 +2177,23 @@ lemma exists_monotone_interval_of_le_add (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f
       change j < a + (r.1 + 1) at hj₂
       omega
   | succ gap ih =>
-    intro k₀
-    obtain ⟨L, hL2, hL⟩ := ih (k₀ + 1)
+    intro k₀ d a hd
+    rw [monotoneIntervalLen_succ] at hd ⊢
+    let L := monotoneIntervalLen f gap (k₀ + 1)
+    have hL2 : 2 ≤ L := two_le_monotoneIntervalLen f hf gap (k₀ + 1)
     let M := f k₀
     have hM1 : 1 ≤ M := hf k₀
-    have hlen2 : 2 ≤ (M + 1) * L := by
-      have : 2 * 2 ≤ (M + 1) * L := Nat.mul_le_mul (by omega) hL2
-      omega
-    refine ⟨(M + 1) * L, hlen2, fun d a hd => ?_⟩
     by_cases hsub : ∃ b : ℕ, a ≤ b ∧ b + L ≤ a + (M + 1) * L ∧
         ∀ i : ℕ, b ≤ i → i < b + L → d i ≠ k₀
     · rcases hsub with ⟨b, hab, hb_len, hne_k₀⟩
+      have hML : (M + 1) * L = (f k₀ + 1) * monotoneIntervalLen f gap (k₀ + 1) := rfl
+      rw [hML] at hb_len
       have hd' : ∀ i : ℕ, b ≤ i → i < b + L → k₀ + 1 ≤ d i ∧ d i ≤ (k₀ + 1) + gap := by
         intro i hbi hiL
         have hdi := hd i (by omega) (by omega)
         have hne := hne_k₀ i hbi hiL
         omega
-      obtain ⟨k', hk'₁, hk'₂, φ, hφ_mono, hφ_in, hφ_gt⟩ := hL d b hd'
+      obtain ⟨k', hk'₁, hk'₂, φ, hφ_mono, hφ_in, hφ_gt⟩ := ih (k₀ + 1) d b hd'
       refine ⟨k', by omega, by omega, φ, hφ_mono, fun r => ?_, hφ_gt⟩
       obtain ⟨h1, h2, h3⟩ := hφ_in r
       exact ⟨by omega, by omega, h3⟩
@@ -2217,50 +2266,79 @@ lemma exists_monotone_interval_of_le_add (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f
         fun r j hj₁ hj₂ => (hψ_lt r.1 r.2).2 j hj₁ hj₂⟩
       dsimp
       obtain ⟨h1, h2, h3⟩ := hψ_props r.1 (by omega)
-      have : (r.1 + 1) * L ≤ (M + 1) * L := Nat.mul_le_mul_right L (by omega)
-      exact ⟨h1, by omega, h3⟩
+      have hmul : (r.1 + 1) * L ≤ (M + 1) * L := Nat.mul_le_mul_right L (by omega)
+      have hlt_a : ψ r.1 < a + (f k₀ + 1) * monotoneIntervalLen f gap (k₀ + 1) := by
+        dsimp only [L, M] at h2 hmul; omega
+      exact ⟨h1, hlt_a, h3⟩
 
-/-- Bounded-order nested separation theorem for a single vital `p`-linkage (Graph Minors XXI, (2.6),
-pages 6–7 of the preprint): proved by applying `vital_linkage_constant_order_nested_separations`
-((2.5)) to the subsequence of separations of equal minimum order `k'` extracted by
-`exists_monotone_interval_of_le_add` with `f k' = (2 * p + 1) * (p + k' + 1) ^ (2 * (p + k'))`. -/
-theorem vital_linkage_bounded_order_nested_separations (p k : ℕ) :
-    ∃ n : ℕ, 2 ≤ n ∧
-      ∀ {α : Type u} {β : Type v} (G L : Hypergraph α β)
-        (A B : Fin n → Hypergraph α β)
-        (M : Fin n → Fin n → Hypergraph α β),
-        IsVitalPLinkage G L p →
-        (∀ i : Fin n, G.IsSeparation (A i) (B i) ∧ separationOrder (A i) (B i) ≤ k) →
-        (∀ i j : Fin n, i < j → A i ≤ A j ∧ B j ≤ B i) →
-        (∀ i i' : Fin n, i < i' →
-          separationOrder (A i) (B i) = separationOrder (A i') (B i') →
-          (∀ j : Fin n, i < j → j < i' →
-            separationOrder (A i) (B i) < separationOrder (A j) (B j)) →
-          IsTransferLinkage (A i) (B i) (A i') (B i') (M i i') (separationOrder (A i) (B i))) →
-        ∃ i i' : Fin n, i < i' ∧
-          separationOrder (A i) (B i) = separationOrder (A i') (B i') ∧
-          (∀ j : Fin n, i < j → j < i' →
-            separationOrder (A i) (B i) < separationOrder (A j) (B j)) ∧
-          L ∩ B i ∩ A i' = M i i' := by
+/-- Combinatorial subsequence extraction lemma for Graph Minors XXI, (2.6) and (2.7) (page 8 of the
+preprint). -/
+lemma exists_monotone_interval_of_le_add (f : ℕ → ℕ) (hf : ∀ k', 1 ≤ f k') :
+    ∀ (gap k₀ : ℕ), ∃ len : ℕ, 2 ≤ len ∧
+      ∀ (d : ℕ → ℕ) (a : ℕ),
+        (∀ i : ℕ, a ≤ i → i < a + len → k₀ ≤ d i ∧ d i ≤ k₀ + gap) →
+        ∃ k' : ℕ, k₀ ≤ k' ∧ k' ≤ k₀ + gap ∧
+          ∃ φ : Fin (f k' + 1) → ℕ,
+            StrictMono φ ∧
+            (∀ r : Fin (f k' + 1), a ≤ φ r ∧ φ r < a + len ∧ d (φ r) = k') ∧
+            (∀ r : Fin (f k'), ∀ j : ℕ, φ r.castSucc < j → j < φ r.succ → k' < d j) :=
+  fun gap k₀ => ⟨monotoneIntervalLen f gap k₀, two_le_monotoneIntervalLen f hf gap k₀,
+    exists_monotone_interval_of_le_add_explicit f hf gap k₀⟩
+
+/-- Explicit bound for Graph Minors XXI, (2.6). -/
+def theorem_2_6_bound (p k : ℕ) : ℕ :=
+  monotoneIntervalLen (fun k' => (2 * p + 1) * (p + k' + 1) ^ (2 * (p + k'))) k 0
+
+lemma two_le_theorem_2_6_bound (p k : ℕ) : 2 ≤ theorem_2_6_bound p k :=
+  two_le_monotoneIntervalLen _ (fun k' => Nat.mul_pos (by omega) (Nat.pow_pos (by omega))) k 0
+
+lemma theorem_2_6_bound_mono {p₁ p₂ k₁ k₂ : ℕ} (hp : p₁ ≤ p₂) (hk : k₁ ≤ k₂) :
+    theorem_2_6_bound p₁ k₁ ≤ theorem_2_6_bound p₂ k₂ := by
+  refine monotoneIntervalLen_mono (fun k' => ?_) hk
+  refine Nat.mul_le_mul (by omega) ?_
+  calc (p₁ + k' + 1) ^ (2 * (p₁ + k'))
+      ≤ (p₂ + k' + 1) ^ (2 * (p₁ + k')) := Nat.pow_le_pow_left (by omega) _
+    _ ≤ (p₂ + k' + 1) ^ (2 * (p₂ + k')) := Nat.pow_le_pow_right (by omega) (by omega)
+
+/-- Explicit version of `vital_linkage_bounded_order_nested_separations` with length `theorem_2_6_bound p k`. -/
+theorem vital_linkage_bounded_order_nested_separations_explicit (p k : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G L : Hypergraph α β)
+      (A B : Fin (theorem_2_6_bound p k) → Hypergraph α β)
+      (M : Fin (theorem_2_6_bound p k) → Fin (theorem_2_6_bound p k) → Hypergraph α β),
+      IsVitalPLinkage G L p →
+      (∀ i : Fin (theorem_2_6_bound p k), G.IsSeparation (A i) (B i) ∧ separationOrder (A i) (B i) ≤ k) →
+      (∀ i j : Fin (theorem_2_6_bound p k), i < j → A i ≤ A j ∧ B j ≤ B i) →
+      (∀ i i' : Fin (theorem_2_6_bound p k), i < i' →
+        separationOrder (A i) (B i) = separationOrder (A i') (B i') →
+        (∀ j : Fin (theorem_2_6_bound p k), i < j → j < i' →
+          separationOrder (A i) (B i) < separationOrder (A j) (B j)) →
+        IsTransferLinkage (A i) (B i) (A i') (B i') (M i i') (separationOrder (A i) (B i))) →
+      ∃ i i' : Fin (theorem_2_6_bound p k), i < i' ∧
+        separationOrder (A i) (B i) = separationOrder (A i') (B i') ∧
+        (∀ j : Fin (theorem_2_6_bound p k), i < j → j < i' →
+          separationOrder (A i) (B i) < separationOrder (A j) (B j)) ∧
+        L ∩ B i ∩ A i' = M i i' := by
   let f : ℕ → ℕ := fun k' => (2 * p + 1) * (p + k' + 1) ^ (2 * (p + k'))
   have hf : ∀ k', 1 ≤ f k' := fun k' =>
     Nat.mul_pos (by omega) (Nat.pow_pos (by omega))
-  obtain ⟨n, hn2, hn⟩ := exists_monotone_interval_of_le_add f hf k 0
-  refine ⟨n, hn2, fun {α β} G L A B M hL hsep hmono hM => ?_⟩
+  let n := theorem_2_6_bound p k
+  intro α β G L A B M hL hsep hmono hM
   let d : ℕ → ℕ := fun i => if h : i < n then separationOrder (A ⟨i, h⟩) (B ⟨i, h⟩) else 0
   have hd : ∀ i : ℕ, 0 ≤ i → i < 0 + n → 0 ≤ d i ∧ d i ≤ 0 + k := by
     intro i _ hi
     have hin : i < n := by omega
     simp only [d, hin, dite_true, zero_le, zero_add]
     exact ⟨trivial, (hsep ⟨i, hin⟩).2⟩
-  obtain ⟨k', _, _, φ₀, hφ₀_mono, hφ₀_in, hφ₀_gt⟩ := hn d 0 hd
+  obtain ⟨k', _, _, φ₀, hφ₀_mono, hφ₀_in, hφ₀_gt⟩ :=
+    exists_monotone_interval_of_le_add_explicit f hf k 0 d 0 hd
+  have hn_eq : n = monotoneIntervalLen f k 0 := rfl
   let φ : Fin (f k' + 1) → Fin n :=
-    fun r => ⟨φ₀ r, by have := (hφ₀_in r).2.1; omega⟩
+    fun r => ⟨φ₀ r, by have := (hφ₀_in r).2.1; rw [← hn_eq] at this; omega⟩
   have hφ_mono : StrictMono φ := fun r₁ r₂ hlt => hφ₀_mono hlt
   have hφ_ord : ∀ r : Fin (f k' + 1),
       separationOrder (A (φ r)) (B (φ r)) = k' := by
     intro r
-    have hlt : φ₀ r < n := by have := (hφ₀_in r).2.1; omega
+    have hlt : φ₀ r < n := by have := (hφ₀_in r).2.1; rw [← hn_eq] at this; omega
     have hval := (hφ₀_in r).2.2
     simpa [d, hlt, φ] using hval
   have hφ_between : ∀ r : Fin (f k'), ∀ j : Fin n,
@@ -2290,6 +2368,29 @@ theorem vital_linkage_bounded_order_nested_separations (p k : ℕ) :
     vital_linkage_constant_order_nested_separations hL hsep' hmono' hM'
   refine ⟨φ r.castSucc, φ r.succ, hφ_mono Fin.castSucc_lt_succ, ?_, hφ_between r, hrL⟩
   rw [hφ_ord, hφ_ord]
+
+/-- Bounded-order nested separation theorem for a single vital `p`-linkage (Graph Minors XXI, (2.6),
+pages 6–7 of the preprint). -/
+theorem vital_linkage_bounded_order_nested_separations (p k : ℕ) :
+    ∃ n : ℕ, 2 ≤ n ∧
+      ∀ {α : Type u} {β : Type v} (G L : Hypergraph α β)
+        (A B : Fin n → Hypergraph α β)
+        (M : Fin n → Fin n → Hypergraph α β),
+        IsVitalPLinkage G L p →
+        (∀ i : Fin n, G.IsSeparation (A i) (B i) ∧ separationOrder (A i) (B i) ≤ k) →
+        (∀ i j : Fin n, i < j → A i ≤ A j ∧ B j ≤ B i) →
+        (∀ i i' : Fin n, i < i' →
+          separationOrder (A i) (B i) = separationOrder (A i') (B i') →
+          (∀ j : Fin n, i < j → j < i' →
+            separationOrder (A i) (B i) < separationOrder (A j) (B j)) →
+          IsTransferLinkage (A i) (B i) (A i') (B i') (M i i') (separationOrder (A i) (B i))) →
+        ∃ i i' : Fin n, i < i' ∧
+          separationOrder (A i) (B i) = separationOrder (A i') (B i') ∧
+          (∀ j : Fin n, i < j → j < i' →
+            separationOrder (A i) (B i) < separationOrder (A j) (B j)) ∧
+          L ∩ B i ∩ A i' = M i i' :=
+  ⟨theorem_2_6_bound p k, two_le_theorem_2_6_bound p k,
+    vital_linkage_bounded_order_nested_separations_explicit.{u, v} p k⟩
 
 /-- Bounded-order nested separation theorem for two vital `p`-linkages (Graph Minors XXI, (2.7),
 page 8 of the preprint): for all `p, k : ℕ` there exists `n ≥ 2` such that for any two vital

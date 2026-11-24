@@ -4,13 +4,13 @@ public import GraphMinor.GM15.Cited
 public import GraphMinor.GM12.Cited
 public import GraphMinor.GM16.Cited
 public import GraphMinor.GM19.Cited
+public import GraphMinor.GM12.Section4Theorem43
+public import GraphMinor.GM12.Section4Theorem44
+public import GraphMinor.GM12.Section4Theorem45
 import GraphMinor.GM12.Section3Theorem
 import GraphMinor.GM11.Section6
 import GraphMinor.GM12.Section4
 import GraphMinor.GM12.Section4Monotone
-import GraphMinor.GM12.Section4Theorem45
-import GraphMinor.GM12.Section4Theorem44
-import GraphMinor.GM12.Section4Theorem43
 import GraphMinor.GM12.Section4DrawnGraph
 import GraphMinor.GM12.Section4MetricExistence
 import GraphMinor.GM12.Section4SpanControl
@@ -75,20 +75,32 @@ private theorem clique_inc {p : ℕ} {x y z : Fin p} (hxy : x ≠ y) :
     · exact ⟨y, hxy, rfl⟩
     · exact ⟨x, hxy.symm, Sym2.eq_swap⟩
 
-/-- Every finite multigraph is a minor of a finite complete graph. Use a
-central vertex for each target vertex and two separate end vertices for
-each target edge. The branches are stars at their central vertices. This
-also represents loops and parallel edges. -/
-private theorem exists_completeGraph_minor {γ δ : Type*} (L : Graph γ δ)
-    (hV : L.vertexSet.Finite) (hE : L.edgeSet.Finite) :
-    ∃ p : ℕ, 1 ≤ p ∧ IsIsoMinor L (GM16.completeGraph p) := by
+/-- Explicit clique size containing any graph with at most `vB` vertices and `eB` edges as a minor. -/
+@[expose] def gm16_theorem42_bound (vB eB : ℕ) : ℕ :=
+  vB + 2 * eB + 1
+
+/-- Every finite multigraph with at most `vB` vertices and `eB` edges is a minor of
+`completeGraph (vB + 2 * eB + 1)`. -/
+private theorem isIsoMinor_completeGraph_of_le {γ δ : Type*} (L : Graph γ δ)
+    (hV : L.vertexSet.Finite) (hE : L.edgeSet.Finite) {vB eB : ℕ}
+    (hvB : L.vertexSet.ncard ≤ vB) (heB : L.edgeSet.ncard ≤ eB) :
+    IsIsoMinor L (GM16.completeGraph (gm16_theorem42_bound vB eB)) := by
   classical
   let : Fintype L.vertexSet := hV.fintype
   let : Fintype L.edgeSet := hE.fintype
   let I := L.vertexSet ⊕ (L.edgeSet × Bool)
-  let p := Fintype.card I + 1
+  let p := gm16_theorem42_bound vB eB
+  have hcardV : Fintype.card L.vertexSet = L.vertexSet.ncard := by
+    rw [← Nat.card_eq_fintype_card, Nat.card_coe_set_eq]
+  have hcardE : Fintype.card L.edgeSet = L.edgeSet.ncard := by
+    rw [← Nat.card_eq_fintype_card, Nat.card_coe_set_eq]
+  have hcardI : Fintype.card I < p := by
+    have h1 : Fintype.card I = Fintype.card L.vertexSet + Fintype.card L.edgeSet * 2 := by
+      simp [I]
+    dsimp only [p, gm16_theorem42_bound]
+    omega
   let tag : I → Fin p := fun z => ⟨(Fintype.equivFin I z).val,
-    Nat.lt_succ_of_lt (Fintype.equivFin I z).isLt⟩
+    (Fintype.equivFin I z).isLt.trans hcardI⟩
   have htag : Function.Injective tag := by
     intro x y h
     have hval : (Fintype.equivFin I x).val = (Fintype.equivFin I y).val :=
@@ -206,24 +218,62 @@ private theorem exists_completeGraph_minor {γ δ : Type*} (L : Graph γ δ)
       · exact ⟨subset_univ _, fun _ _ _ h => ⟨h.1.1, h.2⟩⟩
       · intro x hx y hy
         exact (hreach x hx).1.trans (hreach y hy).2
-  refine ⟨p, Nat.succ_le_succ (Nat.zero_le _), ?_⟩
   exact isIsoMinor_of_isMinorModel L (GM16.completeGraph p) hV hE
     (Set.toFinite _) (Set.toFinite _) a b hm
+
+/-- Explicit form of `gm16_theorem42`: a tangle controlling `K_{vB + 2*eB + 1}` controls
+every finite graph with at most `vB` vertices and `eB` edges. -/
+theorem gm16_theorem42_explicit {γ δ : Type*} (L : Graph γ δ)
+    (hV : L.vertexSet.Finite) (hE : L.edgeSet.Finite) {vB eB : ℕ}
+    (hvB : L.vertexSet.ncard ≤ vB) (heB : L.edgeSet.ncard ≤ eB)
+    {α β : Type*} (G : Graph α β) (θ : ℕ) (T : Set (Hypergraph α β × Hypergraph α β))
+    (hT : GM15.IsGraphTangle G θ T)
+    (hc : ControlsMinor (Hypergraph.ofGraph G hT.finite_V hT.finite_E) θ T
+      (GM16.completeGraph (gm16_theorem42_bound vB eB))) :
+    ControlsMinor (Hypergraph.ofGraph G hT.finite_V hT.finite_E) θ T L := by
+  have hminor := isIsoMinor_completeGraph_of_le L hV hE hvB heB
+  have hp : 1 ≤ gm16_theorem42_bound vB eB := Nat.succ_le_succ (Nat.zero_le _)
+  have : NeZero (gm16_theorem42_bound vB eB) := ⟨Nat.ne_zero_of_lt hp⟩
+  have : Nonempty (Fin (gm16_theorem42_bound vB eB)) := ⟨⟨0, hp⟩⟩
+  have hc' := hc
+  obtain ⟨_, b, _⟩ := hc'
+  let : Nonempty β := ⟨b s((0 : Fin (gm16_theorem42_bound vB eB)), 0)⟩
+  exact theorem_4_2_proof hT.finite_V hT.finite_E (Set.toFinite _) (Set.toFinite _) hminor hc
 
 /-- The finite-graph consequence of XII (4.2) used by XVI, with exactly
 the cited conclusion. A sufficiently large complete graph contains the
 given finite multigraph as a minor. -/
 theorem gm16_theorem42 : GM16.GM12Theorem42Statement.{u, v} := by
   intro γ δ L hV hE
-  obtain ⟨p, hp, hminor⟩ := exists_completeGraph_minor L hV hE
-  refine ⟨p, ?_⟩
-  intro α β G θ T hT hc
-  have : NeZero p := ⟨Nat.ne_zero_of_lt hp⟩
-  have : Nonempty (Fin p) := ⟨⟨0, hp⟩⟩
-  have hc' := hc
-  obtain ⟨_, b, _⟩ := hc'
-  let : Nonempty β := ⟨b s((0 : Fin p), 0)⟩
-  exact theorem_4_2_proof hT.finite_V hT.finite_E (Set.toFinite _) (Set.toFinite _) hminor hc
+  exact ⟨gm16_theorem42_bound L.vertexSet.ncard L.edgeSet.ncard,
+    fun G θ T hT hc => gm16_theorem42_explicit L hV hE le_rfl le_rfl G θ T hT hc⟩
+
+/-- Explicit form of `gm16_theorem43`, with threshold `theorem_4_3_bound V a b vB eB`. -/
+theorem gm16_theorem43_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    {α' β' : Type*} (L : Graph α' β')
+    (hS : Surface.IsClosedSurface S) (hConn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ Surface.SurfaceModel a b 0))
+    (hVL : L.vertexSet.Finite) (hEL : L.edgeSet.Finite)
+    {vB eB : ℕ} (hvB : L.vertexSet.ncard ≤ vB) (heB : L.edgeSet.ncard ≤ eB)
+    (hdraw : GM16.CanBeDrawnIn S L) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Surface.Drawing S) (η : GM14.SpanEmbedding H G) (θ_span : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (hT : GM15.IsGraphTangle G θ_star T_star),
+      ¬ ControlsMinor (Hypergraph.ofGraph G hT.finite_V hT.finite_E) θ_star T_star L →
+      theorem_4_3_bound V a b vB eB ≤ θ_span →
+      ¬ GM15.IsSigmaSpan G H η θ_star θ_span T_star T := by
+  let : ConnectedSpace S := hConn
+  obtain ⟨ν, edgeOf, hν, hline, hloop, hmeet, hon⟩ := hdraw
+  obtain ⟨D, _, _⟩ := exists_graphDrawing_of_edge_curves L hVL hEL ν edgeOf hν hline hloop hmeet hon
+  have hmain := theorem_4_3_drawing_explicit V hV hS he D hvB heB
+  intro α β G θstar Tstar H η θ T hTstar hNo hθ hSpan
+  obtain ⟨d, hd⟩ := exists_metric_of_respectful_drawing_tangle hS hSpan.isRespectful
+  have hc := hmain H θ T d hd hθ
+  exact hNo (controlsMinor_of_controlling_drawing_tangle η hSpan.isControlling hc)
 
 /-- XII (4.3), pages 249--251, with exactly the span conclusion
 cited by XVI. The drawing embedding transfers every branch and
@@ -234,14 +284,42 @@ theorem gm16_theorem43
     : GM16.GM12Theorem43Statement.{u, v, w} := by
   intro S _ _ α' β' L hS hConn hVL hEL hdraw
   let : ConnectedSpace S := hConn
-  obtain ⟨ν, edgeOf, hν, hline, hloop, hmeet, hon⟩ := hdraw
-  obtain ⟨D, _, _⟩ := exists_graphDrawing_of_edge_curves L hVL hEL ν edgeOf hν hline hloop hmeet hon
-  obtain ⟨N, hN, hmain⟩ := theorem_4_3_drawing hS D
-  refine ⟨N, hN, ?_⟩
-  intro α β G θstar Tstar H η θ T hTstar hNo hθ hSpan
-  obtain ⟨d, hd⟩ := exists_metric_of_respectful_drawing_tangle hS hSpan.isRespectful
-  have hc := hmain H θ T d hd hθ
-  exact hNo (controlsMinor_of_controlling_drawing_tangle η hSpan.isControlling hc)
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_3_bound GM07.vModel a b L.vertexSet.ncard L.edgeSet.ncard,
+    one_le_theorem_4_3_bound _ a b _ _,
+    gm16_theorem43_explicit GM07.vModel (fun _ _ _ _ => le_rfl) L hS hConn he hVL hEL le_rfl le_rfl hdraw⟩
+
+/-- Explicit form of `gm16_theorem44`, with threshold `theorem_4_4_bound V a b p`. -/
+theorem gm16_theorem44_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : Surface.IsClosedSurface S) (hConn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ Surface.SurfaceModel a b 0)) (p : ℕ) :
+    let μ := p * (p - 1) / 2
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Surface.Drawing S) (η : GM14.SpanEmbedding H G)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ)
+      (s t : Fin μ → S) (Q : Fin μ → Graph α β)
+      (hSpan : GM15.IsSigmaSpan G H η θ_star θ_span T_star T),
+      GM14.HasTangleMetric H θ_span T d →
+      theorem_4_4_bound V a b p ≤ θ_span →
+      (∀ i : Fin μ, s i ∈ H.V ∧ t i ∈ H.V ∧ s i ≠ t i) →
+      Function.Injective s → Function.Injective t → Disjoint (range s) (range t) →
+      (∀ u ∈ range s ∪ range t, ∀ v ∈ range s ∪ range t, u ≠ v →
+        theorem_4_4_bound V a b p ≤ d {u} {v}) →
+      (∀ i : Fin μ, GM14.IsHPathWithEnds G η.imageGraph (Q i) (η.vMap (s i)) (η.vMap (t i))) →
+      Pairwise (fun i j => Disjoint (Q i).vertexSet (Q j).vertexSet) →
+      ControlsMinor
+        (Hypergraph.ofGraph G hSpan.isControlling.isTangle_star.finite_V
+          hSpan.isControlling.isTangle_star.finite_E)
+        θ_star T_star (GM16.completeGraph p) := by
+  let : ConnectedSpace S := hConn
+  dsimp only
+  intro α β G θstar θ Tstar H η T d s t P hSpan hm hθ hends hs ht hdisj hfar hP hPP
+  exact theorem_4_4_span_explicit V hV hS he p G θstar θ Tstar H η T d s t P
+    hSpan.isControlling hm hθ hends hs ht hdisj hfar hP hPP
 
 /-- XII (4.4), pages 251--252, with exactly the span conclusion
 cited by XVI. All branch, path, feasibility, and control steps are
@@ -250,11 +328,39 @@ theorem gm16_theorem44
     : GM16.GM12Theorem44Statement.{u, v, w} := by
   intro S _ _ hS hConn p
   let : ConnectedSpace S := hConn
-  obtain ⟨N, hN, hmain⟩ := theorem_4_4_span hS p
-  refine ⟨N, hN, ?_⟩
-  dsimp only
-  intro α β G θstar θ Tstar H η T d s t P hSpan hm hθ hends hs ht hdisj hfar hP hPP
-  exact hmain G θstar θ Tstar H η T d s t P hSpan.isControlling hm hθ hends hs ht hdisj hfar hP hPP
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_4_bound GM07.vModel a b p, one_le_theorem_4_4_bound _ a b p,
+    gm16_theorem44_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS hConn he p⟩
+
+/-- Explicit form of `gm15_theorem45`, with eye count `theorem_4_5_kBound p` and order
+threshold `theorem_4_5_NBound V a b p`. -/
+theorem gm15_theorem45_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (S : Type w) [TopologicalSpace S] [T2Space S]
+    (hS : Surface.IsClosedSurface S) (hConn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ Surface.SurfaceModel a b 0)) (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Surface.Drawing S) (η : GM14.SpanEmbedding H G) (θ : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ)
+      (hSpan : GM15.IsSigmaSpan G H η θ_star θ T_star T),
+      GM14.HasTangleMetric H θ T d →
+      p ≤ θ_star → theorem_4_5_NBound V a b p ≤ θ →
+      GM15.HasIndependentEyes G H η θ T d (theorem_4_5_kBound p) →
+      ControlsMinor
+        (Hypergraph.ofGraph G hSpan.isControlling.isTangle_star.finite_V
+          hSpan.isControlling.isTangle_star.finite_E)
+        θ_star T_star (GM15.completeGraph p) := by
+  let : ConnectedSpace S := hConn
+  intro α β G θstar Tstar H η θ T d hSpan hm _ hNθ heyes
+  obtain ⟨r, P, Q, hri, heye, hdist, hdisj⟩ := heyes
+  have hfar : ∀ i j, i ≠ j → theorem_4_5_NBound V a b p ≤ d (r i) (r j) := by
+    intro i j hij
+    rw [hdist i j hij]
+    exact hNθ
+  exact theorem_4_5_span_explicit V hV hS he p G θstar θ Tstar H η T d hSpan.isControlling hm hNθ
+    r P Q hri heye hfar hdisj
 
 /-- Graph Minors XII (4.5), pages 252--253, in the exact independent-eye
 span form used by XV. The only statement hypotheses are the cited
@@ -263,15 +369,9 @@ theorem gm15_theorem45
     : GM15.GM12Theorem45Statement.{u, v, w} := by
   intro S _ _ hS hConn p
   let : ConnectedSpace S := hConn
-  obtain ⟨k, N, hN, hmain⟩ := theorem_4_5_span hS p
-  refine ⟨k, N, ?_⟩
-  intro α β G θstar Tstar H η θ T d hSpan hm hpθ hNθ heyes
-  obtain ⟨r, P, Q, hri, heye, hdist, hdisj⟩ := heyes
-  have hfar : ∀ i j, i ≠ j → N ≤ d (r i) (r j) := by
-    intro i j hij
-    rw [hdist i j hij]
-    exact hNθ
-  exact hmain G θstar θ Tstar H η T d hSpan.isControlling hm hNθ r P Q hri heye hfar hdisj
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_5_kBound p, theorem_4_5_NBound GM07.vModel a b p,
+    gm15_theorem45_explicit GM07.vModel (fun _ _ _ _ => le_rfl) S hS hConn he p⟩
 
 /-- Unconditional proof of `GM19.GM12Theorem32Statement`. -/
 theorem gm19_theorem32_proved : GM19.GM12Theorem32Statement.{u} :=

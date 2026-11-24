@@ -35,6 +35,23 @@ theorem isIsoMinor_of_subdrawing
   exact ⟨K, hK.trans hle, C, hC, hIso⟩
 
 /-- The loopless minimum-degree-two target replacement used at the
+start of Graph Minors XII (4.3), page 249, with explicit vertex and edge bounds. -/
+theorem exists_loopless_minimum_degree_two_minor_bounded
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (Γ : Drawing S) :
+    ∃ H : Drawing S, IsIsoMinor Γ.toGraph H.toGraph ∧
+      H.V.ncard ≤ 3 * Γ.V.ncard + Γ.E.ncard ∧ H.E.ncard ≤ 4 * Γ.V.ncard + 4 * Γ.E.ncard ∧
+      (∀ e v, ¬ H.toGraph.IsLink e v v) ∧
+      ∀ v ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e v ∧ H.toGraph.Inc f v := by
+  obtain ⟨Γ₀, K, H, A, B, m, x, y, hΓ₀, hd, hKH, hHV, hHE, hloop, htwo⟩ :=
+    exists_loopless_minimum_degree_two_replacement_bounded hS Γ
+  have hminor : IsIsoMinor Γ₀.toGraph K.toGraph := isIsoMinor_of_isMinorModel Γ₀.toGraph K.toGraph
+    Γ₀.finite_V Γ₀.finite_edges K.finite_V K.finite_edges (splitBranch Γ₀ m y) A
+    (isMinorModel_of_splitData hd)
+  exact ⟨H, (isIsoMinor_of_subdrawing hΓ₀).trans
+    (hminor.trans (isIsoMinor_of_subdrawing hKH)), hHV, hHE, hloop, htwo⟩
+
+/-- The loopless minimum-degree-two target replacement used at the
 start of Graph Minors XII (4.3), page 249, for an actual drawing
 of the target graph. -/
 theorem exists_loopless_minimum_degree_two_minor
@@ -43,12 +60,8 @@ theorem exists_loopless_minimum_degree_two_minor
     ∃ H : Drawing S, IsIsoMinor Γ.toGraph H.toGraph ∧
       (∀ e v, ¬ H.toGraph.IsLink e v v) ∧
       ∀ v ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e v ∧ H.toGraph.Inc f v := by
-  obtain ⟨Γ₀, K, H, A, B, m, x, y, hΓ₀, hd, hKH, hloop, htwo⟩ :=
-    exists_loopless_minimum_degree_two_replacement hS Γ
-  have hminor : IsIsoMinor Γ₀.toGraph K.toGraph := isIsoMinor_of_isMinorModel Γ₀.toGraph K.toGraph
-    Γ₀.finite_V Γ₀.finite_edges K.finite_V K.finite_edges (splitBranch Γ₀ m y) A
-    (isMinorModel_of_splitData hd)
-  exact ⟨H, (isIsoMinor_of_subdrawing hΓ₀).trans
-    (hminor.trans (isIsoMinor_of_subdrawing hKH)), hloop, htwo⟩
+  obtain ⟨H, hminor, _, _, hloop, htwo⟩ :=
+    exists_loopless_minimum_degree_two_minor_bounded hS Γ
+  exact ⟨H, hminor, hloop, htwo⟩
 
 end GraphMinor.GM12

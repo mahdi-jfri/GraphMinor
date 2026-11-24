@@ -202,42 +202,37 @@ theorem isTangle_capDrawing (hS : IsSurface S) (cap : IsCappedSurface S Shat)
   exact ⟨_, isTangle_mapDrawingInjOn D cap.emb cap.isEmbedding.continuous.continuousOn
     cap.isEmbedding.injective.injOn h𝒯⟩
 
-/-- **(4.6) applied to `Γ^+`**, as in the proof of Graph Minors XXI, (7.3) (page 31 of the
-preprint): "Now $\Gamma \setminus X$ is obtained from $\Gamma^+$ by deleting some ... vertices and
-edges of $\Gamma^+$, all incident with one of $c(\Sigma)$ regions of $\Gamma^+$ in $\hat{\Sigma}$."
-
-For every `θ' ≥ 1` there is `θ ≥ 1` such that, if `Γ^+` has a tangle of order `≥ θ` and
-`X ⊆ V(Γ) ∩ bd(Σ)`, then the image of `Γ \ X` in `Σ̂` has a tangle of order `≥ θ'`. The regions
-are the pasted discs (`cuffDisc_mem_R_capDrawing_plusDrawing`). Each deleted vertex is in `X`, and
-so on a cuff. Each deleted edge is a space, which lies on a cuff, or an edge of `Γ` with an end
-in `X`. -/
-theorem exists_tangle_capDrawing_deleteVertices [T2Space S] (hS : IsSurface S)
-    (cap : IsCappedSurface S Shat) {θ' : ℕ} (hθ' : 1 ≤ θ') :
-    ∃ θ : ℕ, 1 ≤ θ ∧
-      ∀ (Γ : Surface.Drawing S) (hprop : Γ.IsProper)
-        (hge2 : ∀ C ∈ cuffs S, 2 ≤ (Γ.V ∩ C).ncard) (X : Set S), X ⊆ bd S →
-        (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
-          θ ≤ θ₀ ∧ IsTangle (plusDrawing hS Γ hprop hge2).toHypergraph θ₀ 𝒯) →
-        ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph Shat (Set Shat) × Hypergraph Shat (Set Shat))),
-          θ' ≤ θ₁ ∧ IsTangle (capDrawing hS cap (GM12.deleteVertices Γ X)).toHypergraph θ₁ 𝒯' := by
+/-- Explicit version of `exists_tangle_capDrawing_deleteVertices` with bound `theorem_4_6_bound k c θ'`. -/
+theorem exists_tangle_capDrawing_deleteVertices_explicit [T2Space S] (hS : IsSurface S)
+    (cap : IsCappedSurface S Shat) {k c : ℕ}
+    (hk : ∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (Shat ≃ₜ SurfaceModel a₀ b₀ c₀))
+    (hc : (cuffs S).ncard = c)
+    {θ' : ℕ} (hθ' : 1 ≤ θ') :
+    ∀ (Γ : Surface.Drawing S) (hprop : Γ.IsProper)
+      (hge2 : ∀ C ∈ cuffs S, 2 ≤ (Γ.V ∩ C).ncard) (X : Set S), X ⊆ bd S →
+      (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+        theorem_4_6_bound k c θ' ≤ θ₀ ∧ IsTangle (plusDrawing hS Γ hprop hge2).toHypergraph θ₀ 𝒯) →
+      ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph Shat (Set Shat) × Hypergraph Shat (Set Shat))),
+        θ' ≤ θ₁ ∧ IsTangle (capDrawing hS cap (GM12.deleteVertices Γ X)).toHypergraph θ₁ 𝒯' := by
   have : CompactSpace S := hS.1
   have : T2Space Shat := cap.isSurface.2.1
   have : ConnectedSpace Shat := cap.connected
   have hcuffs_fin : (cuffs S).Finite := (cuff_statement S hS).2.1
   have : Fintype (cuffs S) := hcuffs_fin.fintype
-  let ρ := Fintype.card (cuffs S)
-  let eC : Fin ρ ≃ cuffs S := (Fintype.equivFin (cuffs S)).symm
-  obtain ⟨θ, hθ, H⟩ := theorem_4_6_proof cap.isSurface cap.bd_empty hθ' ρ
-  refine ⟨θ, hθ, fun Γ hprop hge2 X hX h𝒯 => ?_⟩
+  have hcard_c : Fintype.card (cuffs S) = c := by
+    rw [← Nat.card_eq_fintype_card, Nat.card_coe_set_eq, hc]
+  let eC : Fin c ≃ cuffs S := (Fintype.equivFinOfCardEq hcard_c).symm
+  have H := theorem_4_6_explicit cap.isSurface cap.bd_empty hk hθ' c
+  intro Γ hprop hge2 X hX h𝒯
   have hCbd : ∀ C ∈ cuffs S, C ⊆ bd S := by
     rintro C ⟨x, hx, rfl⟩
     exact connectedComponentIn_subset (bd S) x
-  have hcuff_of_bd : ∀ x ∈ bd S, ∃ i : Fin ρ, x ∈ (eC i : Set S) := by
+  have hcuff_of_bd : ∀ x ∈ bd S, ∃ i : Fin c, x ∈ (eC i : Set S) := by
     intro x hx
     rw [← sUnion_cuffs (S := S)] at hx
     obtain ⟨C, hC, hxC⟩ := hx
     exact ⟨eC.symm ⟨C, hC⟩, by simpa using hxC⟩
-  have hsub_cl : ∀ i : Fin ρ, cap.emb '' (eC i : Set S) ⊆ closure (cap.cuffDisc (eC i)) := by
+  have hsub_cl : ∀ i : Fin c, cap.emb '' (eC i : Set S) ⊆ closure (cap.cuffDisc (eC i)) := by
     intro i
     rw [cap.closure_cuffDisc hS (eC i).2]
     exact subset_union_right
@@ -290,6 +285,24 @@ theorem exists_tangle_capDrawing_deleteVertices [T2Space S] (hS : IsSurface S)
       have hx_bd := (subset_bd_diff_of_mem_drawingSpaces he hx).1
       obtain ⟨i, hxi⟩ := hcuff_of_bd x hx_bd
       exact ⟨i, cap.emb x, mem_image_of_mem _ hx, hsub_cl i (mem_image_of_mem _ hxi)⟩
+
+/-- **(4.6) applied to `Γ^+`**, as in the proof of Graph Minors XXI, (7.3) (page 31 of the
+preprint): "Now $\Gamma \setminus X$ is obtained from $\Gamma^+$ by deleting some ... vertices and
+edges of $\Gamma^+$, all incident with one of $c(\Sigma)$ regions of $\Gamma^+$ in $\hat{\Sigma}$." -/
+theorem exists_tangle_capDrawing_deleteVertices [T2Space S] (hS : IsSurface S)
+    (cap : IsCappedSurface S Shat) {θ' : ℕ} (hθ' : 1 ≤ θ') :
+    ∃ θ : ℕ, 1 ≤ θ ∧
+      ∀ (Γ : Surface.Drawing S) (hprop : Γ.IsProper)
+        (hge2 : ∀ C ∈ cuffs S, 2 ≤ (Γ.V ∩ C).ncard) (X : Set S), X ⊆ bd S →
+        (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+          θ ≤ θ₀ ∧ IsTangle (plusDrawing hS Γ hprop hge2).toHypergraph θ₀ 𝒯) →
+        ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph Shat (Set Shat) × Hypergraph Shat (Set Shat))),
+          θ' ≤ θ₁ ∧ IsTangle (capDrawing hS cap (GM12.deleteVertices Γ X)).toHypergraph θ₁ 𝒯' := by
+  have : ConnectedSpace Shat := cap.connected
+  obtain ⟨a₀, b₀, c₀, ⟨e₀⟩⟩ := classification Shat cap.isSurface inferInstance
+  exact ⟨theorem_4_6_bound (4 * a₀ + 2 * b₀ + c₀) (cuffs S).ncard θ',
+    one_le_theorem_4_6_bound _ _ hθ',
+    exists_tangle_capDrawing_deleteVertices_explicit hS cap ⟨a₀, b₀, c₀, le_rfl, ⟨e₀⟩⟩ rfl hθ'⟩
 
 end CappedPlus
 

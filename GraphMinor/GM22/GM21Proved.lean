@@ -1,7 +1,7 @@
 module
 
 public import GraphMinor.GM22.Cited
-public import GraphMinor.GM21.Final
+public import GraphMinor.GM21.Explicit
 
 /-!
 # Graph Minors XXI, (1.1), in the definitions used by XXII
@@ -46,6 +46,17 @@ theorem gm21Theorem11Statement_iff_gm21 :
   refine forall_congr' fun α => forall_congr' fun β => forall_congr' fun G =>
     forall_congr' fun L => forall_congr' fun _ => forall_congr' fun _ => ?_
   rw [isVitalPLinkage_iff_gm21, treeWidthLE_iff_gm21]
+
+/-- Explicit version of **Graph Minors XXI, (1.1)** in the types of Graph Minors XXII, with
+tree-width bound `GM21.theorem_1_1_bound V p`. -/
+theorem gm21Theorem11_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) {α : Type u} {β : Type v} (G L : Graph α β)
+    (hVG : V(G).Finite) (hEG : E(G).Finite) (hvit : IsVitalPLinkage G L p) :
+    TreeWidthLE G (GM21.theorem_1_1_bound V p) :=
+  (treeWidthLE_iff_gm21 G _).mpr
+    (GM21.theorem_1_1_explicit.{u, v} V hV p G L hVG hEG
+      ((isVitalPLinkage_iff_gm21 G L p).mp hvit))
 
 /-- **Graph Minors XXI, (1.1)** in the types of Graph Minors XXII (`GM22.GM21Theorem11Statement`),
 proved from `GM21.theorem_1_1_proof`. -/

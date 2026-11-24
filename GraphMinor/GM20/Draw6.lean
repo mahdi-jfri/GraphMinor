@@ -20,45 +20,185 @@ open Set Topology GraphMinor.Surface
 
 variable {a b c : ℕ}
 
+private theorem exists_move_to_last (m : ℕ) :
+    ∀ (d : ℕ) (k : Fin (m + 1)), m - k.1 = d →
+      ∃ l : List (Fin m), l.length = d ∧
+        (l.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod (Fin.last m) = k
+  | 0, k, hk => by
+    have hk' : k = Fin.last m := Fin.ext (by simp [Fin.last]; omega)
+    exact ⟨[], rfl, by simp [hk']⟩
+  | d + 1, k, hk => by
+    have hkm : k.1 < m := by omega
+    let k' : Fin (m + 1) := ⟨k.1 + 1, by omega⟩
+    obtain ⟨l', hl', hprod⟩ := exists_move_to_last m d k' (by simp [k']; omega)
+    let i : Fin m := ⟨k.1, hkm⟩
+    have hi₀ : i.castSucc = k := Fin.ext rfl
+    have hi₁ : i.succ = k' := Fin.ext rfl
+    refine ⟨i :: l', by simp [hl'], ?_⟩
+    simp only [List.map_cons, List.prod_cons, Equiv.Perm.coe_mul, Function.comp_apply, hprod,
+      hi₀, hi₁, Equiv.swap_apply_right]
+
+private theorem adjSwap_list_inv {m : ℕ} (l : List (Fin m)) :
+    (l.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod⁻¹ =
+      (l.reverse.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod := by
+  induction l with
+  | nil => simp
+  | cons i l ih =>
+    simp [mul_inv_rev, ih]
+
+private theorem lift_adjSwap_prod {m : ℕ} (l : List (Fin m)) :
+    (∀ x : Fin (m + 1),
+      ((l.map Fin.castSucc).map fun i : Fin (m + 1) ↦ Equiv.swap i.castSucc i.succ).prod x.castSucc =
+        ((l.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod x).castSucc) ∧
+    ((l.map Fin.castSucc).map fun i : Fin (m + 1) ↦ Equiv.swap i.castSucc i.succ).prod
+      (Fin.last (m + 1)) = Fin.last (m + 1) := by
+  induction l with
+  | nil => simp
+  | cons i l ih =>
+    constructor
+    · intro x
+      simp only [List.map_cons, List.prod_cons, Equiv.Perm.coe_mul, Function.comp_apply, ih.1]
+      set y := (l.map fun j : Fin m ↦ Equiv.swap j.castSucc j.succ).prod x
+      have hsucc : (i.castSucc : Fin (m + 1)).succ = i.succ.castSucc := Fin.ext rfl
+      rw [hsucc]
+      by_cases h₁ : y = i.castSucc
+      · rw [h₁]; simp
+      · by_cases h₂ : y = i.succ
+        · rw [h₂, Equiv.swap_apply_right, Equiv.swap_apply_right]
+        · have h₁' : y.castSucc ≠ i.castSucc.castSucc := fun h ↦ h₁ (Fin.castSucc_injective _ h)
+          have h₂' : y.castSucc ≠ i.succ.castSucc := fun h ↦ h₂ (Fin.castSucc_injective _ h)
+          rw [Equiv.swap_apply_of_ne_of_ne h₁' h₂', Equiv.swap_apply_of_ne_of_ne h₁ h₂]
+    · simp only [List.map_cons, List.prod_cons, Equiv.Perm.coe_mul, Function.comp_apply, ih.2]
+      have h₁ : Fin.last (m + 1) ≠ (i.castSucc : Fin (m + 1)).castSucc :=
+        (Fin.castSucc_ne_last _).symm
+      have h₂ : Fin.last (m + 1) ≠ (i.castSucc : Fin (m + 1)).succ := by
+        intro h
+        have := congrArg Fin.val h
+        simp only [Fin.val_last, Fin.val_succ, Fin.val_castSucc] at this
+        omega
+      exact Equiv.swap_apply_of_ne_of_ne h₁ h₂
+
+private theorem exists_adj_swap_list : ∀ (m : ℕ) (σ : Equiv.Perm (Fin (m + 1))),
+    ∃ l : List (Fin m), l.length ≤ m * (m + 1) / 2 ∧
+      σ = (l.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod
+  | 0, σ => by
+    refine ⟨[], Nat.zero_le _, ?_⟩
+    exact Equiv.ext fun x ↦ Fin.ext (by omega)
+  | m + 1, σ => by
+    obtain ⟨lq, hlq, hq⟩ := exists_move_to_last (m + 1) (m + 1 - (σ.symm (Fin.last (m + 1))).1)
+      (σ.symm (Fin.last (m + 1))) rfl
+    set q : Equiv.Perm (Fin (m + 2)) :=
+      (lq.map fun i : Fin (m + 1) ↦ Equiv.swap i.castSucc i.succ).prod
+    set τ : Equiv.Perm (Fin (m + 2)) := σ * q
+    have hτlast : τ (Fin.last (m + 1)) = Fin.last (m + 1) := by
+      simp [τ, hq]
+    have hτsymlast : τ.symm (Fin.last (m + 1)) = Fin.last (m + 1) :=
+      τ.symm_apply_eq.mpr hτlast.symm
+    let τ' : Equiv.Perm (Fin (m + 1)) :=
+      { toFun := fun x ↦ ⟨(τ x.castSucc).1, by
+          have h1 := (τ x.castSucc).2
+          have h2 : τ x.castSucc ≠ Fin.last (m + 1) := fun h ↦
+            Fin.castSucc_ne_last x (τ.injective (h.trans hτlast.symm))
+          have h3 : (τ x.castSucc).1 ≠ m + 1 := fun h ↦ h2 (Fin.ext h)
+          omega⟩
+        invFun := fun x ↦ ⟨(τ.symm x.castSucc).1, by
+          have h1 := (τ.symm x.castSucc).2
+          have h2 : τ.symm x.castSucc ≠ Fin.last (m + 1) := fun h ↦
+            Fin.castSucc_ne_last x (τ.symm.injective (h.trans hτsymlast.symm))
+          have h3 : (τ.symm x.castSucc).1 ≠ m + 1 := fun h ↦ h2 (Fin.ext h)
+          omega⟩
+        left_inv := fun x ↦ Fin.ext (by
+          have hcast : (⟨(τ x.castSucc).1, by
+            have h1 := (τ x.castSucc).2
+            have h2 : τ x.castSucc ≠ Fin.last (m + 1) := fun h ↦
+              Fin.castSucc_ne_last x (τ.injective (h.trans hτlast.symm))
+            have h3 : (τ x.castSucc).1 ≠ m + 1 := fun h ↦ h2 (Fin.ext h)
+            omega⟩ : Fin (m + 1)).castSucc = τ x.castSucc := Fin.ext rfl
+          change (τ.symm (⟨(τ x.castSucc).1, _⟩ : Fin (m + 1)).castSucc).1 = x.1
+          rw [hcast, τ.symm_apply_apply]
+          rfl)
+        right_inv := fun x ↦ Fin.ext (by
+          have hcast : (⟨(τ.symm x.castSucc).1, by
+            have h1 := (τ.symm x.castSucc).2
+            have h2 : τ.symm x.castSucc ≠ Fin.last (m + 1) := fun h ↦
+              Fin.castSucc_ne_last x (τ.symm.injective (h.trans hτsymlast.symm))
+            have h3 : (τ.symm x.castSucc).1 ≠ m + 1 := fun h ↦ h2 (Fin.ext h)
+            omega⟩ : Fin (m + 1)).castSucc = τ.symm x.castSucc := Fin.ext rfl
+          change (τ (⟨(τ.symm x.castSucc).1, _⟩ : Fin (m + 1)).castSucc).1 = x.1
+          rw [hcast, τ.apply_symm_apply]
+          rfl) }
+    obtain ⟨l', hl', hτ'⟩ := exists_adj_swap_list m τ'
+    have hτeq : τ = ((l'.map Fin.castSucc).map fun i : Fin (m + 1) ↦
+        Equiv.swap i.castSucc i.succ).prod := by
+      ext x
+      refine Fin.lastCases ?_ ?_ x
+      · rw [hτlast, (lift_adjSwap_prod l').2]
+      · intro y
+        rw [(lift_adjSwap_prod l').1 y, ← hτ']
+        rfl
+    refine ⟨l'.map Fin.castSucc ++ lq.reverse, ?_, ?_⟩
+    · simp only [List.length_append, List.length_map, List.length_reverse, hlq]
+      have hmul : m * (m + 1) + 2 * (m + 1) = (m + 1) * (m + 2) := by ring
+      have htri : m * (m + 1) / 2 + (m + 1) = (m + 1) * (m + 2) / 2 := by
+        rw [← hmul, Nat.add_mul_div_left _ _ (by decide : 0 < 2)]
+      have hsub : m + 1 - (σ.symm (Fin.last (m + 1))).1 ≤ m + 1 := Nat.sub_le _ _
+      exact (Nat.add_le_add hl' hsub).trans htri.le
+    · have hσ : σ = τ * q⁻¹ := by simp [τ]
+      rw [hσ, hτeq, adjSwap_list_inv lq, List.map_append, List.prod_append]
+
+private theorem wiring_of_nonempty_list {m : ℕ} :
+    ∀ (l : List (Fin m)), l ≠ [] →
+      ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
+        (∀ j, s ≤ j → j < s + l.length → ∀ i : Fin m,
+          Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
+        Slab a b c (m + 1) (x s) (x (s + l.length))
+          (l.map fun i : Fin m ↦ Equiv.swap i.castSucc i.succ).prod
+  | [], hne => (hne rfl).elim
+  | [i], _ => fun a b c _ x s _ h ↦ by
+    simpa using h s le_rfl (by simp) i
+  | i :: j :: l, _ => fun a b c _ x s hx h ↦ by
+    have h₁ := wiring_of_nonempty_list (j :: l) (List.cons_ne_nil j l) a b c x s hx
+      (fun k hk hk' ↦ h k hk (by simp at hk' ⊢; omega))
+    have h₂ := h (s + (j :: l).length) (by omega) (by simp) i
+    have h₃ := h₁.comp h₂ (hx (by omega)) (hx (by omega))
+    simpa [List.length_cons, add_assoc] using h₃
+
+/-- The curves for a permutation of `m + 1` heights, with an explicit upper bound on the width `L`. -/
+theorem wiring_bound {m : ℕ} (hm : 0 < m) (σ : Equiv.Perm (Fin (m + 1))) :
+    ∃ L, 1 ≤ L ∧ L ≤ max 2 (m * (m + 1) / 2) ∧
+      ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
+        (∀ j, s ≤ j → j < s + L → ∀ i : Fin m,
+          Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
+        Slab a b c (m + 1) (x s) (x (s + L)) σ := by
+  obtain ⟨l, hl, rfl⟩ := exists_adj_swap_list m σ
+  rcases l with _ | ⟨i, l'⟩
+  · refine ⟨2, by omega, le_max_left _ _, fun a b c _ x s hx h ↦ ?_⟩
+    have h₀ := h s le_rfl (by omega) ⟨0, hm⟩
+    have h₁ := h (s + 1) (by omega) (by omega) ⟨0, hm⟩
+    have h₂ := h₀.comp h₁ (hx (by omega)) (hx (by omega))
+    simpa [Equiv.swap_mul_self] using h₂
+  · exact ⟨(i :: l').length, by simp, le_trans hl (le_max_right _ _),
+      wiring_of_nonempty_list (i :: l') (List.cons_ne_nil i l')⟩
+
 /-- The curves for a permutation of `m + 1` heights, for `m` positive. -/
 theorem wiring {m : ℕ} (hm : 0 < m) (σ : Equiv.Perm (Fin (m + 1))) :
     ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
       (∀ j, s ≤ j → j < s + L → ∀ i : Fin m,
         Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
       Slab a b c (m + 1) (x s) (x (s + L)) σ := by
-  have hσ : σ ∈ Submonoid.closure (Set.range fun i : Fin m ↦
-      Equiv.swap i.castSucc i.succ) := by
-    rw [Equiv.Perm.mclosure_swap_castSucc_succ]
-    exact Submonoid.mem_top _
-  induction hσ using Submonoid.closure_induction with
-  | mem τ hτ =>
-    obtain ⟨i, rfl⟩ := hτ
-    exact ⟨1, le_rfl, fun a b c _ x s _ h ↦ h s le_rfl (by omega) i⟩
-  | one =>
-    refine ⟨2, by omega, fun a b c _ x s hx h ↦ ?_⟩
-    have h₀ := h s le_rfl (by omega) ⟨0, hm⟩
-    have h₁ := h (s + 1) (by omega) (by omega) ⟨0, hm⟩
-    have h₂ := h₀.comp h₁ (hx (by omega)) (hx (by omega))
-    rw [Equiv.swap_mul_self] at h₂
-    exact h₂
-  | mul τ τ' _ _ h₁ h₂ =>
-    obtain ⟨L₁, hL₁, h₁⟩ := h₁
-    obtain ⟨L₂, hL₂, h₂⟩ := h₂
-    refine ⟨L₂ + L₁, by omega, fun a b c _ x s hx h ↦ ?_⟩
-    have h₃ := h₂ a b c x s hx fun j hj hj' ↦ h j hj (by omega)
-    have h₄ := h₁ a b c x (s + L₂) hx fun j hj hj' ↦ h j (by omega) (by omega)
-    rw [← add_assoc]
-    exact h₃.comp h₄ (hx (by omega)) (hx (by omega))
+  obtain ⟨L, hL, _, h⟩ := wiring_bound hm σ
+  exact ⟨L, hL, h⟩
 
-/-- The curves for a permutation of an even number of heights. -/
-theorem wiring_even {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
-    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
-      (∀ j, s ≤ j → j < s + L → ∀ (m : ℕ) (i : Fin m),
-        Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
-      Slab a b c n (x s) (x (s + L)) σ := by
+/-- The curves for a permutation of an even number of heights, with an explicit width bound. -/
+theorem wiring_even_bound {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ L ≤ max 2 ((n - 1) * n / 2) ∧
+      ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
+        (∀ j, s ≤ j → j < s + L → ∀ (m : ℕ) (i : Fin m),
+          Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
+        Slab a b c n (x s) (x (s + L)) σ := by
   obtain ⟨k, rfl⟩ := hn
   rcases Nat.eq_zero_or_pos k with rfl | hk
-  · refine ⟨1, le_rfl, fun a b c _ x s _ _ ↦ ?_⟩
+  · refine ⟨1, le_rfl, by omega, fun a b c _ x s _ _ ↦ ?_⟩
     exact ⟨fun p ↦ p.elim0, fun p ↦ p.elim0, fun p ↦ p.elim0, fun p ↦ p.elim0, fun p ↦ p.elim0,
       fun p ↦ p.elim0⟩
   · obtain ⟨m, hm⟩ : ∃ m, k + k = m + 1 := ⟨k + k - 1, by omega⟩
@@ -66,15 +206,27 @@ theorem wiring_even {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
     revert σ
     rw [hm]
     intro σ
-    obtain ⟨L, hL, h⟩ := wiring hm0 σ
-    exact ⟨L, hL, fun a b c _ x s hx hs ↦ h a b c x s hx fun j hj hj' i ↦ hs j hj hj' m i⟩
+    obtain ⟨L, hL, hLle, h⟩ := wiring_bound hm0 σ
+    exact ⟨L, hL, by simpa using hLle,
+      fun a b c _ x s hx hs ↦ h a b c x s hx fun j hj hj' i ↦ hs j hj hj' m i⟩
 
-/-- A permutation is carried by a row of handles. -/
-theorem wiring_handles {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
-    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ a →
-      Slab a b c n (3 * ((-1 : ℤ) : ℝ) + 3 / 2) (3 * (((2 * L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
-  obtain ⟨L, hL, h⟩ := wiring_even hn σ
-  refine ⟨L, hL, fun a b c _ hLa ↦ ?_⟩
+/-- The curves for a permutation of an even number of heights. -/
+theorem wiring_even {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)] (x : ℕ → ℝ) (s : ℕ), Monotone x →
+      (∀ j, s ≤ j → j < s + L → ∀ (m : ℕ) (i : Fin m),
+        Slab a b c (m + 1) (x j) (x (j + 1)) (Equiv.swap i.castSucc i.succ)) →
+      Slab a b c n (x s) (x (s + L)) σ := by
+  obtain ⟨L, hL, _, h⟩ := wiring_even_bound hn σ
+  exact ⟨L, hL, h⟩
+
+/-- A permutation is carried by a row of handles, with an explicit upper bound on the number of
+handles used. -/
+theorem wiring_handles_bound {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ L ≤ max 2 ((n - 1) * n / 2) ∧
+      ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ a →
+        Slab a b c n (3 * ((-1 : ℤ) : ℝ) + 3 / 2) (3 * (((2 * L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
+  obtain ⟨L, hL, hLle, h⟩ := wiring_even_bound hn σ
+  refine ⟨L, hL, hLle, fun a b c _ hLa ↦ ?_⟩
   have h₁ := h a b c (fun j ↦ 6 * (j : ℝ) - 3 / 2) 0
     (fun i j hij ↦ by
       have : (i : ℝ) ≤ j := by exact_mod_cast hij
@@ -91,13 +243,22 @@ theorem wiring_handles {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
   · push_cast
     ring
 
-/-- A permutation is carried by a row of cross-caps. -/
-theorem wiring_crosscaps {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
-    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ b →
-      Slab a b c n (3 * (((2 * a : ℕ) : ℤ) - 1 : ℤ) + 3 / 2)
-        (3 * (((2 * a + L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
-  obtain ⟨L, hL, h⟩ := wiring_even hn σ
-  refine ⟨L, hL, fun a b c _ hLb ↦ ?_⟩
+/-- A permutation is carried by a row of handles. -/
+theorem wiring_handles {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ a →
+      Slab a b c n (3 * ((-1 : ℤ) : ℝ) + 3 / 2) (3 * (((2 * L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
+  obtain ⟨L, hL, _, h⟩ := wiring_handles_bound hn σ
+  exact ⟨L, hL, h⟩
+
+/-- A permutation is carried by a row of cross-caps, with an explicit upper bound on the number of
+cross-caps used. -/
+theorem wiring_crosscaps_bound {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ L ≤ max 2 ((n - 1) * n / 2) ∧
+      ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ b →
+        Slab a b c n (3 * (((2 * a : ℕ) : ℤ) - 1 : ℤ) + 3 / 2)
+          (3 * (((2 * a + L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
+  obtain ⟨L, hL, hLle, h⟩ := wiring_even_bound hn σ
+  refine ⟨L, hL, hLle, fun a b c _ hLb ↦ ?_⟩
   have h₁ := h a b c (fun j ↦ 3 * ((2 * a + j : ℕ) : ℝ) - 3 / 2) 0
     (fun i j hij ↦ by
       have : (i : ℝ) ≤ j := by exact_mod_cast hij
@@ -114,6 +275,14 @@ theorem wiring_crosscaps {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
     ring
   · push_cast
     ring
+
+/-- A permutation is carried by a row of cross-caps. -/
+theorem wiring_crosscaps {n : ℕ} (hn : Even n) (σ : Equiv.Perm (Fin n)) :
+    ∃ L, 1 ≤ L ∧ ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ b →
+      Slab a b c n (3 * (((2 * a : ℕ) : ℤ) - 1 : ℤ) + 3 / 2)
+        (3 * (((2 * a + L : ℕ) : ℤ) - 1 : ℤ) + 3 / 2) σ := by
+  obtain ⟨L, hL, _, h⟩ := wiring_crosscaps_bound hn σ
+  exact ⟨L, hL, h⟩
 
 /-- The straight segment between two points of the plane. -/
 def sg (z z' : ℝ × ℝ) : Set (ℝ × ℝ) :=

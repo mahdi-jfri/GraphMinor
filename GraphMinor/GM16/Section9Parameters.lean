@@ -60,6 +60,47 @@ private theorem section9_order_bounds (δ β : ℕ) (hδβ : δ ≤ β) :
           (12 * β + 14) * (δ - 1) + 1 < 12 * (δ + 3) * (β + 1) := by nlinarith
       omega
 
+/-- The even battlefield size `β` chosen in Graph Minors XVI, Section 9. -/
+@[expose] def section9Beta (δ φ ψ : ℕ) : ℕ :=
+  let κ := δ ^ 2 * φ ^ 2 / 2 + 1
+  2 * ((κ * (ψ + 6) + 1) / 2)
+
+/-- The choices in Graph Minors XVI, proof of (8.1), pages 71–74, satisfy the
+order and index bounds used in Claims (2), (3), and the annulus selection,
+with `β = section9Beta δ φ ψ`. -/
+theorem section9_parameters_explicit (δ φ ψ : ℕ) (hφ : 3 ≤ φ) (hψ : 3 ≤ ψ) :
+    let κ := δ ^ 2 * φ ^ 2 / 2 + 1
+    let β := section9Beta δ φ ψ
+    let γ := 3 * β + 3
+    let θ := 12 * (δ + 3) * (β + 1)
+    1 ≤ κ ∧
+    Even β ∧ κ * (ψ + 6) ≤ β ∧ β ≤ κ * (ψ + 6) + 1 ∧
+    4 ≤ β ∧ (4 * γ + 2) * δ < θ ∧ 16 * β + 17 ≤ θ ∧
+    2 * β + 5 * γ + 2 < θ - (4 * γ + 2) * (δ - 1) - 1 ∧
+    κ + (κ - 1) * (ψ + 5) ≤ β - ψ - 5 := by
+  let κ := δ ^ 2 * φ ^ 2 / 2 + 1
+  let β := section9Beta δ φ ψ
+  have hκ : 1 ≤ κ := by dsimp [κ]; omega
+  have hlow : κ * (ψ + 6) ≤ β := by dsimp [β, section9Beta, κ]; omega
+  have hhigh : β ≤ κ * (ψ + 6) + 1 := by dsimp [β, section9Beta, κ]; omega
+  have hκβ : κ ≤ β := by
+    have hb := Nat.mul_le_mul_left κ (show 1 ≤ ψ + 6 by omega)
+    omega
+  have hδβ : δ ≤ β := (hairs_le_section9_kappa δ φ hφ).trans hκβ
+  obtain ⟨hclear, hbig, hfree⟩ := section9_order_bounds δ β hδβ
+  refine ⟨hκ, ⟨(κ * (ψ + 6) + 1) / 2, by dsimp [β, section9Beta, κ]; omega⟩, hlow, hhigh,
+    ?_, ?_, hbig, ?_, ?_⟩
+  · have hb := Nat.mul_le_mul_right (ψ + 6) hκ
+    omega
+  · rw [show 4 * (3 * β + 3) + 2 = 12 * β + 14 by omega]
+    exact hclear
+  · rw [show 4 * (3 * β + 3) + 2 = 12 * β + 14 by omega]
+    exact hfree
+  · have hstep : κ - 1 + 1 = κ := by omega
+    have heq : κ + (κ - 1) * (ψ + 5) + ψ + 5 = κ * (ψ + 6) := by nlinarith
+    dsimp only [κ, β] at hlow heq ⊢
+    omega
+
 /-- The choices in Graph Minors XVI, proof of (8.1), pages 71–74, satisfy the
 order and index bounds used in Claims (2), (3), and the annulus selection. -/
 theorem section9_parameters (δ φ ψ : ℕ) (hφ : 3 ≤ φ) (hψ : 3 ≤ ψ) :
@@ -70,27 +111,9 @@ theorem section9_parameters (δ φ ψ : ℕ) (hφ : 3 ≤ φ) (hψ : 3 ≤ ψ) :
       4 ≤ β ∧ (4 * γ + 2) * δ < θ ∧ 16 * β + 17 ≤ θ ∧
       2 * β + 5 * γ + 2 < θ - (4 * γ + 2) * (δ - 1) - 1 ∧
       κ + (κ - 1) * (ψ + 5) ≤ β - ψ - 5 := by
-  let κ := δ ^ 2 * φ ^ 2 / 2 + 1
-  let β := 2 * ((κ * (ψ + 6) + 1) / 2)
-  have hκ : 1 ≤ κ := by dsimp [κ]; omega
-  have hlow : κ * (ψ + 6) ≤ β := by dsimp [β]; omega
-  have hhigh : β ≤ κ * (ψ + 6) + 1 := by dsimp [β]; omega
-  have hκβ : κ ≤ β := by
-    have hb := Nat.mul_le_mul_left κ (show 1 ≤ ψ + 6 by omega)
-    omega
-  have hδβ : δ ≤ β := (hairs_le_section9_kappa δ φ hφ).trans hκβ
-  obtain ⟨hclear, hbig, hfree⟩ := section9_order_bounds δ β hδβ
-  refine ⟨κ, β, 3 * β + 3, 12 * (δ + 3) * (β + 1), rfl, hκ,
-    ⟨(κ * (ψ + 6) + 1) / 2, by dsimp [β]; omega⟩, hlow, hhigh, rfl, rfl, ?_, ?_, hbig, ?_, ?_⟩
-  · have hb := Nat.mul_le_mul_right (ψ + 6) hκ
-    omega
-  · rw [show 4 * (3 * β + 3) + 2 = 12 * β + 14 by omega]
-    exact hclear
-  · rw [show 4 * (3 * β + 3) + 2 = 12 * β + 14 by omega]
-    exact hfree
-  · have hstep : κ - 1 + 1 = κ := by omega
-    have heq : κ + (κ - 1) * (ψ + 5) + ψ + 5 = κ * (ψ + 6) := by nlinarith
-    omega
+  obtain ⟨h1, h2, h3, h4, h5, h6, h7, h8, h9⟩ := section9_parameters_explicit δ φ ψ hφ hψ
+  exact ⟨δ ^ 2 * φ ^ 2 / 2 + 1, section9Beta δ φ ψ, 3 * section9Beta δ φ ψ + 3,
+    12 * (δ + 3) * (section9Beta δ φ ψ + 1), rfl, h1, h2, h3, h4, rfl, rfl, h5, h6, h7, h8, h9⟩
 
 /-- Section 9's order bound leaves room to preserve a free boundary set
 through all the other clearings in Claim (3). The triangle inequality

@@ -577,12 +577,26 @@ private theorem boundary_count_le_of_enclosing_disc_of_cuff_ins
     exact (Set.ncard_le_ncard hsub hfinite).trans
       (hsmall.trans (hzη.trans (le_of_not_gt hshort)))
 
-/-- Variant of Graph Minors XII, (3.2) (pages 245–248) where the freeness hypothesis on
-`V(Γ) ∩ bd(Δ_i)` is replaced by Claim (4) of Graph Minors XXI, (5.1) (page 16 of the preprint). -/
-theorem theorem_3_2_of_cuff_ins
+/-- Explicit threshold for `theorem_3_2_of_cuff_ins`, parameterized by an upper bound `V` on
+`GM07.vModel` and closed surface model parameters `(a, b)`. -/
+def theorem_3_2_of_cuff_ins_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b t z : ℕ) : ℕ :=
+  let η_sep := 2 * max (GM12.theorem_3_1_bound V a b t z) z + 1
+  let N_two := 42 * (z + 4) * V a b 4 (z + 4)
+  let η_two := 2 * (2 * max N_two z + 1) + 1
+  max η_sep (max (max 1 z) η_two)
+
+lemma one_le_theorem_3_2_of_cuff_ins_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b t z : ℕ) :
+    1 ≤ theorem_3_2_of_cuff_ins_bound V a b t z :=
+  (le_max_left 1 z).trans ((le_max_left _ _).trans (le_max_right _ _))
+
+/-- Explicit variant of Graph Minors XII, (3.2) (pages 245–248) with threshold
+`theorem_3_2_of_cuff_ins_bound V a b t z`, where the freeness hypothesis on `V(Γ) ∩ bd(Δ_i)` is
+replaced by Claim (4) of Graph Minors XXI, (5.1) (page 16 of the preprint). -/
+theorem theorem_3_2_of_cuff_ins_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S : Type} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
-    (hS : IsClosedSurface S) (t z : ℕ) :
-    ∃ η : ℕ, 1 ≤ η ∧ ∀ (Δ : Fin t → Set S) (Γ : Surface.Drawing S) (θ : ℕ)
+    (hS : IsClosedSurface S) {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (t z : ℕ) :
+    ∀ (Δ : Fin t → Set S) (Γ : Surface.Drawing S) (θ : ℕ)
       (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
       (d : Set S → Set S → ℕ) (p : ℕ) (Zs : Fin p → Set S),
       (∀ i, IsClosedDisc (Δ i) ∧ Γ.U ∩ Δ i = Γ.V ∩ discBd (Δ i)) →
@@ -590,9 +604,9 @@ theorem theorem_3_2_of_cuff_ins
       (discBoundaryVertices Γ Δ).ncard ≤ z →
       (⋃ j, Zs j) = discBoundaryVertices Γ Δ →
       (∀ i j, i ≠ j → Disjoint (Zs i) (Zs j)) → IsTopologicallyFeasible Δ Zs →
-      η ≤ θ → HasTangleMetric Γ θ T d →
+      theorem_3_2_of_cuff_ins_bound V a b t z ≤ θ → HasTangleMetric Γ θ T d →
       (∀ i j, i ≠ j → ∀ ri ∈ Γ.R, (ri ∩ Δ i).Nonempty →
-        ∀ rj ∈ Γ.R, (rj ∩ Δ j).Nonempty → η ≤ d ri rj) →
+        ∀ rj ∈ Γ.R, (rj ∩ Δ j).Nonempty → theorem_3_2_of_cuff_ins_bound V a b t z ≤ d ri rj) →
       (∀ (F D : Set S) (i : Fin t),
         Γ.IsNormal F → IsOArc F → F ⊆ discComplement Δ →
         (Γ.V ∩ F).ncard < (Γ.V ∩ discBd (Δ i)).ncard →
@@ -601,19 +615,22 @@ theorem theorem_3_2_of_cuff_ins
           (PaintingOrDrawing.drawing Γ).interOutside D) ∈ T →
         ¬ discBd (Δ i) ⊆ D) →
       HasConnectingSubdrawings Γ (discBoundaryVertices Γ Δ) Zs := by
-  have h75 : GM07Theorem75Statement.{0} :=
-    GM07.gm07_theorem_7_5
-  have h51 : GM07Theorem51Statement.{0} := GM07.gm07_theorem_5_1
-  have h55 : GM07Theorem55Statement.{0} := GM07.gm07_theorem_5_5
+  dsimp only [theorem_3_2_of_cuff_ins_bound]
+  set N_sep := GM12.theorem_3_1_bound V a b t z
+  set η_sep := 2 * max N_sep z + 1
+  set N_two := 42 * (z + 4) * V a b 4 (z + 4)
+  set η'_two := 2 * max N_two z + 1
+  set η_two := 2 * η'_two + 1
+  set η_all := max η_sep (max (max 1 z) η_two)
   by_cases hcase : ¬ IsSphere S ∨ 3 ≤ t
-  · obtain ⟨N, hN⟩ := GM12.theorem_3_1_proof hS t z hcase
-    let η := 2 * max N z + 1
-    have h2N : 2 * N < η := Nat.lt_succ_of_le (Nat.mul_le_mul_left 2 (le_max_left N z))
-    have hNη : N < η := (Nat.le_mul_of_pos_left N (by decide : 0 < 2)).trans_lt h2N
-    have hzη : z ≤ η := (le_max_right N z).trans
-      ((Nat.le_mul_of_pos_left (max N z) (by decide : 0 < 2)).trans (Nat.le_succ _))
-    refine ⟨η, Nat.succ_le_succ (Nat.zero_le _), ?_⟩
+  · have hN := GM12.theorem_3_1_explicit V hV hS he t z hcase
+    have hη_sep_le : η_sep ≤ η_all := le_max_left _ _
+    have h2N : 2 * N_sep < η_sep := Nat.lt_succ_of_le (Nat.mul_le_mul_left 2 (le_max_left N_sep z))
+    have hNη : N_sep < η_sep := (Nat.le_mul_of_pos_left N_sep (by decide : 0 < 2)).trans_lt h2N
+    have hzη : z ≤ η_sep := (le_max_right N_sep z).trans
+      ((Nat.le_mul_of_pos_left (max N_sep z) (by decide : 0 < 2)).trans (Nat.le_succ _))
     intro Δ Γ θ T d p Zs hΔ hdis hcount hcover hdisZ hfeasible horder hm hsep hno_ins
+    have horder' : η_sep ≤ θ := hη_sep_le.trans horder
     have hregion : ∀ i, ∃ r ∈ Γ.R, (r ∩ Δ i).Nonempty := by
       intro i
       obtain ⟨r, hr, hInt, _, _⟩ := exists_unique_region_meeting_disc hS (hΔ i).1 (hΔ i).2
@@ -621,24 +638,24 @@ theorem theorem_3_2_of_cuff_ins
       exact ⟨r, hr, x, hInt hx, hx.1⟩
     choose r hr hrΔ using hregion
     obtain ⟨hT, K, ins, hK, hd, heq⟩ := hm
-    have hsep' : ∀ i j, i ≠ j → η ≤ tangleMetric Γ K ins θ (r i) (r j) := by
+    have hsep' : ∀ i j, i ≠ j → η_sep ≤ tangleMetric Γ K ins θ (r i) (r j) := by
       intro i j hij
       rw [← heq (r i) (Or.inr (hr i)) (r j) (Or.inr (hr j))]
-      exact hsep i j hij (r i) (hr i) (hrΔ i) (r j) (hr j) (hrΔ j)
+      exact hη_sep_le.trans (hsep i j hij (r i) (hr i) (hrΔ i) (r j) (hr j) (hrΔ j))
     have hcase' : ¬ IsSphere S ∨ 3 ≤ Nat.card (Fin t) := by simpa only [Nat.card_fin] using hcase
     apply hN Γ Δ (fun i => (hΔ i).1) hdis (fun i => (hΔ i).2) p Zs
     · intro F hn hF _ hsmall
-      exact small_circle_bounds_at_most_one_prescribed_disc hS hT.2.1 hT.2.2 hK hd horder hNη
+      exact small_circle_bounds_at_most_one_prescribed_disc hS hT.2.1 hT.2.2 hK hd horder' hNη
         Δ r hr hrΔ hsep' hF hn hsmall
     · intro A B P D E u v hn hA hB hP hu hv hPA hPB hstar hD hE hbD hbE hDE hi hj
-      exact joined_circle_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder Δ r (fun i => (hΔ i).1)
+      exact joined_circle_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder' Δ r (fun i => (hΔ i).1)
         hcase' hr hrΔ hsep' h2N hn hA hB hP hu hv hPA hPB hstar hD hE hbD hbE hDE hi hj
     · intro A B D E hn hA hB hstar hD hE hbD hbE hcap hi hj
-      exact meeting_circle_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder Δ r (fun i => (hΔ i).1)
+      exact meeting_circle_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder' Δ r (fun i => (hΔ i).1)
         hcase' hr hrΔ hsep' h2N hn hA hB hstar hD hE hbD hbE hcap hi hj
     · intro ht _ P D a b _ hn hP hPP hstar hDs
       subst t
-      apply theta_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder Δ r (fun i => (hΔ i).1)
+      apply theta_vertex_count_gt hS hT.2.1 hT.2.2 hK hd horder' Δ r (fun i => (hΔ i).1)
         hr hrΔ hsep' hNη P D hn hP hPP hstar (fun i => (hDs i).1) (fun i => (hDs i).2.1)
       · intro i
         simpa only [Fin.cast_refl, id_eq] using (hDs i).2.2.1
@@ -647,7 +664,7 @@ theorem theorem_3_2_of_cuff_ins
     · exact hdisZ
     · exact hfeasible
     · intro F hn hF hstar D hD hbD i hi
-      exact boundary_count_le_of_enclosing_disc_of_cuff_ins hS hT.2.1 hT.2.2 hK hd horder hzη
+      exact boundary_count_le_of_enclosing_disc_of_cuff_ins hS hT.2.1 hT.2.2 hK hd horder' hzη
         Δ r (fun i => (hΔ i).1) hcase' hr hrΔ hsep' hcount hno_ins hF hn hstar hD hbD i hi
     · exact hcount
   · have hs : IsSphere S := by
@@ -657,39 +674,43 @@ theorem theorem_3_2_of_cuff_ins
       by_contra hn
       exact hcase (Or.inr (by omega))
     interval_cases t
-    · refine ⟨1, le_rfl, ?_⟩
-      intro Δ Γ θ T d p Zs _ _ _ hcover _ _ _ _ _ _
+    · intro Δ Γ θ T d p Zs _ _ _ hcover _ _ _ _ _ _
       have hZ : discBoundaryVertices Γ Δ = ∅ := by simp [discBoundaryVertices]
       rw [hZ] at hcover ⊢
       exact hasConnectingSubdrawings_of_empty_union Γ Zs hcover
-    · refine ⟨max 1 z, le_max_left _ _, ?_⟩
-      intro Δ Γ θ T d p Zs hΔ _ hcount hcover hdisZ hfeas horder hm _ hno_ins
+    · intro Δ Γ θ T d p Zs hΔ _ hcount hcover hdisZ hfeas horder hm _ hno_ins
+      have h1z_le : max 1 z ≤ η_all := (le_max_left _ _).trans (le_max_right _ _)
       have hzθ : (discBoundaryVertices Γ Δ).ncard ≤ θ :=
-        hcount.trans ((le_max_right 1 z).trans horder)
+        hcount.trans ((le_max_right 1 z).trans (h1z_le.trans horder))
       exact theorem_3_2_one_disc_of_cuff_ins hS hs Γ hm.1.2.1 hm.1.2.2 Δ
         (fun i => (hΔ i).1) (fun i => (hΔ i).2) Zs hcover hdisZ hfeas hzθ hno_ins
     · have hcase3 : ¬ IsSphere S ∨ 3 ≤ 3 := Or.inr le_rfl
-      obtain ⟨a, b, hcomplex, hmodel⟩ := exists_uniform_discComplement_model hS 3 hcase3
-      let N := 42 * (z + 3 + 1) * GM07.vModel a b (3 + 1) (z + 3 + 1)
-      let η' := 2 * max N z + 1
-      have hη'pos : 1 ≤ η' := Nat.succ_le_succ (Nat.zero_le _)
-      have h2N : 2 * N < η' := Nat.lt_succ_of_le (Nat.mul_le_mul_left 2 (le_max_left N z))
-      have hNη : N < η' := (Nat.le_mul_of_pos_left N (by decide : 0 < 2)).trans_lt h2N
-      have hzη : z ≤ η' := (le_max_right N z).trans
-        ((Nat.le_mul_of_pos_left (max N z) (by decide : 0 < 2)).trans (Nat.le_succ _))
-      refine ⟨2 * η' + 1, Nat.succ_le_succ (Nat.zero_le _), ?_⟩
+      rcases he with ⟨e⟩
+      have hcomplex : 3 ≤ 3 * a + 3 * b + 3 := by omega
+      have hmodel : ∀ Δ' : Fin 3 → Set S, (∀ i, IsClosedDisc (Δ' i)) →
+          Pairwise (fun i j => Disjoint (Δ' i) (Δ' j)) →
+          Nonempty (discComplement Δ' ≃ₜ SurfaceModel a b 3) := fun Δ' hΔ' hd' =>
+        Eq.mp (congrArg (fun n => Nonempty (discComplement Δ' ≃ₜ SurfaceModel a b n)) (Nat.card_fin 3))
+          (discComplement_model_of_closed_model hS Δ' hΔ' hd' e)
+      have hη_two_le : η_two ≤ η_all := (le_max_right _ _).trans (le_max_right _ _)
+      have hη'pos : 1 ≤ η'_two := Nat.succ_le_succ (Nat.zero_le _)
+      have h2N : 2 * N_two < η'_two := Nat.lt_succ_of_le (Nat.mul_le_mul_left 2 (le_max_left N_two z))
+      have hNη : N_two < η'_two := (Nat.le_mul_of_pos_left N_two (by decide : 0 < 2)).trans_lt h2N
+      have hzη : z ≤ η'_two := (le_max_right N_two z).trans
+        ((Nat.le_mul_of_pos_left (max N_two z) (by decide : 0 < 2)).trans (Nat.le_succ _))
       intro Δ Γ θ T d p Zs hΔ hdis hcount hcover hdisZ hfeas horder hm hsep hno_ins
+      have horder_two : 2 * η'_two + 1 ≤ θ := hη_two_le.trans horder
       have hreg : ∀ i, ∃ r ∈ Γ.R, (r ∩ Δ i).Nonempty := by
         intro i
         obtain ⟨r, hr, hInt, _, _⟩ := exists_unique_region_meeting_disc hS (hΔ i).1 (hΔ i).2
         obtain ⟨x, hx⟩ := (hΔ i).1.nonempty_discInt
         exact ⟨r, hr, x, hInt hx, hx.1⟩
       choose r hr hrΔ using hreg
-      have hsep2 : ∀ i j, i ≠ j → 2 * η' + 1 ≤ d (r i) (r j) :=
-        fun i j hij => hsep i j hij (r i) (hr i) (hrΔ i) (r j) (hr j) (hrΔ j)
+      have hsep2 : ∀ i j, i ≠ j → 2 * η'_two + 1 ≤ d (r i) (r j) :=
+        fun i j hij => hη_two_le.trans (hsep i j hij (r i) (hr i) (hrΔ i) (r j) (hr j) (hrΔ j))
       have hfar := hsep2 0 1 (by decide)
       obtain ⟨q, hq, hq0, _, hq1⟩ := exists_intermediate_region hS hm hη'pos (hr 0) (hr 1) hfar
-      have hqfar : ∀ i : Fin 2, η' ≤ d (r i) q := by
+      have hqfar : ∀ i : Fin 2, η'_two ≤ d (r i) q := by
         intro i; fin_cases i
         · exact hq0
         · exact hq1
@@ -734,20 +755,20 @@ theorem theorem_3_2_of_cuff_ins
         refine Fin.forall_fin_succ.mpr ⟨?_, hrΔ⟩
         obtain ⟨x, hx⟩ := hE.nonempty_discInt
         exact ⟨x, hEq hx.1, hx.1⟩
-      have hsep' : ∀ i j, i ≠ j → η' ≤ d (r' i) (r' j) := by
+      have hsep' : ∀ i j, i ≠ j → η'_two ≤ d (r' i) (r' j) := by
         intro i j
         refine Fin.cases ?_ (fun i => ?_) i
         · refine Fin.cases ?_ (fun j => ?_) j
           · intro hij; exact False.elim (hij rfl)
           · intro _
-            change η' ≤ d q (r j)
+            change η'_two ≤ d q (r j)
             rw [h91.2.2.2.1 q (Or.inr hq) (r j) (Or.inr (hr j))]
             exact hqfar j
         · refine Fin.cases ?_ (fun j => ?_) j
           · intro _; exact hqfar i
           · intro hij
-            change η' ≤ d (r i) (r j)
-            exact (Nat.le_add_right η' η' |>.trans (Nat.le_succ _)).trans
+            change η'_two ≤ d (r i) (r j)
+            exact (Nat.le_add_right η'_two η'_two |>.trans (Nat.le_succ _)).trans
               (by simpa only [two_mul] using hsep2 i j (fun he => hij (congrArg Fin.succ he)))
       have hno_ins' : ∀ (F D : Set S) (i : Fin 3),
           Γ.IsNormal F → IsOArc F → F ⊆ discComplement Δ' →
@@ -785,12 +806,12 @@ theorem theorem_3_2_of_cuff_ins
       obtain ⟨H, hHF, hHB, hclasses⟩ := exists_punctured_forest_of_ambient hS Δ' hΔ' hdis' Zs
         F_amb hFF (hcontacts.1.trans hFU) (hcontacts.2.trans hFV) hZbd' hclasses'
       obtain ⟨hT, K, ins, hK, hd, heq⟩ := hm
-      have hsepmetric : ∀ i j, i ≠ j → η' ≤ tangleMetric Γ K ins θ (r' i) (r' j) := by
+      have hsepmetric : ∀ i j, i ≠ j → η'_two ≤ tangleMetric Γ K ins θ (r' i) (r' j) := by
         intro i j hij
         rw [← heq (r' i) (Or.inr (hr' i)) (r' j) (Or.inr (hr' j))]
         exact hsep' i j hij
-      have hηorder : η' ≤ θ := (Nat.le_add_right η' η' |>.trans (Nat.le_succ _)).trans
-        (by simpa only [two_mul] using horder)
+      have hηorder : η'_two ≤ θ := (Nat.le_add_right η'_two η'_two |>.trans (Nat.le_succ _)).trans
+        (by simpa only [two_mul] using horder_two)
       have hcase3' : ¬ IsSphere S ∨ 3 ≤ Nat.card (Fin 3) := by simpa only [Nat.card_fin] using hcase3
       have hbound : ∀ F : Set S, Γ.IsNormal F → IsOArc F → F ⊆ discComplement Δ' →
           ∀ D : Set S, IsClosedDisc D → discBd D = F →
@@ -803,9 +824,11 @@ theorem theorem_3_2_of_cuff_ins
         apply connecting_subdrawings_of_alpha_bound_of_forest hS Γ Δ' hΔ' hdis' havoid' Zs
           (hcover.trans hZeq.symm) hdisZ H hHF hHB hclasses hbound a b 3 z hcomplex
           (hmodel Δ' hΔ' hdis') (hZeq ▸ hcount)
-        apply Nat.le_of_lt
+        have hVle : 42 * (z + 3 + 1) * GM07.vModel a b (3 + 1) (z + 3 + 1) ≤ N_two :=
+          Nat.mul_le_mul_left _ (hV a b 4 (z + 4))
+        apply hVle.trans (Nat.le_of_lt ?_)
         have hUC := drawing_support_subset_discComplement hS Γ Δ' hΔ' hdis' havoid'
-        apply alpha_gt_of_geometric_conditions hS Γ Δ' hΔ' hdis' hcase3 hUC N
+        apply alpha_gt_of_geometric_conditions hS Γ Δ' hΔ' hdis' hcase3 hUC N_two
         · intro F hn hF _ hsmall
           exact small_circle_bounds_at_most_one_prescribed_disc hS hT.2.1 hT.2.2 hK hd hηorder hNη
             Δ' r' hr' hrΔ' hsepmetric hF hn hsmall
@@ -825,6 +848,35 @@ theorem theorem_3_2_of_cuff_ins
         · exact exists_alphaCandidate_in_discComplement hS (by decide : 3 ≠ 0)
             hcase3 Γ Δ' hΔ' hdis' havoid'
       rwa [hZeq] at hresult
+
+/-- Variant of Graph Minors XII, (3.2) (pages 245–248) where the freeness hypothesis on
+`V(Γ) ∩ bd(Δ_i)` is replaced by Claim (4) of Graph Minors XXI, (5.1) (page 16 of the preprint). -/
+theorem theorem_3_2_of_cuff_ins
+    {S : Type} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (t z : ℕ) :
+    ∃ η : ℕ, 1 ≤ η ∧ ∀ (Δ : Fin t → Set S) (Γ : Surface.Drawing S) (θ : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (p : ℕ) (Zs : Fin p → Set S),
+      (∀ i, IsClosedDisc (Δ i) ∧ Γ.U ∩ Δ i = Γ.V ∩ discBd (Δ i)) →
+      Pairwise (fun i j => Disjoint (Δ i) (Δ j)) →
+      (discBoundaryVertices Γ Δ).ncard ≤ z →
+      (⋃ j, Zs j) = discBoundaryVertices Γ Δ →
+      (∀ i j, i ≠ j → Disjoint (Zs i) (Zs j)) → IsTopologicallyFeasible Δ Zs →
+      η ≤ θ → HasTangleMetric Γ θ T d →
+      (∀ i j, i ≠ j → ∀ ri ∈ Γ.R, (ri ∩ Δ i).Nonempty →
+        ∀ rj ∈ Γ.R, (rj ∩ Δ j).Nonempty → η ≤ d ri rj) →
+      (∀ (F D : Set S) (i : Fin t),
+        Γ.IsNormal F → IsOArc F → F ⊆ discComplement Δ →
+        (Γ.V ∩ F).ncard < (Γ.V ∩ discBd (Δ i)).ncard →
+        IsClosedDisc D → subBd D = F →
+        ((PaintingOrDrawing.drawing Γ).inter D,
+          (PaintingOrDrawing.drawing Γ).interOutside D) ∈ T →
+        ¬ discBd (Δ i) ⊆ D) →
+      HasConnectingSubdrawings Γ (discBoundaryVertices Γ Δ) Zs := by
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_3_2_of_cuff_ins_bound GM07.vModel a b t z,
+    one_le_theorem_3_2_of_cuff_ins_bound _ a b t z,
+    theorem_3_2_of_cuff_ins_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS he t z⟩
 
 end GM21
 end GraphMinor

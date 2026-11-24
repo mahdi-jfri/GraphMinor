@@ -4,7 +4,7 @@ public import GraphMinor.GM12.Cited
 public import GraphMinor.GM12.Defs
 public import GraphMinor.GM15.Defs
 public import GraphMinor.GM16.Defs
-import GraphMinor.GM12.Section4EyeConnections
+public import GraphMinor.GM12.Section4EyeConnections
 import GraphMinor.GM12.Section4EyeBranchControl
 import GraphMinor.GM12.Section4EyePathReindex
 import GraphMinor.GM12.Section4Monotone
@@ -31,35 +31,47 @@ open Set Surface Graph Hypergraph GM14 GM15
 
 universe u
 
-/-- XII (4.5), pages 252--253, for `p ≥ 4`, in the independent-eye
-span formulation used by XV. The only statement hypotheses are
-VII (7.5), (5.1), and (5.5). The paper reduces to `p ≥ 5`.
-A larger threshold includes the source vertex-count bound
-explicitly before applying the final separation estimate. -/
-theorem theorem_4_5_span_large
+/-- XII (4.5), pages 252--253, for `p ≥ 4`, with explicit eye count
+`theorem_4_5_large_kBound p` and explicit threshold `theorem_4_5_large_NBound V a b p`. -/
+theorem theorem_4_5_span_large_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
-    (hS : IsClosedSurface S) (p : ℕ) (hp : 4 ≤ p) :
-    ∃ k N : ℕ, 1 ≤ N ∧ ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
+    (hS : IsClosedSurface S) {a₀ b₀ : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a₀ b₀ 0))
+    (p : ℕ) (hp : 4 ≤ p) :
+    ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
       (Tstar : Set (Hypergraph α β × Hypergraph α β)) (Γ : Drawing S)
       (η : SpanEmbedding Γ G) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
       (d : Set S → Set S → ℕ) (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
-      HasTangleMetric Γ θ T d → N ≤ θ →
-      ∀ (r : Fin k → Set S) (P Q : Fin k → Graph α β),
+      HasTangleMetric Γ θ T d → theorem_4_5_large_NBound V a₀ b₀ p ≤ θ →
+      ∀ (r : Fin (theorem_4_5_large_kBound p) → Set S)
+        (P Q : Fin (theorem_4_5_large_kBound p) → Graph α β),
       Function.Injective r → (∀ i, IsEyeWithPaths G Γ η θ T (r i) (P i) (Q i)) →
-      (∀ i j, i ≠ j → N ≤ d (r i) (r j)) →
+      (∀ i j, i ≠ j → theorem_4_5_large_NBound V a₀ b₀ p ≤ d (r i) (r j)) →
       (∀ i j, i ≠ j → Disjoint ((P i).vertexSet ∪ (Q i).vertexSet)
         ((P j).vertexSet ∪ (Q j).vertexSet)) →
       ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
         hCtrl.isTangle_star.finite_E) θstar Tstar (GM16.completeGraph p) := by
   classical
-  obtain ⟨W, E, L, κ, t, σ, N, hW, hE, hminor, hlink, hκne, ht, hNW, htwo, hconnect⟩ :=
-    exists_eye_connections hS hp
+  obtain ⟨W, E, L, κ, t, σ, hW, hE, hminor, hlink, hκne, ht, htle, hNW, htwo, hconnect⟩ :=
+    exists_eye_connections_explicit V hV hS he hp
   let : Finite W := hW
   let : Finite E := hE
   let : Fintype W := Fintype.ofFinite W
   let : Fintype E := Fintype.ofFinite E
-  refine ⟨t, N, (by omega), ?_⟩
-  intro α β G θstar θ Tstar Γ η T d hCtrl hm hN r P Q hri heye hfar hdisj
+  set N := theorem_4_5_large_NBound V a₀ b₀ p
+  intro α β G θstar θ Tstar Γ η T d hCtrl hm hN r₀ P₀ Q₀ hri₀ heye₀ hfar₀ hdisj₀
+  let emb : Fin t → Fin (theorem_4_5_large_kBound p) := Fin.castLE htle
+  have hemb : Function.Injective emb := Fin.castLE_injective htle
+  let r : Fin t → Set S := fun i => r₀ (emb i)
+  let P : Fin t → Graph α β := fun i => P₀ (emb i)
+  let Q : Fin t → Graph α β := fun i => Q₀ (emb i)
+  have hri : Function.Injective r := hri₀.comp hemb
+  have heye : ∀ i, IsEyeWithPaths G Γ η θ T (r i) (P i) (Q i) := fun i => heye₀ (emb i)
+  have hfar : ∀ i j, i ≠ j → N ≤ d (r i) (r j) :=
+    fun i j hij => hfar₀ (emb i) (emb j) (fun h => hij (hemb h))
+  have hdisj : ∀ i j, i ≠ j → Disjoint ((P i).vertexSet ∪ (Q i).vertexSet)
+      ((P j).vertexSet ∪ (Q j).vertexSet) :=
+    fun i j hij => hdisj₀ (emb i) (emb j) (fun h => hij (hemb h))
   have hex := fun i => (heye i).2
   choose C a b c d' hC hCG hCr ha hb hc hd hnodup horder hfree hPQ hP hQ using hex
   have hr : ∀ i, r i ∈ Γ.R := fun i => (heye i).1
@@ -111,5 +123,30 @@ theorem theorem_4_5_span_large
   let : Nonempty β := ⟨η.eMap e⟩
   exact theorem_4_2_proof hCtrl.isTangle_star.finite_V hCtrl.isTangle_star.finite_E
     (Set.toFinite L.vertexSet) (Set.toFinite L.edgeSet) hminor hcL
+
+/-- XII (4.5), pages 252--253, for `p ≥ 4`, in the independent-eye
+span formulation used by XV. The only statement hypotheses are
+VII (7.5), (5.1), and (5.5). The paper reduces to `p ≥ 5`.
+A larger threshold includes the source vertex-count bound
+explicitly before applying the final separation estimate. -/
+theorem theorem_4_5_span_large
+    {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (p : ℕ) (hp : 4 ≤ p) :
+    ∃ k N : ℕ, 1 ≤ N ∧ ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
+      (Tstar : Set (Hypergraph α β × Hypergraph α β)) (Γ : Drawing S)
+      (η : SpanEmbedding Γ G) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
+      HasTangleMetric Γ θ T d → N ≤ θ →
+      ∀ (r : Fin k → Set S) (P Q : Fin k → Graph α β),
+      Function.Injective r → (∀ i, IsEyeWithPaths G Γ η θ T (r i) (P i) (Q i)) →
+      (∀ i j, i ≠ j → N ≤ d (r i) (r j)) →
+      (∀ i j, i ≠ j → Disjoint ((P i).vertexSet ∪ (Q i).vertexSet)
+        ((P j).vertexSet ∪ (Q j).vertexSet)) →
+      ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
+        hCtrl.isTangle_star.finite_E) θstar Tstar (GM16.completeGraph p) := by
+  obtain ⟨a₀, b₀, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_5_large_kBound p, theorem_4_5_large_NBound GM07.vModel a₀ b₀ p,
+    (by unfold theorem_4_5_large_NBound; exact (by omega : 1 ≤ 2 * (p + 2 * theorem_4_5_large_kBound p) + 3).trans (le_max_right _ _)),
+    theorem_4_5_span_large_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS he p hp⟩
 
 end GraphMinor.GM12

@@ -4,8 +4,8 @@ public import GraphMinor.GM12.Cited
 public import GraphMinor.GM12.Defs
 public import GraphMinor.GM15.Defs
 public import GraphMinor.GM16.Defs
+public import GraphMinor.GM12.Section4VertexConnections
 import GraphMinor.GM12.Section4CliqueLabels
-import GraphMinor.GM12.Section4VertexConnections
 import GraphMinor.GM12.Section4TerminalIndexing
 import GraphMinor.GM12.Section4SpanControl
 import GraphMinor.GM12.Section4ExternalPathBranches
@@ -40,24 +40,29 @@ open Set Graph Surface Hypergraph GM10 GM14 GM15
 
 universe u
 
-/-- XII (4.4), pages 251--252, for at least three clique vertices,
-in the span formulation used by XVI. The statement hypotheses are
-only the cited VII (7.5), (5.1), and (5.5). -/
-theorem theorem_4_4_span_large
+/-- Explicit threshold for Graph Minors XII, (4.4), when `3 ≤ p`. -/
+@[expose] def theorem_4_4_large_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p : ℕ) : ℕ :=
+  vertexConnectionsBound V a b p (2 * (p * (p - 1) / 2))
+
+/-- XII (4.4), pages 251--252, for at least three clique vertices, with explicit threshold
+`theorem_4_4_large_bound V a b p`. -/
+theorem theorem_4_4_span_large_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
-    (hS : IsClosedSurface S) (p : ℕ) (hp : 3 ≤ p) :
-    ∃ N : ℕ, 1 ≤ N ∧
-      ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
-        (Tstar : Set (Hypergraph α β × Hypergraph α β))
-        (Γ : Drawing S) (η : SpanEmbedding Γ G)
-        (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-        (d : Set S → Set S → ℕ)
-        (s r : Fin (p * (p - 1) / 2) → S) (P : Fin (p * (p - 1) / 2) → Graph α β)
-        (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
-      HasTangleMetric Γ θ T d → N ≤ θ →
+    (hS : IsClosedSurface S) {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0))
+    (p : ℕ) (hp : 3 ≤ p) :
+    ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
+      (Tstar : Set (Hypergraph α β × Hypergraph α β))
+      (Γ : Drawing S) (η : SpanEmbedding Γ G)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ)
+      (s r : Fin (p * (p - 1) / 2) → S) (P : Fin (p * (p - 1) / 2) → Graph α β)
+      (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
+      HasTangleMetric Γ θ T d → theorem_4_4_large_bound V a b p ≤ θ →
       (∀ i, s i ∈ Γ.V ∧ r i ∈ Γ.V ∧ s i ≠ r i) →
       Function.Injective s → Function.Injective r → Disjoint (range s) (range r) →
-      (∀ x ∈ range s ∪ range r, ∀ y ∈ range s ∪ range r, x ≠ y → N ≤ d {x} {y}) →
+      (∀ x ∈ range s ∪ range r, ∀ y ∈ range s ∪ range r, x ≠ y →
+        theorem_4_4_large_bound V a b p ≤ d {x} {y}) →
       (∀ i, IsHPathWithEnds G η.imageGraph (P i) (η.vMap (s i)) (η.vMap (r i))) →
       Pairwise (fun i j => Disjoint (P i).vertexSet (P j).vertexSet) →
       ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
@@ -66,8 +71,9 @@ theorem theorem_4_4_span_large
   let μ := p * (p - 1) / 2
   obtain ⟨K, κ, hKV, hKE, ⟨φ⟩, hloop, hassign, hslots⟩ := exists_oriented_clique_labels hp
   let σ : Fin (2 * μ) ≃ Fin μ × Bool := Fintype.equivOfCardEq (by simp [Nat.mul_comm])
-  obtain ⟨N, hN, hpN, hconnect⟩ := exists_threshold_for_vertex_connections hS p (2 * μ)
-  refine ⟨N, hN, ?_⟩
+  have hconnect := exists_threshold_for_vertex_connections_explicit V hV hS he p (2 * μ)
+  set N := theorem_4_4_large_bound V a b p
+  have hpN : 2 * p + 2 ≤ N := Nat.add_le_add_right (le_max_right _ _) 2
   intro α β G θstar θ Tstar Γ η T d s r P hCtrl hm hθ hends hs hr hsr hfar hP hPP
   let ends : Fin μ × Bool → S := fun q => if q.2 then s q.1 else r q.1
   let z : Fin (2 * μ) → S := fun q => ends (σ q)
@@ -158,5 +164,32 @@ theorem theorem_4_4_span_large
   obtain ⟨e, _⟩ := hEΓ
   let : Nonempty β := ⟨η.eMap e⟩
   exact controlsMinor_of_iso φ.symm hcK
+
+/-- XII (4.4), pages 251--252, for at least three clique vertices,
+in the span formulation used by XVI. The statement hypotheses are
+only the cited VII (7.5), (5.1), and (5.5). -/
+theorem theorem_4_4_span_large
+    {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (p : ℕ) (hp : 3 ≤ p) :
+    ∃ N : ℕ, 1 ≤ N ∧
+      ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
+        (Tstar : Set (Hypergraph α β × Hypergraph α β))
+        (Γ : Drawing S) (η : SpanEmbedding Γ G)
+        (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (d : Set S → Set S → ℕ)
+        (s r : Fin (p * (p - 1) / 2) → S) (P : Fin (p * (p - 1) / 2) → Graph α β)
+        (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
+      HasTangleMetric Γ θ T d → N ≤ θ →
+      (∀ i, s i ∈ Γ.V ∧ r i ∈ Γ.V ∧ s i ≠ r i) →
+      Function.Injective s → Function.Injective r → Disjoint (range s) (range r) →
+      (∀ x ∈ range s ∪ range r, ∀ y ∈ range s ∪ range r, x ≠ y → N ≤ d {x} {y}) →
+      (∀ i, IsHPathWithEnds G η.imageGraph (P i) (η.vMap (s i)) (η.vMap (r i))) →
+      Pairwise (fun i j => Disjoint (P i).vertexSet (P j).vertexSet) →
+      ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
+        hCtrl.isTangle_star.finite_E) θstar Tstar (GM16.completeGraph p) := by
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_4_large_bound GM07.vModel a b p,
+    by unfold theorem_4_4_large_bound vertexConnectionsBound; omega,
+    theorem_4_4_span_large_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS he p hp⟩
 
 end GraphMinor.GM12

@@ -1731,38 +1731,59 @@ theorem theorem_4_5_proof {S : Type} [TopologicalSpace S] (hS : IsSurface S) [Co
       · exact disjoint_left.mp he.2 ⟨hv_cl, hv_del.1⟩ ⟨hv_del.1, hV_del hv_del⟩
   exact ⟨θ', _, le_rfl, theorem_3_4_proof (GM12.toHypergraph_le_of_isSubdrawing hSub_del) h𝒯_del⟩
 
-/-- Multi-region vertex-deletion form of **Graph Minors XXI, (4.6)**: for every surface `S` with
-`bd S = ∅`, `θ' ≥ 1`, and `ρ : ℕ`, there is `θ ≥ 1` such that for every drawing `Γ` in `S` with a
-tangle of order `≥ θ` and `r : Fin ρ → Set S` with `∀ i, r i ∈ Γ.R`,
-`GM12.deleteVertices Γ (⋃ i, {v ∈ Γ.V | v ∈ closure (r i)})` has a tangle of order `θ'`. -/
-theorem theorem_4_6_deleteVertices {S : Type} [TopologicalSpace S] [T2Space S]
-    (hS : IsSurface S) [ConnectedSpace S] (hbd : bd S = ∅) (ρ : ℕ) {θ' : ℕ} (hθ' : 1 ≤ θ') :
-    ∃ θ : ℕ, 1 ≤ θ ∧
-      ∀ (Γ : Surface.Drawing S) (r : Fin ρ → Set S),
-        (∀ i, r i ∈ Γ.R) →
-        (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
-          θ ≤ θ₀ ∧ IsTangle Γ.toHypergraph θ₀ 𝒯) →
-        ∃ 𝒯', IsTangle
-          (GM12.deleteVertices Γ (⋃ i, {v ∈ Γ.V | v ∈ closure (r i)})).toHypergraph θ' 𝒯' := by
+/-- Explicit tangle order bound for **Graph Minors XXI, (4.6)** (page 14 of the preprint),
+iterating `tangleRegionBound k` `ρ` times from `θ'`. -/
+@[expose] def theorem_4_6_bound (k ρ θ' : ℕ) : ℕ :=
+  Nat.iterate (tangleRegionBound k) ρ θ'
+
+theorem one_le_theorem_4_6_bound (k ρ : ℕ) {θ' : ℕ} (hθ' : 1 ≤ θ') :
+    1 ≤ theorem_4_6_bound k ρ θ' := by
+  induction ρ with
+  | zero => exact hθ'
+  | succ ρ _ =>
+    unfold theorem_4_6_bound
+    rw [Function.iterate_succ_apply']
+    exact one_le_tangleRegionBound k
+
+/-- Explicit multi-region vertex-deletion form of **Graph Minors XXI, (4.6)** with bound
+`theorem_4_6_bound k ρ θ'`. -/
+theorem theorem_4_6_deleteVertices_explicit {S : Type} [TopologicalSpace S] [T2Space S]
+    (hS : IsSurface S) [ConnectedSpace S] (hbd : bd S = ∅)
+    {k : ℕ} (hk : ∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (S ≃ₜ SurfaceModel a₀ b₀ c₀))
+    (ρ : ℕ) {θ' : ℕ} (hθ' : 1 ≤ θ') :
+    ∀ (Γ : Surface.Drawing S) (r : Fin ρ → Set S),
+      (∀ i, r i ∈ Γ.R) →
+      (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+        theorem_4_6_bound k ρ θ' ≤ θ₀ ∧ IsTangle Γ.toHypergraph θ₀ 𝒯) →
+      ∃ 𝒯', IsTangle
+        (GM12.deleteVertices Γ (⋃ i, {v ∈ Γ.V | v ∈ closure (r i)})).toHypergraph θ' 𝒯' := by
+  have : CompactSpace S := hS.1
   induction ρ generalizing θ' with
   | zero =>
-    refine ⟨θ', hθ', fun Γ r _ ⟨θ₀, 𝒯, hθ₀, h𝒯⟩ ↦ ?_⟩
+    intro Γ r _ ⟨θ₀, 𝒯, hθ₀, h𝒯⟩
     have h𝒯' : IsTangle Γ.toHypergraph θ' (truncation 𝒯 θ') := theorem_3_7_proof h𝒯 hθ' hθ₀
     have hSub : Γ.IsSubdrawing (GM12.deleteVertices Γ (⋃ i : Fin 0, {v ∈ Γ.V | v ∈ closure (r i)})) := by
       rw [GM12.isSubdrawing_deleteVertices_iff]
       exact ⟨⟨Subset.rfl, Subset.rfl⟩, by simp⟩
     exact ⟨_, theorem_3_4_proof (GM12.toHypergraph_le_of_isSubdrawing hSub) h𝒯'⟩
   | succ ρ ih =>
-    obtain ⟨θ₁, hθ₁, H_ih⟩ := ih hθ'
-    obtain ⟨θ, hθ, H_step⟩ := theorem_4_5_deleteVertices hS hbd hθ₁
-    refine ⟨θ, hθ, fun Γ r hr h𝒯 ↦ ?_⟩
+    intro Γ r hr ⟨θ₀, 𝒯, hθ₀, h𝒯⟩
+    have hiter : theorem_4_6_bound k (ρ + 1) θ' = tangleRegionBound k (theorem_4_6_bound k ρ θ') :=
+      Function.iterate_succ_apply' (tangleRegionBound k) ρ θ'
+    rw [hiter] at hθ₀
+    let θ₁ := theorem_4_6_bound k ρ θ'
+    have hθ₁ : 1 ≤ θ₁ := one_le_theorem_4_6_bound k ρ hθ'
+    have h𝒯_trunc : IsTangle Γ.toHypergraph (tangleRegionBound k θ₁)
+        (truncation 𝒯 (tangleRegionBound k θ₁)) :=
+      theorem_3_7_proof h𝒯 (one_le_tangleRegionBound k) hθ₀
     let Γ₁ := GM12.deleteVertices Γ {v ∈ Γ.V | v ∈ closure (r 0)}
     have hSub₁ : Γ₁.IsSubdrawing Γ := GM12.deleteVertices_isSubdrawing _ _
-    obtain ⟨𝒯₁, h𝒯₁⟩ := H_step Γ (r 0) (hr 0) h𝒯
+    obtain ⟨𝒯₁, h𝒯₁⟩ :=
+      theorem_4_5_deleteVertices_aux k hθ₁ S hS hbd hk Γ (r 0) (hr 0) ⟨_, h𝒯_trunc⟩
     have hr_sup : ∀ j : Fin ρ, ∃ r' ∈ Γ₁.R, r j.succ ⊆ r' :=
       fun j ↦ exists_region_superset_of_isSubdrawing hSub₁ (hr j.succ)
     choose r₁ hr₁ hr₁_sub using hr_sup
-    obtain ⟨𝒯', h𝒯'⟩ := H_ih Γ₁ r₁ hr₁ ⟨θ₁, 𝒯₁, le_rfl, h𝒯₁⟩
+    obtain ⟨𝒯', h𝒯'⟩ := ih hθ' Γ₁ r₁ hr₁ ⟨θ₁, 𝒯₁, le_rfl, h𝒯₁⟩
     have hSub_final :
         (GM12.deleteVertices Γ₁ (⋃ j : Fin ρ, {v ∈ Γ₁.V | v ∈ closure (r₁ j)})).IsSubdrawing
           (GM12.deleteVertices Γ (⋃ i : Fin (ρ + 1), {v ∈ Γ.V | v ∈ closure (r i)})) := by
@@ -1783,31 +1804,41 @@ theorem theorem_4_6_deleteVertices {S : Type} [TopologicalSpace S] [T2Space S]
         exact ⟨j, hv_Γ₁, closure_mono (hr₁_sub j) hvrj⟩
     exact ⟨_, theorem_3_4_proof (GM12.toHypergraph_le_of_isSubdrawing hSub_final) h𝒯'⟩
 
-/-- **Graph Minors XXI, (4.6)** (page 14 of the preprint):
-"For any surface $\Sigma$ with $bd(\Sigma) = \emptyset$, and all integers $\theta' \ge 1$ and
-$\rho \ge 0$, there exists $\theta \ge 1$ such that, if $\Gamma$ is a drawing in $\Sigma$ with a
-tangle of order $\ge \theta$, and $r_1, \dots, r_\rho$ are regions of $\Gamma$ in $\Sigma$, and
-$\Gamma'$ is obtained from $\Gamma$ by deleting some vertices and edges each incident with one of
-$r_1, \dots, r_\rho$, then $\Gamma'$ has a tangle of order $\ge \theta'$." -/
-theorem theorem_4_6_proof {S : Type} [TopologicalSpace S] (hS : IsSurface S) [ConnectedSpace S]
-    (hbd : bd S = ∅) {θ' : ℕ} (hθ' : 1 ≤ θ') (ρ : ℕ) :
+/-- Multi-region vertex-deletion form of **Graph Minors XXI, (4.6)**. -/
+theorem theorem_4_6_deleteVertices {S : Type} [TopologicalSpace S] [T2Space S]
+    (hS : IsSurface S) [ConnectedSpace S] (hbd : bd S = ∅) (ρ : ℕ) {θ' : ℕ} (hθ' : 1 ≤ θ') :
     ∃ θ : ℕ, 1 ≤ θ ∧
-      ∀ (Γ Γ' : Surface.Drawing S) (r : Fin ρ → Set S),
+      ∀ (Γ : Surface.Drawing S) (r : Fin ρ → Set S),
         (∀ i, r i ∈ Γ.R) →
-        Γ'.IsSubdrawing Γ →
-        (∀ v ∈ Γ.V \ Γ'.V, ∃ i, v ∈ closure (r i)) →
-        (∀ e ∈ Γ.E \ Γ'.E, (∃ i, (e ∩ closure (r i)).Nonempty) ∨ (closure e ∩ (Γ.V \ Γ'.V)).Nonempty) →
         (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
           θ ≤ θ₀ ∧ IsTangle Γ.toHypergraph θ₀ 𝒯) →
-        ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
-          θ' ≤ θ₁ ∧ IsTangle Γ'.toHypergraph θ₁ 𝒯' := by
+        ∃ 𝒯', IsTangle
+          (GM12.deleteVertices Γ (⋃ i, {v ∈ Γ.V | v ∈ closure (r i)})).toHypergraph θ' 𝒯' := by
+  obtain ⟨a₀, b₀, c₀, e₀⟩ := classification S hS inferInstance
+  exact ⟨theorem_4_6_bound (4 * a₀ + 2 * b₀ + c₀) ρ θ',
+    one_le_theorem_4_6_bound _ ρ hθ',
+    theorem_4_6_deleteVertices_explicit hS hbd ⟨a₀, b₀, c₀, le_rfl, e₀⟩ ρ hθ'⟩
+
+/-- Explicit version of **Graph Minors XXI, (4.6)** with bound `theorem_4_6_bound k ρ θ'`. -/
+theorem theorem_4_6_explicit {S : Type} [TopologicalSpace S] (hS : IsSurface S) [ConnectedSpace S]
+    (hbd : bd S = ∅)
+    {k : ℕ} (hk : ∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (S ≃ₜ SurfaceModel a₀ b₀ c₀))
+    {θ' : ℕ} (hθ' : 1 ≤ θ') (ρ : ℕ) :
+    ∀ (Γ Γ' : Surface.Drawing S) (r : Fin ρ → Set S),
+      (∀ i, r i ∈ Γ.R) →
+      Γ'.IsSubdrawing Γ →
+      (∀ v ∈ Γ.V \ Γ'.V, ∃ i, v ∈ closure (r i)) →
+      (∀ e ∈ Γ.E \ Γ'.E, (∃ i, (e ∩ closure (r i)).Nonempty) ∨ (closure e ∩ (Γ.V \ Γ'.V)).Nonempty) →
+      (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+        theorem_4_6_bound k ρ θ' ≤ θ₀ ∧ IsTangle Γ.toHypergraph θ₀ 𝒯) →
+      ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+        θ' ≤ θ₁ ∧ IsTangle Γ'.toHypergraph θ₁ 𝒯' := by
   have : T2Space S := hS.2.1
   have hclS : IsClosedSurface S := ⟨hS.1, hS.2.1, fun x ↦ by
     by_contra hx
     exact notMem_empty x (hbd ▸ hx)⟩
-  obtain ⟨θ, hθ, H⟩ := theorem_4_6_deleteVertices hS hbd ρ hθ'
-  refine ⟨θ, hθ, fun Γ Γ' r hr hSub hV_del hE_del h𝒯 ↦ ?_⟩
-  obtain ⟨𝒯_del, h𝒯_del⟩ := H Γ r hr h𝒯
+  intro Γ Γ' r hr hSub hV_del hE_del h𝒯
+  obtain ⟨𝒯_del, h𝒯_del⟩ := theorem_4_6_deleteVertices_explicit hS hbd hk ρ hθ' Γ r hr h𝒯
   have hSub_del :
       (GM12.deleteVertices Γ (⋃ i, {v ∈ Γ.V | v ∈ closure (r i)})).IsSubdrawing Γ' := by
     refine ⟨?_, ?_⟩
@@ -1829,6 +1860,24 @@ theorem theorem_4_6_proof {S : Type} [TopologicalSpace S] (hS : IsSurface S) [Co
       · obtain ⟨i, hvi⟩ := hV_del v hv_del
         exact disjoint_left.mp he.2 ⟨hv_cl, hv_del.1⟩ (mem_iUnion.mpr ⟨i, hv_del.1, hvi⟩)
   exact ⟨θ', _, le_rfl, theorem_3_4_proof (GM12.toHypergraph_le_of_isSubdrawing hSub_del) h𝒯_del⟩
+
+/-- **Graph Minors XXI, (4.6)** (page 14 of the preprint). -/
+theorem theorem_4_6_proof {S : Type} [TopologicalSpace S] (hS : IsSurface S) [ConnectedSpace S]
+    (hbd : bd S = ∅) {θ' : ℕ} (hθ' : 1 ≤ θ') (ρ : ℕ) :
+    ∃ θ : ℕ, 1 ≤ θ ∧
+      ∀ (Γ Γ' : Surface.Drawing S) (r : Fin ρ → Set S),
+        (∀ i, r i ∈ Γ.R) →
+        Γ'.IsSubdrawing Γ →
+        (∀ v ∈ Γ.V \ Γ'.V, ∃ i, v ∈ closure (r i)) →
+        (∀ e ∈ Γ.E \ Γ'.E, (∃ i, (e ∩ closure (r i)).Nonempty) ∨ (closure e ∩ (Γ.V \ Γ'.V)).Nonempty) →
+        (∃ (θ₀ : ℕ) (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+          θ ≤ θ₀ ∧ IsTangle Γ.toHypergraph θ₀ 𝒯) →
+        ∃ (θ₁ : ℕ) (𝒯' : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+          θ' ≤ θ₁ ∧ IsTangle Γ'.toHypergraph θ₁ 𝒯' := by
+  obtain ⟨a₀, b₀, c₀, e₀⟩ := classification S hS inferInstance
+  exact ⟨theorem_4_6_bound (4 * a₀ + 2 * b₀ + c₀) ρ θ',
+    one_le_theorem_4_6_bound _ ρ hθ',
+    theorem_4_6_explicit hS hbd ⟨a₀, b₀, c₀, le_rfl, e₀⟩ hθ' ρ⟩
 
 end GM21
 end GraphMinor

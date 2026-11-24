@@ -1536,24 +1536,31 @@ private theorem exists_insulatedSystem_of_no_delete_v [T2Space S] (hS : IsSurfac
       exact ⟨D_comp, hD_le, hD_conn, hD_link, hD_disj, hD_meet⟩
   }, rfl⟩
 
-/-- **3.1** (Graph Minors XXII, page 534):
-"For every integer $p \ge 0$ there exists $h \ge 1$ with the following property. Let $\Gamma, K$
-be subgraphs of a graph $G$ with $G = \Gamma \cup K$, and let $\Gamma$ be a drawing in a surface
-$\Sigma$. Let $v \in V(\Gamma)$ be $h$-insulated from $V(\Gamma \cap K)$ by $\Gamma$, let
-$Z \subseteq V(K)$ with $|Z| \le p$, and let $L \subseteq G$. Then there is a subgraph $L'$ of
-$G \setminus \{v\}$ with the same effect on $Z$ as $L$ and with $L' \cap K \subseteq L$." -/
-theorem theorem_3_1_proof  (p : ℕ) :
-    ∃ h ≥ 1, ∀ {S : Type w} [TopologicalSpace S] [T2Space S], IsSurface S →
+/-- Explicit insulation bound for **Graph Minors XXII, 3.1**, parameterized by an upper bound `V`
+on `GM07.vModel`. -/
+def theorem_3_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  2 * theorem_2_1_bound V p + 3
+
+lemma one_le_theorem_3_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) :
+    1 ≤ theorem_3_1_bound V p := by
+  dsimp only [theorem_3_1_bound]; omega
+
+/-- Explicit version of **Graph Minors XXII, 3.1** (page 534) with insulation bound
+`theorem_3_1_bound V p`. -/
+theorem theorem_3_1_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) :
+    ∀ {S : Type w} [TopologicalSpace S] [T2Space S], IsSurface S →
       ∀ {α : Type u} {β : Type v} (G Γ K L : Graph α β), V(G).Finite → E(G).Finite →
         Γ ≤ G → K ≤ G → V(G) = V(Γ) ∪ V(K) → E(G) = E(Γ) ∪ E(K) →
         ∀ (D : Drawing S) (ιV : S ↪ α) (ιE : Set S ↪ β), Γ = D.toEmbeddedGraph ιV ιE →
-        ∀ v₀ ∈ D.V, IsInsulated D (ιV ⁻¹' (V(Γ) ∩ V(K))) h v₀ →
+        ∀ v₀ ∈ D.V, IsInsulated D (ιV ⁻¹' (V(Γ) ∩ V(K))) (theorem_3_1_bound V p) v₀ →
         ∀ Z ⊆ V(K), Z.ncard ≤ p → L ≤ G →
         ∃ L' ≤ G.deleteVerts {ιV v₀},
           HasSameEffectOn L' L Z ∧ subgraphInter G L' K ≤ L := by
   classical
-  obtain ⟨w, hw⟩ := theorem_2_1_proof.{u, v} p
-  refine ⟨2 * w + 3, by omega, ?_⟩
+  dsimp only [theorem_3_1_bound]
+  set w := theorem_2_1_bound V p
   intro S _ _ hS α β G Γ K L hVG hEG_fin hΓG hKG hUG hEG D ιV ιE hΓD v₀ hv₀ hIns Z hZK hZp hLG
   by_contra hno
   obtain ⟨S₀, hZ₀_eq⟩ := exists_insulatedSystem_of_no_delete_v hS hVG hEG_fin hΓG hKG hUG hEG
@@ -1562,7 +1569,25 @@ theorem theorem_3_1_proof  (p : ℕ) :
     rw [hZ₀_eq]
     have hZ_fin : Z.Finite := hVG.subset (hZK.trans hKG.vertexSet_mono)
     exact (ncard_le_ncard inter_subset_left hZ_fin).trans hZp
-  exact InsulatedSystem.false_of_exists (@hw α β) S₀ hZ₀_p
+  exact InsulatedSystem.false_of_exists (theorem_2_1_explicit.{u, v} V hV p (α := α) (β := β)) S₀ hZ₀_p
+
+/-- **3.1** (Graph Minors XXII, page 534):
+"For every integer $p \ge 0$ there exists $h \ge 1$ with the following property. Let $\Gamma, K$
+be subgraphs of a graph $G$ with $G = \Gamma \cup K$, and let $\Gamma$ be a drawing in a surface
+$\Sigma$. Let $v \in V(\Gamma)$ be $h$-insulated from $V(\Gamma \cap K)$ by $\Gamma$, let
+$Z \subseteq V(K)$ with $|Z| \le p$, and let $L \subseteq G$. Then there is a subgraph $L'$ of
+$G \setminus \{v\}$ with the same effect on $Z$ as $L$ and with $L' \cap K \subseteq L$." -/
+theorem theorem_3_1_proof (p : ℕ) :
+    ∃ h ≥ 1, ∀ {S : Type w} [TopologicalSpace S] [T2Space S], IsSurface S →
+      ∀ {α : Type u} {β : Type v} (G Γ K L : Graph α β), V(G).Finite → E(G).Finite →
+        Γ ≤ G → K ≤ G → V(G) = V(Γ) ∪ V(K) → E(G) = E(Γ) ∪ E(K) →
+        ∀ (D : Drawing S) (ιV : S ↪ α) (ιE : Set S ↪ β), Γ = D.toEmbeddedGraph ιV ιE →
+        ∀ v₀ ∈ D.V, IsInsulated D (ιV ⁻¹' (V(Γ) ∩ V(K))) h v₀ →
+        ∀ Z ⊆ V(K), Z.ncard ≤ p → L ≤ G →
+        ∃ L' ≤ G.deleteVerts {ιV v₀},
+          HasSameEffectOn L' L Z ∧ subgraphInter G L' K ≤ L :=
+  ⟨theorem_3_1_bound GM07.vModel p, one_le_theorem_3_1_bound _ p,
+    theorem_3_1_explicitBound.{u, v, w} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 
 

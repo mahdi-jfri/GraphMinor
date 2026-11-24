@@ -35,16 +35,19 @@ theorem exists_ends (H : Hypergraph α' β') (hH : H.IsGraph) {e : β'} (he : e 
   · obtain ⟨u, v, _, huv⟩ := Set.ncard_eq_two.mp h₄
     exact ⟨u, v, huv⟩
 
-/-- A finite graph has a list of half-edges such that any set of curves that reorders the list as
-needed gives a drawing of the graph. -/
-theorem exists_perm (H : Hypergraph α' β') (hH : H.IsGraph) :
-    ∃ (n : ℕ) (_ : Even n) (π : Equiv.Perm (Fin n)), ∀ (a b c : ℕ)
+/-- A finite graph has a list of `2 * |E(H)|` half-edges such that any set of curves that reorders
+the list as needed gives a drawing of the graph. -/
+theorem exists_perm_of_edges (H : Hypergraph α' β') (hH : H.IsGraph) :
+    ∃ (π : Equiv.Perm (Fin (2 * H.edgeSet.ncard))), ∀ (a b c : ℕ)
       [T2Space (SurfaceModel a b c)] (m₀ m₁ : ℤ), m₀ < m₁ →
-      Slab a b c n (3 * (m₀ : ℝ) + 3 / 2) (3 * (m₁ : ℝ) + 3 / 2) π →
+      Slab a b c (2 * H.edgeSet.ncard) (3 * (m₀ : ℝ) + 3 / 2) (3 * (m₁ : ℝ) + 3 / 2) π →
       CanBeDrawn (SurfaceModel a b c) H := by
   classical
   have hEf : Finite H.edgeSet := H.edgeSet_finite.to_subtype
   obtain ⟨m, ⟨Eq⟩⟩ := Finite.exists_equiv_fin H.edgeSet
+  have hm_eq : H.edgeSet.ncard = m := by
+    rw [← Nat.card_coe_set_eq, Nat.card_congr Eq, Nat.card_fin]
+  rw [hm_eq]
   let e : Fin m → β' := fun j ↦ (Eq.symm j).1
   have hem : ∀ j, e j ∈ H.edgeSet := fun j ↦ (Eq.symm j).2
   choose s t hst using fun j ↦ exists_ends H hH (hem j)
@@ -65,7 +68,7 @@ theorem exists_perm (H : Hypergraph α' β') (hH : H.IsGraph) :
   let π : Equiv.Perm (Fin (2 * m)) := Tuple.sort f
   have hmono : Monotone fun p ↦ ((f (π p) : ℕ) : ℝ) := fun p p' hpp ↦
     Nat.cast_le.mpr (Tuple.monotone_sort f hpp)
-  refine ⟨2 * m, even_two_mul m, π, fun a b c _ m₀ m₁ hm hS ↦ ?_⟩
+  refine ⟨π, fun a b c _ m₀ m₁ hm hS ↦ ?_⟩
   have hm' : (m₀ : ℝ) + 1 ≤ m₁ := by exact_mod_cast hm
   set X : ℝ := 3 * (m₀ : ℝ) + 5 / 4 with hX
   set R : ℝ := 3 * (m₁ : ℝ) + 3 / 2 with hR
@@ -281,19 +284,55 @@ theorem exists_perm (H : Hypergraph α' β') (hH : H.IsGraph) :
       simp only at h₂
       linarith
 
+/-- A finite graph has a list of half-edges such that any set of curves that reorders the list as
+needed gives a drawing of the graph. -/
+theorem exists_perm (H : Hypergraph α' β') (hH : H.IsGraph) :
+    ∃ (n : ℕ) (_ : Even n) (π : Equiv.Perm (Fin n)), ∀ (a b c : ℕ)
+      [T2Space (SurfaceModel a b c)] (m₀ m₁ : ℤ), m₀ < m₁ →
+      Slab a b c n (3 * (m₀ : ℝ) + 3 / 2) (3 * (m₁ : ℝ) + 3 / 2) π →
+      CanBeDrawn (SurfaceModel a b c) H := by
+  obtain ⟨π, h⟩ := exists_perm_of_edges H hH
+  exact ⟨2 * H.edgeSet.ncard, even_two_mul _, π, h⟩
+
+/-- Explicit genus threshold for drawing any graph with at most `eCount` edges in a model surface. -/
+def drawBound (eCount : ℕ) : ℕ :=
+  max 2 (eCount * (2 * eCount - 1))
+
+theorem drawBound_mono : Monotone drawBound := by
+  intro m n hmn
+  unfold drawBound
+  exact max_le_max_left 2 (Nat.mul_le_mul hmn (by omega))
+
+/-- **Explicit drawing threshold for a finite graph.** Any graph `H` with at most `eCount` edges
+can be drawn in every model surface with at least `drawBound eCount` handles or at least
+`drawBound eCount` cross-caps. -/
+theorem canBeDrawn_of_drawBound (H : Hypergraph α' β') (hH : H.IsGraph) {eCount : ℕ}
+    (he : H.edgeSet.ncard ≤ eCount) (a b c : ℕ) [T2Space (SurfaceModel a b c)]
+    (hab : drawBound eCount ≤ a ∨ drawBound eCount ≤ b) :
+    CanBeDrawn (SurfaceModel a b c) H := by
+  obtain ⟨π, h⟩ := exists_perm_of_edges H hH
+  have hn : Even (2 * H.edgeSet.ncard) := even_two_mul _
+  obtain ⟨L₁, hL₁, hL₁le, h₁⟩ := wiring_handles_bound hn π
+  obtain ⟨L₂, hL₂, hL₂le, h₂⟩ := wiring_crosscaps_bound hn π
+  have hdiv : (2 * H.edgeSet.ncard - 1) * (2 * H.edgeSet.ncard) / 2 =
+      H.edgeSet.ncard * (2 * H.edgeSet.ncard - 1) := by
+    rw [show (2 * H.edgeSet.ncard - 1) * (2 * H.edgeSet.ncard) =
+        2 * (H.edgeSet.ncard * (2 * H.edgeSet.ncard - 1)) by ring]
+    exact Nat.mul_div_right _ (by omega)
+  have hle : max 2 ((2 * H.edgeSet.ncard - 1) * (2 * H.edgeSet.ncard) / 2) ≤ drawBound eCount := by
+    rw [hdiv]
+    exact drawBound_mono he
+  rcases hab with hab | hab
+  · exact h a b c (-1) ((2 * L₁ : ℕ) - 1) (by push_cast; omega)
+      (h₁ a b c (hL₁le.trans (hle.trans hab)))
+  · exact h a b c ((2 * a : ℕ) - 1) ((2 * a + L₂ : ℕ) - 1) (by push_cast; omega)
+      (h₂ a b c (hL₂le.trans (hle.trans hab)))
+
 /-- **A surface of large genus has a drawing of a finite graph.** Given a graph `H`, some `L` is such
 that `H` can be drawn in every model surface with at least `L` handles or at least `L` cross-caps. -/
 theorem exists_canBeDrawn (H : Hypergraph α' β') (hH : H.IsGraph) :
     ∃ L, ∀ (a b c : ℕ) [T2Space (SurfaceModel a b c)], L ≤ a ∨ L ≤ b →
-      CanBeDrawn (SurfaceModel a b c) H := by
-  obtain ⟨n, hn, π, h⟩ := exists_perm H hH
-  obtain ⟨L₁, hL₁, h₁⟩ := wiring_handles hn π
-  obtain ⟨L₂, hL₂, h₂⟩ := wiring_crosscaps hn π
-  refine ⟨max L₁ L₂, fun a b c _ hab ↦ ?_⟩
-  rcases hab with hab | hab
-  · exact h a b c (-1) ((2 * L₁ : ℕ) - 1) (by push_cast; omega)
-      (h₁ a b c ((le_max_left _ _).trans hab))
-  · exact h a b c ((2 * a : ℕ) - 1) ((2 * a + L₂ : ℕ) - 1) (by push_cast; omega)
-      (h₂ a b c ((le_max_right _ _).trans hab))
+      CanBeDrawn (SurfaceModel a b c) H :=
+  ⟨drawBound H.edgeSet.ncard, fun a b c _ hab ↦ canBeDrawn_of_drawBound H hH le_rfl a b c hab⟩
 
 end GraphMinor.GM20.Draw

@@ -68,31 +68,38 @@ private lemma section7_param_bounds {φ μ lam' θ' : ℕ}
     by omega, by omega, by omega, by omega, by omega, by omega, by omega, by omega⟩
 
 
-/-- The induction step of XV (1.2), retaining the proper arrangement
-from XV (7.7) for the use in XVI (7.2), page 62. -/
-theorem proper_eye_induction_step
-     :
+/-- Explicit `(p_k, lam_k, θ_k)` parameters for the induction step of XV (1.2). -/
+@[expose] def properEyeStep (φ μ _lam_next θ_next : ℕ) : ℕ × ℕ × ℕ :=
+  let θ'' : ℕ := 2 * (θ_next + 3 * μ + 8)
+  let τ₁ : ℕ := 4 + μ / 2
+  let τ₂ : ℕ := 6 + θ'' / 2
+  let π : ℕ := (φ - 1) * (2 * τ₁ + τ₂ - 7)
+  let beta : ℕ := 2 * π + 8
+  (3 * π + 9, 20 * beta, 100 * beta)
+
+/-- Explicit version of `proper_eye_induction_step` using `properEyeStep`. -/
+theorem proper_eye_induction_step_explicit :
     ∀ (S : Type w) [TopologicalSpace S] [T2Space S],
     IsSurface S → ConnectedSpace S → bd S = ∅ →
     ∀ (k φ μ lam_next θ_next : ℕ),
       8 ≤ φ → 12 ≤ μ → Even μ → 4 ≤ lam_next →
       4 * lam_next + μ + 2 ≤ θ_next →
-      ∃ (p_k lam_k θ_k : ℕ),
-        4 * lam_k + μ + 2 ≤ θ_k ∧
-        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
-          (T_star : Set (Hypergraph α β × Hypergraph α β))
-          (H₀ : Drawing S) (η₀ : SpanEmbedding H₀ G) (θ₀ : ℕ)
-          (T₀ : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-          (d₀ : Set S → Set S → ℕ),
-          IsFlatSpan G H₀ η₀ θ_star θ₀ lam_k μ T_star T₀ →
-          HasTangleMetric H₀ θ₀ T₀ d₀ →
-          θ_k ≤ θ₀ →
-          HasEyesAtDistance G H₀ η₀ θ₀ T₀ d₀ k θ_k →
-          Section7S1 S G θ_star T_star k μ lam_next θ_next ∨
-          Section7S2 S G θ_star T_star φ ∨
-          (∃ (𝒮 : Set (Society α β)) (disc : Society α β → Set S) (pt : α → S),
-            IsCentralSegregation G T_star 𝒮 ∧
-            GM15.IsSegregationOfType G p_k k 𝒮 ∧ IsProperArrangement 𝒮 disc pt) := by
+      let res := properEyeStep φ μ lam_next θ_next
+      4 * res.2.1 + μ + 2 ≤ res.2.2 ∧
+      ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+        (T_star : Set (Hypergraph α β × Hypergraph α β))
+        (H₀ : Drawing S) (η₀ : SpanEmbedding H₀ G) (θ₀ : ℕ)
+        (T₀ : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (d₀ : Set S → Set S → ℕ),
+        IsFlatSpan G H₀ η₀ θ_star θ₀ res.2.1 μ T_star T₀ →
+        HasTangleMetric H₀ θ₀ T₀ d₀ →
+        res.2.2 ≤ θ₀ →
+        HasEyesAtDistance G H₀ η₀ θ₀ T₀ d₀ k res.2.2 →
+        Section7S1 S G θ_star T_star k μ lam_next θ_next ∨
+        Section7S2 S G θ_star T_star φ ∨
+        (∃ (𝒮 : Set (Society α β)) (disc : Society α β → Set S) (pt : α → S),
+          IsCentralSegregation G T_star 𝒮 ∧
+          GM15.IsSegregationOfType G res.1 k 𝒮 ∧ IsProperArrangement 𝒮 disc pt) := by
   have h71 : GM15Theorem71Statement.{u, v, w} :=
     GM15.theorem_7_1_proof
   have h75 : GM15Theorem75Statement.{u, v, w} :=
@@ -103,6 +110,7 @@ theorem proper_eye_induction_step
   have h711 : GM15Theorem711Statement.{u, v, w} :=
     GM15.theorem_7_11_proof
   intro S _ _ _ _ _ k φ μ lam' θ' hφ8 hμ12 hμ_even hlam'4 hθ'_ge
+  dsimp only [properEyeStep]
   let θ'' : ℕ := 2 * (θ' + 3 * μ + 8)
   let τ₁ : ℕ := 4 + μ / 2
   let τ₂ : ℕ := 6 + θ'' / 2
@@ -115,7 +123,7 @@ theorem proper_eye_induction_step
     ⟨hθ''_even, hθ'_le_θ'', h4_θ', h4_θ_k, hθ''_ge, hθ''_gt, hφ2, hφ3, hτ₁_ge, hτ₂_ge,
       hπ2, hπ3, hθ_k_ge, hlam_bound_μ, hθ_bound_μ, hθ''_beta, h16beta, h6beta,
       hφ_le, hbeta_lam, h2τ₁_lt, hlam_bound_beta⟩
-  refine ⟨p_k, lam_k, θ_k, hθ_k_ge, ?_⟩
+  refine ⟨hθ_k_ge, ?_⟩
   intro α β G θ_star T_star H₀ η₀ θ₀ T₀ d₀ hFlat₀ hMetric₀ hθ₀_ge hEyes₀
   -- Step 1: Apply (7.1) to obtain a `(lam_k, μ)`-flat `Σ`-span `H, η, T` of order `θ_k` with `k`
   -- eyes `r` mutually at distance `θ_k`.
@@ -177,6 +185,37 @@ theorem proper_eye_induction_step
           S₀ α₀_disc α₀_pt i (D i) P X hFlat hMetric (by omega) hlam'4 hθ''_ge hθ''_even rfl
           hlam_bound_beta hθ''_beta le_rfl hr_inj hr_eye hr_dist
           hTransP hPathsP hX_sub hEndsP hFreeX hCardτ₂ hDouble)
+
+/-- The induction step of XV (1.2), retaining the proper arrangement
+from XV (7.7) for the use in XVI (7.2), page 62. -/
+theorem proper_eye_induction_step
+     :
+    ∀ (S : Type w) [TopologicalSpace S] [T2Space S],
+    IsSurface S → ConnectedSpace S → bd S = ∅ →
+    ∀ (k φ μ lam_next θ_next : ℕ),
+      8 ≤ φ → 12 ≤ μ → Even μ → 4 ≤ lam_next →
+      4 * lam_next + μ + 2 ≤ θ_next →
+      ∃ (p_k lam_k θ_k : ℕ),
+        4 * lam_k + μ + 2 ≤ θ_k ∧
+        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+          (T_star : Set (Hypergraph α β × Hypergraph α β))
+          (H₀ : Drawing S) (η₀ : SpanEmbedding H₀ G) (θ₀ : ℕ)
+          (T₀ : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+          (d₀ : Set S → Set S → ℕ),
+          IsFlatSpan G H₀ η₀ θ_star θ₀ lam_k μ T_star T₀ →
+          HasTangleMetric H₀ θ₀ T₀ d₀ →
+          θ_k ≤ θ₀ →
+          HasEyesAtDistance G H₀ η₀ θ₀ T₀ d₀ k θ_k →
+          Section7S1 S G θ_star T_star k μ lam_next θ_next ∨
+          Section7S2 S G θ_star T_star φ ∨
+          (∃ (𝒮 : Set (Society α β)) (disc : Society α β → Set S) (pt : α → S),
+            IsCentralSegregation G T_star 𝒮 ∧
+            GM15.IsSegregationOfType G p_k k 𝒮 ∧ IsProperArrangement 𝒮 disc pt) := by
+  intro S _ _ hSurf hConn hBd k φ μ lam_next θ_next hφ hμ hμe hlam hθ
+  exact ⟨(properEyeStep φ μ lam_next θ_next).1, (properEyeStep φ μ lam_next θ_next).2.1,
+    (properEyeStep φ μ lam_next θ_next).2.2,
+    proper_eye_induction_step_explicit.{u, v, w} S hSurf hConn hBd k φ μ lam_next θ_next
+      hφ hμ hμe hlam hθ⟩
 
 
 end GraphMinor.GM16

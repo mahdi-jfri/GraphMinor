@@ -71,9 +71,18 @@ theorem isClosedSurface_ulift (a b : ℕ) : IsClosedSurface (ULift.{w} (SurfaceM
   rw [bd_model] at h1
   exact h1
 
-/-- A graph is drawn in all models of large genus, as a graph in the sense of Graph Minors XVI. -/
-theorem exists_drawn {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hV : V(L).Finite) (hE : E(L).Finite) :
-    ∃ L₀, ∀ a b : ℕ, L₀ ≤ a ∨ L₀ ≤ b → CanBeDrawnIn (ULift.{w} (SurfaceModel a b 0)) L := by
+/-- Explicit genus bound `N` for the surface tower of a graph with at most `eB` edges. -/
+def towerN (eB : ℕ) : ℕ := 3 * GM20.Draw.drawBound eB + 2
+
+/-- Explicit length of the surface tower for a graph with at most `eB` edges. -/
+def towerLen (eB : ℕ) : ℕ := (towerN eB + 1) * (towerN eB + 1)
+
+/-- A graph with at most `eB` edges is drawn in all models with at least `GM20.Draw.drawBound eB`
+handles or cross-caps, in the sense of Graph Minors XVI. -/
+theorem canBeDrawnIn_of_drawBound {α' : Type u'} {β' : Type v'} (L : Graph α' β')
+    (hV : V(L).Finite) (hE : E(L).Finite) {eB : ℕ} (heB : E(L).ncard ≤ eB)
+    (a b : ℕ) (hab : GM20.Draw.drawBound eB ≤ a ∨ GM20.Draw.drawBound eB ≤ b) :
+    CanBeDrawnIn (ULift.{w} (SurfaceModel a b 0)) L := by
   let H : Hypergraph α' β' := Hypergraph.ofGraph L hV hE
   have hG : H.IsGraph := by
     intro e he
@@ -86,10 +95,8 @@ theorem exists_drawn {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hV : V
     refine ⟨⟨x, ⟨y, hl⟩⟩, ?_⟩
     calc (H.ends e).ncard ≤ ({x, y} : Set α').ncard := ncard_le_ncard hsub (by simp)
       _ ≤ 2 := ncard_insert_le _ _ |>.trans (by simp)
-  obtain ⟨L₀, hL⟩ := GM20.Draw.exists_canBeDrawn H hG
-  refine ⟨L₀, fun a b hab => ?_⟩
   have := (isSurface_model a b 0).1.2.1
-  obtain ⟨ν, F, h1, h2, h3, h4, h5⟩ := hL a b 0 hab
+  obtain ⟨ν, F, h1, h2, h3, h4, h5⟩ := GM20.Draw.canBeDrawn_of_drawBound H hG heB a b 0 hab
   let ψ : SurfaceModel a b 0 ≃ₜ ULift.{w} (SurfaceModel a b 0) := Homeomorph.ulift.symm
   refine ⟨ψ ∘ ν, fun e => ψ '' F e, ψ.injective.comp_injOn h1, ?_, ?_, ?_, ?_⟩
   · intro e he u₁ u₂ hl hne
@@ -114,6 +121,12 @@ theorem exists_drawn {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hV : V
     obtain ⟨z, hz, hez⟩ := hm
     exact h5 e he v hv (ψ.injective hez ▸ hz)
 
+/-- A graph is drawn in all models of large genus, as a graph in the sense of Graph Minors XVI. -/
+theorem exists_drawn {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hV : V(L).Finite) (hE : E(L).Finite) :
+    ∃ L₀, ∀ a b : ℕ, L₀ ≤ a ∨ L₀ ≤ b → CanBeDrawnIn (ULift.{w} (SurfaceModel a b 0)) L :=
+  ⟨GM20.Draw.drawBound E(L).ncard, fun a b hab =>
+    canBeDrawnIn_of_drawBound.{w} L hV hE le_rfl a b hab⟩
+
 theorem isSphere_tower {a b : ℕ} (ha : a = 0) (hb : b = 0) : IsSphere (ULift.{w} (SurfaceModel a b 0)) := by
   subst ha hb
   obtain ⟨E⟩ := isSphere_model
@@ -131,39 +144,43 @@ theorem step_model {S S' : Type w} [TopologicalSpace S] [TopologicalSpace S'] [C
   · obtain ⟨a', b', h3, h4⟩ := crosscap_model hS hb hS' hb' hΛ hu h1 h2 e₁ e₂ e
     exact ⟨a', b', h3, by omega, by omega⟩
 
-/-- **The surface tower.** Every finite graph has a tower of closed connected surfaces that starts with the sphere and is closed under adding a handle or a crosscap to a surface in which the graph cannot be drawn. -/
-theorem surfaceTower : SurfaceTowerStatement.{u, v, w, u', v'} := by
-  intro α' β' L hV hE
-  obtain ⟨L₀, hL⟩ := exists_drawn.{w} L hV hE
-  let N : ℕ := 3 * L₀ + 2
-  refine ⟨{ n := (N + 1) * (N + 1)
-            one_le_n := Nat.mul_pos (by omega) (by omega)
-            Surf := fun i => ULift.{w} (SurfaceModel (towerA N i) (towerB N i) 0)
-            topSpace := fun _ => inferInstance
-            t2Space := fun i => (isClosedSurface_ulift _ _).2.1
-            isClosedSurface := fun i => isClosedSurface_ulift _ _
-            isConnected := fun i => ?_
-            isSphere_zero := isSphere_tower (by simp [towerA]) (by simp [towerB, towerA])
-            step_index := ?_ }⟩
-  · have := (isSurface_model (towerA N i) (towerB N i) 0).2
+/-- Explicit surface tower for any finite graph `L` with at most `eB` edges,
+having length `towerLen eB` and surfaces `ULift (SurfaceModel (towerA (towerN eB) i) (towerB (towerN eB) i) 0)`. -/
+noncomputable def surfaceTowerExplicit {α' : Type u'} {β' : Type v'} (L : Graph α' β')
+    (hV : V(L).Finite) (hE : E(L).Finite) {eB : ℕ} (heB : E(L).ncard ≤ eB) :
+    SurfaceTowerFor.{u, v, w, u', v'} L where
+  n := towerLen eB
+  one_le_n := Nat.mul_pos (by unfold towerN; omega) (by unfold towerN; omega)
+  Surf := fun i => ULift.{w} (SurfaceModel (towerA (towerN eB) i) (towerB (towerN eB) i) 0)
+  topSpace := fun _ => inferInstance
+  t2Space := fun i => (isClosedSurface_ulift _ _).2.1
+  isClosedSurface := fun i => isClosedSurface_ulift _ _
+  isConnected := fun i => by
+    have := (isSurface_model (towerA (towerN eB) i) (towerB (towerN eB) i) 0).2
     exact Homeomorph.ulift.symm.surjective.connectedSpace Homeomorph.ulift.symm.continuous
-  · intro i hnot α β G θ_star φ T_star S' _ _ H' η' θ_span' T' hcl hconn hadd hφ hspan
+  isSphere_zero := isSphere_tower (by simp [towerA]) (by simp [towerB, towerA])
+  step_index := by
+    intro i hnot α β G θ_star φ T_star S' _ _ H' η' θ_span' T' hcl hconn hadd hφ hspan
+    let N := towerN eB
+    let L₀ := GM20.Draw.drawBound eB
     have hc := (isSurface_model (towerA N i) (towerB N i) 0).2
     have hci : ConnectedSpace (ULift.{w} (SurfaceModel (towerA N i) (towerB N i) 0)) :=
       Homeomorph.ulift.symm.surjective.connectedSpace Homeomorph.ulift.symm.continuous
     have hsmall : towerA N i < L₀ ∧ towerB N i < L₀ := by
       by_contra h
-      exact hnot (hL _ _ (by omega))
-    obtain ⟨a', b', ⟨e'⟩, h3, h4⟩ := step_model (Homeomorph.ulift : ULift.{w} (SurfaceModel (towerA N i) (towerB N i) 0) ≃ₜ _) hadd
+      exact hnot (canBeDrawnIn_of_drawBound.{w} L hV hE heB _ _ (by dsimp only [N, L₀] at h ⊢; omega))
+    obtain ⟨a', b', ⟨e'⟩, h3, h4⟩ :=
+      step_model (Homeomorph.ulift : ULift.{w} (SurfaceModel (towerA N i) (towerB N i) 0) ≃ₜ _) hadd
     have hle : 2 * a' + b' ≤ N := by
-      simp only [N]
+      dsimp only [N, towerN, L₀]
       omega
     obtain ⟨ea, eb⟩ := tower_index hle
     set k := (2 * a' + b') * (N + 1) + a' with hk
-    have hkn : k < (N + 1) * (N + 1) := by
+    have hkn : k < towerLen eB := by
       have : (2 * a' + b' + 1) * (N + 1) ≤ (N + 1) * (N + 1) := Nat.mul_le_mul_right _ (by omega)
       have h5 : a' < N + 1 := by omega
       rw [Nat.add_mul] at this
+      dsimp only [towerLen, N] at hk this ⊢
       omega
     have hik : (i : ℕ) < k := by
       have h5 := tower_genus N i
@@ -171,13 +188,20 @@ theorem surfaceTower : SurfaceTowerStatement.{u, v, w, u', v'} := by
         rw [Nat.mul_comm]
         exact Nat.lt_mul_div_succ m (by omega)
       replace h6 := h6 i
-      have h7 : ((i : ℕ) / (N + 1) + 1) * (N + 1) ≤ (2 * a' + b') * (N + 1) := Nat.mul_le_mul_right _ (by omega)
+      have h7 : ((i : ℕ) / (N + 1) + 1) * (N + 1) ≤ (2 * a' + b') * (N + 1) :=
+        Nat.mul_le_mul_right _ (by omega)
       omega
     have hψ : ∀ x y, x = a' → y = b' → Nonempty (S' ≃ₜ ULift.{w} (SurfaceModel x y 0)) := by
       rintro _ _ rfl rfl
       exact ⟨e'.trans Homeomorph.ulift.symm⟩
     obtain ⟨ψ⟩ := hψ _ _ ea eb
-    have : T2Space (ULift.{w} (SurfaceModel (towerA N k) (towerB N k) 0)) := (isClosedSurface_ulift _ _).2.1
-    exact ⟨⟨k, hkn⟩, hik, mapDrawingHomeo ψ H', SpanEmbedding.mapHomeo ψ η', θ_span', mapT ψ T', hφ, IsSigmaSpan.transport ψ hspan⟩
+    have : T2Space (ULift.{w} (SurfaceModel (towerA N k) (towerB N k) 0)) :=
+      (isClosedSurface_ulift _ _).2.1
+    exact ⟨⟨k, hkn⟩, hik, mapDrawingHomeo ψ H', SpanEmbedding.mapHomeo ψ η', θ_span', mapT ψ T',
+      hφ, IsSigmaSpan.transport ψ hspan⟩
+
+/-- **The surface tower.** Every finite graph has a tower of closed connected surfaces that starts with the sphere and is closed under adding a handle or a crosscap to a surface in which the graph cannot be drawn. -/
+theorem surfaceTower : SurfaceTowerStatement.{u, v, w, u', v'} :=
+  fun L hV hE => ⟨surfaceTowerExplicit L hV hE le_rfl⟩
 
 end GraphMinor.GM16

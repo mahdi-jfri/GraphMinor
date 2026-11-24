@@ -8,6 +8,7 @@ public import GraphMinor.GM12.Section4SubdivisionNoncrossing
 import GraphMinor.GM12.Section4CliqueCrossingArcs
 import GraphMinor.GM12.Section4FamilySubdivision
 import GraphMinor.GM12.Section4CrossingMultiplicity
+import GraphMinor.GM12.Section4ChordGeometry
 
 /-!
 # The complete one-crossing source for the clique minor
@@ -29,10 +30,9 @@ namespace GraphMinor.GM12
 open Set Surface Graph
 
 /-- The actual finite one-crossing source graph and all its
-geometric properties in XII (4.5), pages 252--253. The graph,
-subdivision, clique minor, crossing count, noncrossing incident
-pairs, and local coordinates are all constructed here. -/
-theorem exists_clique_one_crossing_source {p : ℕ} (hp : 4 ≤ p) :
+geometric properties in XII (4.5), pages 252--253, together with explicit
+upper bounds on its crossing count and vertex count in terms of `p`. -/
+theorem exists_clique_one_crossing_source_bounded {p : ℕ} (hp : 4 ≤ p) :
     ∃ (W F : Type) (L : Graph W F) (v : W → ℂ) (ends : F × Bool → W) (P : F → Set ℂ),
       Finite W ∧ Finite F ∧ IsIsoMinor (GM16.completeGraph p) L ∧ Function.Injective v ∧
       L.vertexSet = univ ∧ L.edgeSet = univ ∧
@@ -43,7 +43,10 @@ theorem exists_clique_one_crossing_source {p : ℕ} (hp : 4 ≤ p) :
       (∀ e f g, e ≠ f → f ≠ g → e ≠ g → P e ∩ P f ∩ P g ⊆ range v) ∧
       (∀ e, ∃ x ∈ edgeMeetingPoints v P, P e ∩ edgeMeetingPoints v P = {x}) ∧
       (∀ w, ∃ e f, e ≠ f ∧ P e ∩ P f = {v w}) ∧
-      (edgeMeetingPoints v P).Finite ∧ 2 ≤ (edgeMeetingPoints v P).ncard ∧ Nat.card F = 2 * (edgeMeetingPoints v P).ncard ∧
+      (edgeMeetingPoints v P).Finite ∧ 2 ≤ (edgeMeetingPoints v P).ncard ∧
+      (edgeMeetingPoints v P).ncard ≤ (p * (p - 1) / 2) ^ 2 ∧
+      Nat.card W ≤ p + 2 * (p * (p - 1) / 2) ^ 2 ∧
+      Nat.card F = 2 * (edgeMeetingPoints v P).ncard ∧
       ∀ x ∈ edgeMeetingPoints v P, ∃ e f, e ≠ f ∧ x ∈ P e ∩ P f ∧
         ∃ (A : ℂ ≃L[ℝ] ℂ) (U : Set ℂ), IsOpen U ∧ x ∈ U ∧
           P e ∩ U = (line[ℝ, x, x + A 1] : Set ℂ) ∩ U ∧
@@ -69,9 +72,67 @@ theorem exists_clique_one_crossing_source {p : ℕ} (hp : 4 ≤ p) :
   have hMfinite : (edgeMeetingPoints v P').Finite := by
     rw [hM]
     exact finite_edgeMeetingPoints V E hfinite
+  have hM_le : (edgeMeetingPoints V E).ncard ≤ (p * (p - 1) / 2) ^ 2 := by
+    let μ := p * (p - 1) / 2
+    let piece : Fin μ × Fin μ → Set ℂ := fun q =>
+      if q.1 ≠ q.2 then (E q.1 ∩ E q.2) \ range V else ∅
+    have hpiece_sub : ∀ q, (piece q).Subsingleton := by
+      intro ⟨i, j⟩
+      by_cases hij : i = j
+      · simp [piece, hij]
+      · simp only [piece, hij, ne_eq, not_false_eq_true, ↓reduceIte]
+        set a : ℂ := (ee (s (i, false)) : ℂ)
+        set b : ℂ := (ee (s (i, true)) : ℂ)
+        set c : ℂ := (ee (s (j, false)) : ℂ)
+        set d : ℂ := (ee (s (j, true)) : ℂ)
+        have hne_line : line[ℝ, a, b] ≠ line[ℝ, c, d] := by
+          intro heq
+          have hc_mem : c ∈ line[ℝ, a, b] := heq ▸ left_mem_affineSpan_pair ℝ c d
+          have hab : a ≠ b := fun h => Bool.false_ne_true (congrArg Prod.snd (hs h))
+          rcases (unit_circle_mem_line_iff (by simp [a]) (by simp [b]) hab (by simp [c])).mp hc_mem with
+            hca | hcb
+          · exact hij (congrArg Prod.fst (hs hca)).symm
+          · exact hij (congrArg Prod.fst (hs hcb)).symm
+        have hseg_sub : (segment ℝ a b ∩ segment ℝ c d).Subsingleton :=
+          (subsingleton_inter_of_ne_lines hne_line).anti fun x hx =>
+            ⟨(line[ℝ, a, b]).convex.segment_subset
+                (left_mem_affineSpan_pair _ _ _) (right_mem_affineSpan_pair _ _ _) hx.1,
+             (line[ℝ, c, d]).convex.segment_subset
+                (left_mem_affineSpan_pair _ _ _) (right_mem_affineSpan_pair _ _ _) hx.2⟩
+        exact hseg_sub.anti fun x hx => (hEinter i j hij hx.1).resolve_right hx.2
+    have hcov : edgeMeetingPoints V E ⊆ ⋃ q ∈ (Finset.univ : Finset (Fin μ × Fin μ)), piece q := by
+      rintro x ⟨i, j, hij, hx, hxV⟩
+      exact Set.mem_biUnion (Finset.mem_univ (i, j)) (by simp [piece, hij, hx, hxV])
+    have hfinU : (⋃ q ∈ (Finset.univ : Finset (Fin μ × Fin μ)), piece q).Finite :=
+      (Finset.finite_toSet _).biUnion fun q _ => (hpiece_sub q).finite
+    have hbiUnion_le : ∀ (S : Finset (Fin μ × Fin μ)),
+        (⋃ q ∈ S, piece q).ncard ≤ S.card := by
+      intro S
+      induction S using Finset.induction_on with
+      | empty => simp
+      | insert q S hq ih =>
+        rw [Finset.set_biUnion_insert, Finset.card_insert_of_notMem hq]
+        have hq1 : (piece q).ncard ≤ 1 := by
+          rcases (hpiece_sub q).eq_empty_or_singleton with h | ⟨x, h⟩ <;> simp [h]
+        exact (Set.ncard_union_le _ _).trans (by omega)
+    calc (edgeMeetingPoints V E).ncard
+        ≤ (⋃ q ∈ (Finset.univ : Finset (Fin μ × Fin μ)), piece q).ncard :=
+          Set.ncard_le_ncard hcov hfinU
+      _ ≤ (Finset.univ : Finset (Fin μ × Fin μ)).card := hbiUnion_le Finset.univ
+      _ = μ ^ 2 := by simp [sq]
+  have hW_le : Nat.card W ≤ p + 2 * (p * (p - 1) / 2) ^ 2 := by
+    rw [Nat.card_eq_fintype_card]
+    have hcardW : Fintype.card W = p + ∑ e : Fin (p * (p - 1) / 2), (k e - 1) := by
+      simp [W, SubdivisionVertex]
+    have hsum_le : ∑ e : Fin (p * (p - 1) / 2), (k e - 1) ≤
+        ∑ e : Fin (p * (p - 1) / 2), k e :=
+      Finset.sum_le_sum fun e _ => Nat.sub_le (k e) 1
+    have hcardF : ∑ e : Fin (p * (p - 1) / 2), k e = 2 * (edgeMeetingPoints V E).ncard := by
+      simpa [F] using hcount
+    omega
   refine ⟨W, F, L, v, ends, P', inferInstance, inferInstance,
     completeGraph_isIsoMinor_port_subdivision ψ hψ k hk, hvinj, rfl, rfl,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, hMfinite, ?_, ?_, ?_⟩
+    ?_, ?_, ?_, ?_, ?_, ?_, ?_, hMfinite, ?_, hM ▸ hM_le, hW_le, ?_, ?_⟩
   · intro e
     exact subdivisionGraph_isLink κ k e.1 e.2
   · intro e
@@ -98,5 +159,31 @@ theorem exists_clique_one_crossing_source {p : ℕ} (hp : 4 ≤ p) :
     obtain ⟨e, f, i, j, hef, hxP, A, U, hU, hxU, hl, hr⟩ :=
       exists_subdivision_crossing_model V E s hs hchord hEinter k w P hPline hcover havoid hinter hxold
     exact ⟨⟨e, i⟩, ⟨f, j⟩, (fun h => hef (congrArg Sigma.fst h)), hxP, A, U, hU, hxU, hl, hr⟩
+
+/-- The actual finite one-crossing source graph and all its
+geometric properties in XII (4.5), pages 252--253. The graph,
+subdivision, clique minor, crossing count, noncrossing incident
+pairs, and local coordinates are all constructed here. -/
+theorem exists_clique_one_crossing_source {p : ℕ} (hp : 4 ≤ p) :
+    ∃ (W F : Type) (L : Graph W F) (v : W → ℂ) (ends : F × Bool → W) (P : F → Set ℂ),
+      Finite W ∧ Finite F ∧ IsIsoMinor (GM16.completeGraph p) L ∧ Function.Injective v ∧
+      L.vertexSet = univ ∧ L.edgeSet = univ ∧
+      (∀ e, L.IsLink e (ends (e, false)) (ends (e, true))) ∧
+      (∀ e, IsLineWithEnds (P e) (v (ends (e, false))) (v (ends (e, true)))) ∧
+      (∀ e w, v w ∈ P e ↔ w = ends (e, false) ∨ w = ends (e, true)) ∧
+      (∀ e f, e ≠ f → (P e ∩ P f).Finite) ∧
+      (∀ e f g, e ≠ f → f ≠ g → e ≠ g → P e ∩ P f ∩ P g ⊆ range v) ∧
+      (∀ e, ∃ x ∈ edgeMeetingPoints v P, P e ∩ edgeMeetingPoints v P = {x}) ∧
+      (∀ w, ∃ e f, e ≠ f ∧ P e ∩ P f = {v w}) ∧
+      (edgeMeetingPoints v P).Finite ∧ 2 ≤ (edgeMeetingPoints v P).ncard ∧ Nat.card F = 2 * (edgeMeetingPoints v P).ncard ∧
+      ∀ x ∈ edgeMeetingPoints v P, ∃ e f, e ≠ f ∧ x ∈ P e ∩ P f ∧
+        ∃ (A : ℂ ≃L[ℝ] ℂ) (U : Set ℂ), IsOpen U ∧ x ∈ U ∧
+          P e ∩ U = (line[ℝ, x, x + A 1] : Set ℂ) ∩ U ∧
+          P f ∩ U = (line[ℝ, x, x + A Complex.I] : Set ℂ) ∩ U := by
+  obtain ⟨W, F, L, v, ends, P, hW, hF, hmin, hvinj, hLV, hLE, hlink, hline, hinc, hfin,
+    htriple, hmeet, htwo, hMfin, hMtwo, _, _, hcardF, hlocal⟩ :=
+    exists_clique_one_crossing_source_bounded hp
+  exact ⟨W, F, L, v, ends, P, hW, hF, hmin, hvinj, hLV, hLE, hlink, hline, hinc, hfin,
+    htriple, hmeet, htwo, hMfin, hMtwo, hcardF, hlocal⟩
 
 end GraphMinor.GM12

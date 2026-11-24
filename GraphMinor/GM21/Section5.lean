@@ -372,51 +372,314 @@ theorem claim_5_2_final_contradiction {S Shat : Type}
   have hle := h11 F D C hnF hF hC hD hbd hm hCD
   omega
 
-/-- **Graph Minors XXI, (5.2), Statement `(*)`** (page 17 of the preprint):
-"(*) *For every surface* $\Sigma$ *with* $\hat{\Sigma}$ *homeomorphic to* $\Sigma_0$ *and every
-integer* $p \ge 0$, *there exists* $\theta \ge 1$ *such that every drawing* $\Gamma$ *in* $\Sigma$
-*with* $|V(\Gamma) \cap bd(\Sigma)| \le p$ *and with a tangle of order* $\ge \theta$ *has no vital
-linkage with all its terminals in* $bd(\Sigma)$." -/
-theorem claim_5_2_star
+/-! ## 2b. Explicit bounds for `(5.2)` -/
+
+/-- One boundary-vertex shift `p ↦ p + 3 * θ₄(k, c, p)` in the proof of Graph Minors XXI, (5.2). -/
+def shift52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  p + 3 * theorem_5_1_bound V k c p
+
+/-- Maximum boundary-vertex count reached after at most `c` cuff-reduction steps in `(5.2)`. -/
+def pTop52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  Nat.iterate (shift52 V k c) c p
+
+/-- Additive slack for statement `(*)` of Graph Minors XXI, (5.2). -/
+def addStar52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  2 * (c + 1) * (pTop52 V k c p + 1) * theorem_5_1_bound V k c (pTop52 V k c p)
+
+/-- Explicit bound for statement `(*)` of Graph Minors XXI, (5.2) given a monotone bound `G_prev`
+for all strictly simpler closed surfaces. -/
+def starBound52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (G_prev : ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  addStar52 V k c p + G_prev (shift52 V k c (pTop52 V k c p))
+
+/-- One closed-surface complexity step for Graph Minors XXI, (5.2), tracking `(p, acc)`. -/
+def closedStep52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap : ℕ) (st : ℕ × ℕ) : ℕ × ℕ :=
+  (shift52 V k_cap st.1 (pTop52 V k_cap st.1 st.1), st.2 + addStar52 V k_cap st.1 st.1)
+
+/-- Iterated closed-surface bound for Graph Minors XXI, (5.2) at step `m` with complexity cap `k_cap`. -/
+def theorem_5_2_iter (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap m p : ℕ) : ℕ :=
+  (Nat.iterate (closedStep52 V k_cap) (m + 1) (p, 1)).2
+
+/-- Explicit tangle-order bound for **Graph Minors XXI, (5.2)** over closed connected surfaces with
+`4 * a + 2 * b + c ≤ k`, parameterized by an upper bound `V` on `GM07.vModel`. -/
+def theorem_5_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k p : ℕ) : ℕ :=
+  theorem_5_2_iter V k k p
+
+private lemma shift52_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k₁ k₂ c₁ c₂ p₁ p₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) (hp : p₁ ≤ p₂) :
+    shift52 V k₁ c₁ p₁ ≤ shift52 V k₂ c₂ p₂ := by
+  dsimp only [shift52]
+  have := theorem_5_1_bound_mono (V := V) hk hc hp
+  omega
+
+private lemma le_shift52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) :
+    p ≤ shift52 V k c p := by
+  dsimp only [shift52]; omega
+
+private lemma shift52_strict_step {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k c p₁ p₂ : ℕ}
+    (hp : p₁ + 1 ≤ p₂) :
+    shift52 V k c p₁ + 1 ≤ shift52 V k c p₂ := by
+  dsimp only [shift52]
+  have := theorem_5_1_bound_mono (V := V) (k₁ := k) (k₂ := k) (c₁ := c) (c₂ := c) le_rfl le_rfl (by omega : p₁ ≤ p₂)
+  omega
+
+private lemma iterate_shift52_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k₁ k₂ c₁ c₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) :
+    ∀ (m : ℕ) {p₁ p₂ : ℕ}, p₁ ≤ p₂ →
+      Nat.iterate (shift52 V k₁ c₁) m p₁ ≤ Nat.iterate (shift52 V k₂ c₂) m p₂ := by
+  intro m
+  induction m with
+  | zero => intro _ _ hp; exact hp
+  | succ m ih =>
+    intro p₁ p₂ hp
+    rw [Function.iterate_succ_apply', Function.iterate_succ_apply']
+    exact shift52_mono hk hc (ih hp)
+
+private lemma iterate_shift52_le_add {V : ℕ → ℕ → ℕ → ℕ → ℕ} (k c : ℕ) :
+    ∀ (m n p : ℕ), m ≤ n →
+      Nat.iterate (shift52 V k c) m p ≤ Nat.iterate (shift52 V k c) n p := by
+  intro m n p hmn
+  induction hmn with
+  | refl => exact le_rfl
+  | @step t _ ih =>
+    rw [Function.iterate_succ_apply']
+    exact ih.trans (le_shift52 V k c _)
+
+private lemma le_pTop52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) :
+    p ≤ pTop52 V k c p :=
+  iterate_shift52_le_add k c 0 c p (Nat.zero_le c)
+
+private lemma pTop52_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k₁ k₂ c₁ c₂ p₁ p₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) (hp : p₁ ≤ p₂) :
+    pTop52 V k₁ c₁ p₁ ≤ pTop52 V k₂ c₂ p₂ :=
+  (iterate_shift52_mono hk hc c₁ hp).trans (iterate_shift52_le_add k₂ c₂ c₁ c₂ p₂ hc)
+
+private lemma pTop52_strict_step {V : ℕ → ℕ → ℕ → ℕ → ℕ} (k c : ℕ) {p₁ p₂ : ℕ}
+    (hp : p₁ + 1 ≤ p₂) :
+    pTop52 V k c p₁ + 1 ≤ pTop52 V k c p₂ := by
+  dsimp only [pTop52]
+  have h : ∀ m {x y}, x + 1 ≤ y →
+      Nat.iterate (shift52 V k c) m x + 1 ≤ Nat.iterate (shift52 V k c) m y := by
+    intro m
+    induction m with
+    | zero => intro _ _ hxy; exact hxy
+    | succ m ih =>
+      intro x y hxy
+      rw [Function.iterate_succ_apply', Function.iterate_succ_apply']
+      exact shift52_strict_step (ih hxy)
+  exact h c hp
+
+private lemma pTop52_shift_le_succ (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) :
+    pTop52 V k c (shift52 V k (c + 1) p) ≤ pTop52 V k (c + 1) p := by
+  dsimp only [pTop52]
+  rw [Function.iterate_succ_apply]
+  exact iterate_shift52_mono le_rfl (Nat.le_succ c) c le_rfl
+
+private lemma addStar52_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k₁ k₂ c₁ c₂ p₁ p₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) (hp : p₁ ≤ p₂) :
+    addStar52 V k₁ c₁ p₁ ≤ addStar52 V k₂ c₂ p₂ := by
+  dsimp only [addStar52]
+  have hP := pTop52_mono (V := V) hk hc hp
+  exact Nat.mul_le_mul
+    (Nat.mul_le_mul (Nat.mul_le_mul_left 2 (by omega)) (by omega))
+    (theorem_5_1_bound_mono hk hc hP)
+
+private lemma starBound52_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {G_prev : ℕ → ℕ}
+    (hG : Monotone G_prev) {k₁ k₂ c₁ c₂ p₁ p₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) (hp : p₁ ≤ p₂) :
+    starBound52 V G_prev k₁ c₁ p₁ ≤ starBound52 V G_prev k₂ c₂ p₂ := by
+  dsimp only [starBound52]
+  exact Nat.add_le_add (addStar52_mono hk hc hp)
+    (hG (shift52_mono hk hc (pTop52_mono hk hc hp)))
+
+private lemma two_mul_h51_le_addStar52 (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) :
+    2 * theorem_5_1_bound V k c p ≤ addStar52 V k c p := by
+  dsimp only [addStar52]
+  have h1 : 2 * 1 * 1 ≤ 2 * (c + 1) * (pTop52 V k c p + 1) :=
+    Nat.mul_le_mul (Nat.mul_le_mul_left 2 (by omega)) (by omega)
+  have h2 : theorem_5_1_bound V k c p ≤ theorem_5_1_bound V k c (pTop52 V k c p) :=
+    theorem_5_1_bound_mono le_rfl le_rfl (le_pTop52 V k c p)
+  have := Nat.mul_le_mul h1 h2
+  simpa only [mul_one] using this
+
+private lemma one_le_starBound52 {V : ℕ → ℕ → ℕ → ℕ → ℕ} {G_prev : ℕ → ℕ}
+    (hG_pos : ∀ p', 1 ≤ G_prev p') (k c p : ℕ) :
+    1 ≤ starBound52 V G_prev k c p := by
+  dsimp only [starBound52]
+  have := hG_pos (shift52 V k c (pTop52 V k c p))
+  omega
+
+private lemma starBound52_ge_branch1 {V : ℕ → ℕ → ℕ → ℕ → ℕ} {G_prev : ℕ → ℕ}
+    (hG : Monotone G_prev) (k c p : ℕ) :
+    2 * theorem_5_1_bound V k c p + G_prev (p + 3 * theorem_5_1_bound V k c p) ≤
+      starBound52 V G_prev k c p := by
+  dsimp only [starBound52]
+  refine Nat.add_le_add (two_mul_h51_le_addStar52 V k c p) ?_
+  exact hG (shift52_mono le_rfl le_rfl (le_pTop52 V k c p))
+
+private lemma starBound52_ge_branch2 {V : ℕ → ℕ → ℕ → ℕ → ℕ} {G_prev : ℕ → ℕ}
+    (hG : Monotone G_prev) (hG_pos : ∀ p', 1 ≤ G_prev p') (k c p : ℕ) :
+    2 * theorem_5_1_bound V k c p +
+        (if c = 0 then 1 else starBound52 V G_prev k (c - 1) (p + 3 * theorem_5_1_bound V k c p)) ≤
+      starBound52 V G_prev k c p := by
+  rcases c with _ | c'
+  · simp only [↓reduceIte, starBound52]
+    exact Nat.add_le_add (two_mul_h51_le_addStar52 V k 0 p) (hG_pos _)
+  · simp only [Nat.succ_ne_zero, ↓reduceIte, Nat.add_sub_cancel, starBound52]
+    change 2 * theorem_5_1_bound V k (c' + 1) p +
+        (addStar52 V k c' (shift52 V k (c' + 1) p) +
+          G_prev (shift52 V k c' (pTop52 V k c' (shift52 V k (c' + 1) p)))) ≤
+      addStar52 V k (c' + 1) p + G_prev (shift52 V k (c' + 1) (pTop52 V k (c' + 1) p))
+    have hP : pTop52 V k c' (shift52 V k (c' + 1) p) ≤ pTop52 V k (c' + 1) p :=
+      pTop52_shift_le_succ V k c' p
+    have hG_le : G_prev (shift52 V k c' (pTop52 V k c' (shift52 V k (c' + 1) p))) ≤
+        G_prev (shift52 V k (c' + 1) (pTop52 V k (c' + 1) p)) :=
+      hG (shift52_mono le_rfl (Nat.le_succ c') hP)
+    have hadd_le : 2 * theorem_5_1_bound V k (c' + 1) p + addStar52 V k c' (shift52 V k (c' + 1) p) ≤
+        addStar52 V k (c' + 1) p := by
+      dsimp only [addStar52]
+      set P := pTop52 V k (c' + 1) p
+      set H := theorem_5_1_bound V k (c' + 1) P
+      have h1 : 2 * theorem_5_1_bound V k (c' + 1) p ≤ 2 * 1 * (P + 1) * H := by
+        have ha : 2 * 1 * 1 ≤ 2 * 1 * (P + 1) := by omega
+        have hb : theorem_5_1_bound V k (c' + 1) p ≤ H :=
+          theorem_5_1_bound_mono le_rfl le_rfl (le_pTop52 V k (c' + 1) p)
+        simpa only [mul_one] using Nat.mul_le_mul ha hb
+      have h2 : 2 * (c' + 1) * (pTop52 V k c' (shift52 V k (c' + 1) p) + 1) *
+            theorem_5_1_bound V k c' (pTop52 V k c' (shift52 V k (c' + 1) p)) ≤
+          2 * (c' + 1) * (P + 1) * H :=
+        Nat.mul_le_mul
+          (Nat.mul_le_mul_left _ (by omega))
+          (theorem_5_1_bound_mono le_rfl (Nat.le_succ c') hP)
+      have hsum : 2 * 1 * (P + 1) * H + 2 * (c' + 1) * (P + 1) * H =
+          2 * (c' + 1 + 1) * (P + 1) * H := by ring
+      omega
+    omega
+
+private lemma starBound52_ge_branch3 {V : ℕ → ℕ → ℕ → ℕ → ℕ} {G_prev : ℕ → ℕ}
+    (hG : Monotone G_prev) (hG_pos : ∀ p', 1 ≤ G_prev p') (k c p : ℕ) :
+    2 * theorem_5_1_bound V k c p +
+        (if p = 0 then 1 else starBound52 V G_prev k c (p - 1)) ≤
+      starBound52 V G_prev k c p := by
+  rcases p with _ | p'
+  · simp only [↓reduceIte, starBound52]
+    exact Nat.add_le_add (two_mul_h51_le_addStar52 V k c 0) (hG_pos _)
+  · simp only [Nat.succ_ne_zero, ↓reduceIte, Nat.add_sub_cancel, starBound52]
+    have hP : pTop52 V k c p' + 1 ≤ pTop52 V k c (p' + 1) :=
+      pTop52_strict_step k c le_rfl
+    have hG_le : G_prev (shift52 V k c (pTop52 V k c p')) ≤
+        G_prev (shift52 V k c (pTop52 V k c (p' + 1))) :=
+      hG (shift52_mono le_rfl le_rfl (by omega))
+    have hadd_le : 2 * theorem_5_1_bound V k c (p' + 1) + addStar52 V k c p' ≤
+        addStar52 V k c (p' + 1) := by
+      dsimp only [addStar52]
+      set P' := pTop52 V k c p'
+      set P := pTop52 V k c (p' + 1)
+      set H := theorem_5_1_bound V k c P
+      have h1 : 2 * theorem_5_1_bound V k c (p' + 1) ≤ 2 * (c + 1) * 1 * H := by
+        have ha : 2 * 1 * 1 ≤ 2 * (c + 1) * 1 := by omega
+        have hb : theorem_5_1_bound V k c (p' + 1) ≤ H :=
+          theorem_5_1_bound_mono le_rfl le_rfl (le_pTop52 V k c (p' + 1))
+        simpa only [mul_one] using Nat.mul_le_mul ha hb
+      have h2 : 2 * (c + 1) * (P' + 1) * theorem_5_1_bound V k c P' ≤ 2 * (c + 1) * (P' + 1) * H :=
+        Nat.mul_le_mul_left _ (theorem_5_1_bound_mono le_rfl le_rfl (by omega))
+      have h3 : 2 * (c + 1) * (P' + 2) * H ≤ 2 * (c + 1) * (P + 1) * H :=
+        Nat.mul_le_mul_right H (Nat.mul_le_mul_left _ (by omega))
+      have hsum : 2 * (c + 1) * 1 * H + 2 * (c + 1) * (P' + 1) * H = 2 * (c + 1) * (P' + 2) * H := by
+        ring
+      omega
+    omega
+
+private lemma iterate_closedStep52_snd_add (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap : ℕ) :
+    ∀ (n p a b : ℕ),
+      (Nat.iterate (closedStep52 V k_cap) n (p, a + b)).2 =
+        a + (Nat.iterate (closedStep52 V k_cap) n (p, b)).2 := by
+  intro n
+  induction n with
+  | zero => intro _ _ _; rfl
+  | succ n ih =>
+    intro p a b
+    rw [Function.iterate_succ_apply, Function.iterate_succ_apply]
+    dsimp only [closedStep52]
+    rw [Nat.add_assoc, ih]
+
+private lemma theorem_5_2_iter_zero (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap p : ℕ) :
+    theorem_5_2_iter V k_cap 0 p = starBound52 V (fun _ => 1) k_cap p p := by
+  change 1 + addStar52 V k_cap p p = addStar52 V k_cap p p + 1
+  omega
+
+private lemma theorem_5_2_iter_succ (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap m p : ℕ) :
+    theorem_5_2_iter V k_cap (m + 1) p =
+      starBound52 V (theorem_5_2_iter V k_cap m) k_cap p p := by
+  dsimp only [theorem_5_2_iter, starBound52]
+  rw [Function.iterate_succ_apply]
+  dsimp only [closedStep52]
+  rw [Nat.add_comm 1 (addStar52 V k_cap p p), iterate_closedStep52_snd_add]
+
+private lemma one_le_theorem_5_2_iter (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap : ℕ) :
+    ∀ m p, 1 ≤ theorem_5_2_iter V k_cap m p := by
+  intro m
+  induction m with
+  | zero => intro p; rw [theorem_5_2_iter_zero]; exact one_le_starBound52 (fun _ => le_rfl) _ _ _
+  | succ m ih => intro p; rw [theorem_5_2_iter_succ]; exact one_le_starBound52 ih _ _ _
+
+private lemma theorem_5_2_iter_mono_p (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k_cap : ℕ) :
+    ∀ m, Monotone (theorem_5_2_iter V k_cap m) := by
+  intro m
+  induction m with
+  | zero =>
+    intro p₁ p₂ hp
+    rw [theorem_5_2_iter_zero, theorem_5_2_iter_zero]
+    exact starBound52_mono (fun _ _ _ => le_rfl) le_rfl hp hp
+  | succ m ih =>
+    intro p₁ p₂ hp
+    rw [theorem_5_2_iter_succ, theorem_5_2_iter_succ]
+    exact starBound52_mono ih le_rfl hp hp
+
+lemma one_le_theorem_5_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k p : ℕ) :
+    1 ≤ theorem_5_2_bound V k p :=
+  one_le_theorem_5_2_iter V k k p
+
+/-- Explicit version of **Graph Minors XXI, (5.2), Statement `(*)`** (page 17 of the preprint) with
+bound `starBound52 V G_prev k c p`. -/
+theorem claim_5_2_star_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S₀ : Type} [TopologicalSpace S₀] [ConnectedSpace S₀]
     (hS₀ : IsSurface S₀) (hbd₀ : bd S₀ = ∅)
+    {k : ℕ} (hk : ∃ a₀ b₀, 4 * a₀ + 2 * b₀ ≤ k ∧ Nonempty (S₀ ≃ₜ SurfaceModel a₀ b₀ 0))
+    (G_prev : ℕ → ℕ) (hG_mono : Monotone G_prev) (hG_pos : ∀ p', 1 ≤ G_prev p')
     (h_simpler : ∀ (S' : Type) [TopologicalSpace S'] [ConnectedSpace S'],
       IsSurface S' → bd S' = ∅ → IsSimplerThan S' S₀ →
-      ∀ (p' : ℕ), ∃ θ : ℕ, 1 ≤ θ ∧
-        ∀ (Γ : Surface.Drawing S') (θ_G : ℕ)
-          (𝒯 : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
-          θ ≤ θ_G → IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p') :
-    ∀ (S : Type) [TopologicalSpace S] [ConnectedSpace S],
-      IsSurface S → Nonempty (IsCappedSurface S S₀) →
-      ∀ (p : ℕ), ∃ θ : ℕ, 1 ≤ θ ∧
-        ∀ (Γ : Surface.Drawing S) (θ_G : ℕ)
+      ∀ (p' : ℕ) (Γ : Surface.Drawing S') (θ_G : ℕ)
+        (𝒯 : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+        G_prev p' ≤ θ_G → IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p') :
+    ∀ (c : ℕ) (S : Type) [TopologicalSpace S] [ConnectedSpace S],
+      IsSurface S → Nonempty (IsCappedSurface S S₀) → (cuffs S).ncard = c →
+      ∀ (p : ℕ) (Γ : Surface.Drawing S) (θ_G : ℕ)
+        (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (L : Hypergraph S (Set S)),
+        Γ.IsProper →
+        (Γ.V ∩ bd S).ncard ≤ p →
+        starBound52 V G_prev k c p ≤ θ_G →
+        IsTangle Γ.toHypergraph θ_G 𝒯 →
+        IsVitalLinkage Γ.toHypergraph L →
+        terminals L ⊆ bd S →
+        False := by
+  classical
+  haveI : T2Space S₀ := hS₀.2.1
+  rcases hk with ⟨a₀, b₀, hab₀, ⟨e₀⟩⟩
+  have h_ind_c : ∀ (c : ℕ),
+      ∀ (S Shat : Type) [TopologicalSpace S] [TopologicalSpace Shat] [ConnectedSpace S],
+        IsSurface S → IsCappedSurface S Shat → Nonempty (Shat ≃ₜ S₀) → (cuffs S).ncard = c →
+        ∀ (p : ℕ) (Γ : Surface.Drawing S) (θ_G : ℕ)
           (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
           (L : Hypergraph S (Set S)),
           Γ.IsProper →
           (Γ.V ∩ bd S).ncard ≤ p →
-          θ ≤ θ_G →
+          starBound52 V G_prev k c p ≤ θ_G →
           IsTangle Γ.toHypergraph θ_G 𝒯 →
           IsVitalLinkage Γ.toHypergraph L →
           terminals L ⊆ bd S →
           False := by
-  classical
-  haveI : T2Space S₀ := hS₀.2.1
-  -- We prove `(*)` by strong induction on `c = (cuffs S).ncard`, and then on `p`, for any
-  -- connected surface `S` with capping `cap : IsCappedSurface S Shat` and `Nonempty (Shat ≃ₜ S₀)`.
-  have h_ind_c : ∀ (c : ℕ),
-      ∀ (S Shat : Type) [TopologicalSpace S] [TopologicalSpace Shat] [ConnectedSpace S],
-        IsSurface S → IsCappedSurface S Shat → Nonempty (Shat ≃ₜ S₀) → (cuffs S).ncard = c →
-        ∀ (p : ℕ), ∃ θ : ℕ, 1 ≤ θ ∧
-          ∀ (Γ : Surface.Drawing S) (θ_G : ℕ)
-            (𝒯 : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-            (L : Hypergraph S (Set S)),
-            Γ.IsProper →
-            (Γ.V ∩ bd S).ncard ≤ p →
-            θ ≤ θ_G →
-            IsTangle Γ.toHypergraph θ_G 𝒯 →
-            IsVitalLinkage Γ.toHypergraph L →
-            terminals L ⊆ bd S →
-            False := by
     intro c
     induction c using Nat.strong_induction_on with
     | h c ih_c =>
@@ -429,12 +692,15 @@ theorem claim_5_2_star
         haveI : T2Space S := hS.2.1
         haveI : T2Space Shat := cap.isSurface.2.1
         rcases hhat₀ with ⟨e_hat₀⟩
-        -- Choose `θ₄ > p` from (5.1).
-        obtain ⟨θ₄, hp_lt_θ₄, h51⟩ := theorem_5_1_proof hS cap p
+        -- Choose `θ₄ > p` explicitly from (5.1).
+        set θ₄ := theorem_5_1_bound V k c p
+        have hp_lt_θ₄ : p < θ₄ := lt_theorem_5_1_bound V k c p
+        have h51 := theorem_5_1_explicit V hV hS cap
+          ⟨a₀, b₀, hab₀, ⟨e_hat₀.trans e₀⟩⟩ hc.le p
         have hθ₄_pos : 1 ≤ θ₄ := by omega
         -- Inductive hypothesis (1) at `p' = p + 3 * θ₄`.
-        obtain ⟨θ₁, hθ₁_pos, hθ₁_prop⟩ :=
-          exists_theta1_of_simpler hS₀ h_simpler (p + 3 * θ₄)
+        set θ₁ := G_prev (p + 3 * θ₄)
+        have hθ₁_pos : 1 ≤ θ₁ := hG_pos (p + 3 * θ₄)
         have h_ind1 : ∀ (Shat' : Type) [TopologicalSpace Shat'],
             IsSurface Shat' → bd Shat' = ∅ → [ConnectedSpace Shat'] →
             IsSimplerThan Shat' Shat →
@@ -453,8 +719,8 @@ theorem claim_5_2_star
           haveI : CompactSpace S' := hS'.1
           haveI : T2Space Shat' := hShat'.2.1
           have hsimp₀ : IsSimplerThan Shat' S₀ := by
-            rcases hsimp' with ⟨a, b, c, a', b', c', h₁, ⟨h₂⟩, h₃⟩
-            exact ⟨a, b, c, a', b', c', h₁, ⟨e_hat₀.symm.trans h₂⟩, h₃⟩
+            rcases hsimp' with ⟨a, b, c', a', b', c'', h₁, ⟨h₂⟩, h₃⟩
+            exact ⟨a, b, c', a', b', c'', h₁, ⟨e_hat₀.symm.trans h₂⟩, h₃⟩
           have hT'_hat : IsTangle (capDrawing hS' cap' Γ').toHypergraph θ₁
               (mapTangleInjOn cap'.emb T') :=
             isTangle_mapDrawingInjOn Γ' cap'.emb
@@ -473,47 +739,15 @@ theorem claim_5_2_star
             rw [h_toH]
             exact ⟨mapHypergraph cap'.emb (image cap'.emb) L',
               (isVitalPLinkage_mapHypergraph hL'_vital.1.1 hinj_V hinj_E).mpr hL'_p⟩
-          exact hθ₁_prop Shat' hShat' hbd_Shat' hsimp₀ (capDrawing hS' cap' Γ') θ₁
+          exact h_simpler Shat' hShat' hbd_Shat' hsimp₀ (p + 3 * θ₄) (capDrawing hS' cap' Γ') θ₁
             (mapTangleInjOn cap'.emb T') le_rfl hT'_hat hL'_hat
-        -- Inductive hypothesis (2) at `p' = p + 3 * θ₄`.
-        have hex_θ₂_t : ∀ t : Fin c, ∃ θ_t : ℕ, 1 ≤ θ_t ∧
-            ∀ (S' Shat' : Type) [TopologicalSpace S'] [TopologicalSpace Shat'],
-              IsSurface S' → [ConnectedSpace S'] →
-              GM19.IsCappedSurface S' Shat' →
-              Nonempty (Shat' ≃ₜ Shat) →
-              (cuffs S').ncard = t.1 →
-              ∀ (Γ' : Surface.Drawing S'),
-                Γ'.IsProper →
-                (Γ'.V ∩ bd S').ncard ≤ p + 3 * θ₄ →
-                ∀ (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S')))
-                  (L' : Hypergraph S' (Set S')),
-                  IsTangle Γ'.toHypergraph θ_t T' →
-                  IsVitalLinkage Γ'.toHypergraph L' →
-                  ¬ (terminals L' ⊆ bd S') := by
-          intro t
-          by_cases h_ex : ∃ (S_t Shat_t : Type) (_ : TopologicalSpace S_t)
-              (_ : TopologicalSpace Shat_t) (_ : ConnectedSpace S_t),
-              IsSurface S_t ∧ Nonempty (IsCappedSurface S_t Shat_t) ∧
-              Nonempty (Shat_t ≃ₜ Shat) ∧ (cuffs S_t).ncard = t.1
-          · rcases h_ex with ⟨S_t, Shat_t, tS_t, tShat_t, cS_t, hsurf_t, ⟨cap_t⟩, ⟨e_hat_t⟩, hcuffs_t⟩
-            letI := tS_t
-            letI := tShat_t
-            letI := cS_t
-            obtain ⟨θ_t, hθ_t_pos, hθ_t⟩ :=
-              ih_c t.1 t.2 S_t Shat_t hsurf_t cap_t ⟨e_hat_t.trans e_hat₀⟩ hcuffs_t (p + 3 * θ₄)
-            refine ⟨θ_t, hθ_t_pos, ?_⟩
-            intro S' Shat' _ _ hS' _ cap' ⟨e_hat'⟩ hcuffs' Γ' hprop' hbd' T' L' hT' hL' hterm'
-            obtain ⟨e_S'⟩ :=
-              homeo_of_capped_homeo_and_cuffs_ncard_eq hsurf_t hS' cap_t cap'
-                ⟨e_hat'.trans e_hat_t.symm⟩ (hcuffs'.trans hcuffs_t.symm)
-            exact no_vitalLinkage_bd_of_homeomorph hsurf_t e_S' hθ_t
-              Γ' θ_t T' L' hprop' hbd' le_rfl hT' hL' hterm'
-          · refine ⟨1, le_rfl, ?_⟩
-            intro S' Shat' tS' tShat' hS' cS' cap' hhat' hcuffs'
-            exact (h_ex ⟨S', Shat', tS', tShat', cS', hS', ⟨cap'⟩, hhat', hcuffs'⟩).elim
-        choose θ₂_fn hθ₂_fn_pos hθ₂_fn_prop using hex_θ₂_t
-        let θ₂ : ℕ := 1 + ∑ t : Fin c, θ₂_fn t
-        have hθ₂_pos : 1 ≤ θ₂ := by dsimp only [θ₂]; omega
+        -- Inductive hypothesis (2) at `p' = p + 3 * θ₄` for fewer cuffs.
+        set θ₂ : ℕ := if c = 0 then 1 else starBound52 V G_prev k (c - 1) (p + 3 * θ₄)
+        have hθ₂_pos : 1 ≤ θ₂ := by
+          dsimp only [θ₂]
+          split_ifs
+          · exact le_rfl
+          · exact one_le_starBound52 hG_pos _ _ _
         have h_ind2 : ∀ (S' Shat' : Type) [TopologicalSpace S'] [TopologicalSpace Shat'],
             IsSurface S' → [ConnectedSpace S'] →
             GM19.IsCappedSurface S' Shat' →
@@ -527,56 +761,46 @@ theorem claim_5_2_star
                 IsTangle Γ'.toHypergraph θ₂ T' →
                 IsVitalLinkage Γ'.toHypergraph L' →
                 ¬ (terminals L' ⊆ bd S') := by
-          intro S' Shat' _ _ hS' _ cap' hhat' hlt Γ' hprop' hbd' T' L' hT' hL' hterm'
-          let t : Fin c := ⟨(cuffs S').ncard, hc ▸ hlt⟩
-          have hle_sum : θ₂_fn t ≤ θ₂ := by
-            have hmem : t ∈ (Finset.univ : Finset (Fin c)) := Finset.mem_univ t
-            have hle := Finset.single_le_sum (fun i _ => Nat.zero_le (θ₂_fn i)) hmem
-            dsimp only [θ₂]
-            omega
-          have hT'_t : IsTangle Γ'.toHypergraph (θ₂_fn t) (truncation T' (θ₂_fn t)) :=
-            hT'.truncation (hθ₂_fn_pos t) hle_sum
-          exact hθ₂_fn_prop t S' Shat' hS' cap' hhat' rfl Γ' hprop' hbd'
-            (truncation T' (θ₂_fn t)) L' hT'_t hL' hterm'
+          intro S' Shat' _ _ hS' _ cap' ⟨e_hat'⟩ hlt Γ' hprop' hbd' T' L' hT' hL' hterm'
+          have hc_ne : c ≠ 0 := by omega
+          have hle_θ₂ : starBound52 V G_prev k (cuffs S').ncard (p + 3 * θ₄) ≤ θ₂ := by
+            simp only [θ₂, hc_ne, ↓reduceIte]
+            exact starBound52_mono hG_mono le_rfl (by omega) le_rfl
+          exact ih_c (cuffs S').ncard (by omega) S' Shat' hS' cap' ⟨e_hat'.trans e_hat₀⟩ rfl
+            (p + 3 * θ₄) Γ' θ₂ T' L' hprop' hbd' hle_θ₂ hT' hL' hterm'
         -- Inductive hypothesis (3) at `< p`.
-        have hex_θ₃ : ∃ θ₃ : ℕ, 1 ≤ θ₃ ∧
-            ∀ (S' : Type) [TopologicalSpace S'],
-              IsSurface S' → [ConnectedSpace S'] →
-              Nonempty (S' ≃ₜ S) →
-              ∀ (Γ' : Surface.Drawing S'),
-                Γ'.IsProper →
-                (Γ'.V ∩ bd S').ncard < p →
-                ∀ (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S')))
-                  (L' : Hypergraph S' (Set S')),
-                  IsTangle Γ'.toHypergraph θ₃ T' →
-                  IsVitalLinkage Γ'.toHypergraph L' →
-                  ¬ (terminals L' ⊆ bd S') := by
-          rcases Nat.eq_zero_or_pos p with rfl | hp_pos
-          · refine ⟨1, le_rfl, ?_⟩
-            intro S' _ _ _ _ Γ' _ hlt
-            omega
-          · obtain ⟨θ₃, hθ₃_pos, hθ₃_prop⟩ := ih_p (p - 1) (by omega)
-            refine ⟨θ₃, hθ₃_pos, ?_⟩
-            intro S' _ hS' _ ⟨e_S⟩ Γ' hprop' hlt T' L' hT' hL' hterm'
-            have hle_p1 : (Γ'.V ∩ bd S').ncard ≤ p - 1 := by omega
-            exact no_vitalLinkage_bd_of_homeomorph hS e_S hθ₃_prop
-              Γ' θ₃ T' L' hprop' hle_p1 le_rfl hT' hL' hterm'
-        obtain ⟨θ₃, hθ₃_pos, h_ind3⟩ := hex_θ₃
-        -- Set `θ = 2 * θ₄ + max θ₁ (max θ₂ θ₃)`.
-        let θ : ℕ := 2 * θ₄ + max θ₁ (max θ₂ θ₃)
-        have hθ_pos : 1 ≤ θ := by
-          dsimp only [θ]; omega
-        have hθ_θ₁ : 2 * θ₄ + θ₁ ≤ θ := by
-          have : θ₁ ≤ max θ₁ (max θ₂ θ₃) := le_max_left _ _
-          dsimp only [θ]; omega
-        have hθ_θ₂ : 2 * θ₄ + θ₂ ≤ θ := by
-          have : θ₂ ≤ max θ₁ (max θ₂ θ₃) := (le_max_left θ₂ θ₃).trans (le_max_right _ _)
-          dsimp only [θ]; omega
-        have hθ_θ₃ : 2 * θ₄ + θ₃ ≤ θ := by
-          have : θ₃ ≤ max θ₁ (max θ₂ θ₃) := (le_max_right θ₂ θ₃).trans (le_max_right _ _)
-          dsimp only [θ]; omega
+        set θ₃ : ℕ := if p = 0 then 1 else starBound52 V G_prev k c (p - 1)
+        have hθ₃_pos : 1 ≤ θ₃ := by
+          dsimp only [θ₃]
+          split_ifs
+          · exact le_rfl
+          · exact one_le_starBound52 hG_pos _ _ _
+        have h_ind3 : ∀ (S' : Type) [TopologicalSpace S'],
+            IsSurface S' → [ConnectedSpace S'] →
+            Nonempty (S' ≃ₜ S) →
+            ∀ (Γ' : Surface.Drawing S'),
+              Γ'.IsProper →
+              (Γ'.V ∩ bd S').ncard < p →
+              ∀ (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S')))
+                (L' : Hypergraph S' (Set S')),
+                IsTangle Γ'.toHypergraph θ₃ T' →
+                IsVitalLinkage Γ'.toHypergraph L' →
+                ¬ (terminals L' ⊆ bd S') := by
+          intro S' _ hS' _ ⟨e_S⟩ Γ' hprop' hlt T' L' hT' hL' hterm'
+          have hp_ne : p ≠ 0 := by omega
+          have hθ₃_eq : θ₃ = starBound52 V G_prev k c (p - 1) := by simp [θ₃, hp_ne]
+          have hle_p1 : (Γ'.V ∩ bd S').ncard ≤ p - 1 := by omega
+          exact no_vitalLinkage_bd_of_homeomorph hS e_S
+            (fun Γ'' θ_G'' 𝒯'' L'' hprop'' hbd'' hle'' h𝒯'' hL'' hterm'' =>
+              ih_p (p - 1) (by omega) Γ'' θ_G'' 𝒯'' L'' hprop'' hbd'' (hθ₃_eq ▸ hle'') h𝒯'' hL'' hterm'')
+            Γ' θ₃ T' L' hprop' hle_p1 le_rfl hT' hL' hterm'
+        -- Check `θ = starBound52 V G_prev k c p` dominates all three branches.
+        set θ : ℕ := starBound52 V G_prev k c p
+        have hθ_pos : 1 ≤ θ := one_le_starBound52 hG_pos k c p
+        have hθ_θ₁ : 2 * θ₄ + θ₁ ≤ θ := starBound52_ge_branch1 hG_mono k c p
+        have hθ_θ₂ : 2 * θ₄ + θ₂ ≤ θ := starBound52_ge_branch2 hG_mono hG_pos k c p
+        have hθ_θ₃ : 2 * θ₄ + θ₃ ≤ θ := starBound52_ge_branch3 hG_mono hG_pos k c p
         have hθ₃_le_θ : θ₃ ≤ θ := by omega
-        refine ⟨θ, hθ_pos, ?_⟩
         intro Γ₀ θ_G 𝒯₀ L₀ hΓ₀_prop hΓ₀_bd hθ_G h𝒯₀ hL₀ hL₀_bd
         -- Pass to a minimal counterexample `(Γ, 𝒯, L)` minimizing `Γ.V.ncard + Γ.E.ncard`.
         have hex_n : ∃ n : ℕ, ∃ (Γ : Surface.Drawing S)
@@ -590,7 +814,6 @@ theorem claim_5_2_star
             Γ.V.ncard + Γ.E.ncard = n :=
           ⟨Γ₀.V.ncard + Γ₀.E.ncard, Γ₀, truncation 𝒯₀ θ, L₀,
             hΓ₀_prop, hΓ₀_bd, h𝒯₀.truncation hθ_pos hθ_G, hL₀, hL₀_bd, rfl⟩
-        let n_min := Nat.find hex_n
         obtain ⟨Γ, 𝒯, L, hΓ_prop, hΓ_bd, h𝒯, hL, hL_bd, hn_eq⟩ := Nat.find_spec hex_n
         have hmin : ∀ (Γ' : Surface.Drawing S)
             (𝒯' : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
@@ -650,35 +873,97 @@ theorem claim_5_2_star
         intro F D C hnF hF hlt hC hD hbd hm hCD
         have hle := h11 F D C hnF hF hC hD hbd hm hCD
         omega
-  intro S _ _ hS ⟨cap⟩ p
-  exact h_ind_c (cuffs S).ncard S S₀ hS cap ⟨Homeomorph.refl S₀⟩ rfl p
+  intro c S _ _ hS ⟨cap⟩ hc
+  exact h_ind_c c S S₀ hS cap ⟨Homeomorph.refl S₀⟩ hc
 
 /-! ## 3. Main Theorem: Graph Minors XXI, (5.2) -/
 
-/-- Complexity-indexed outer induction for **Graph Minors XXI, (5.2)** over closed connected
-surfaces `S₀` with `4 * a₀ + 2 * b₀ + c₀ ≤ k`. -/
-private theorem prove_5_2_by_complexity (k : ℕ) :
-    ∀ (S₀ : Type) [TopologicalSpace S₀] [ConnectedSpace S₀],
-      IsSurface S₀ → bd S₀ = ∅ →
-      (∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (S₀ ≃ₜ SurfaceModel a₀ b₀ c₀)) →
-      ∀ (p : ℕ), ∃ θ : ℕ, 1 ≤ θ ∧
-        ∀ (Γ : Surface.Drawing S₀) (θ_G : ℕ)
+/-- Complexity-indexed outer induction for **Graph Minors XXI, (5.2)** with explicit bound
+`theorem_5_2_iter V k_cap k p`. -/
+private theorem prove_5_2_by_complexity_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (k_cap : ℕ) :
+    ∀ (k : ℕ), k ≤ k_cap →
+      ∀ (S₀ : Type) [TopologicalSpace S₀] [ConnectedSpace S₀],
+        IsSurface S₀ → bd S₀ = ∅ →
+        (∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (S₀ ≃ₜ SurfaceModel a₀ b₀ c₀)) →
+        ∀ (p : ℕ) (Γ : Surface.Drawing S₀) (θ_G : ℕ)
           (𝒯 : Set (Hypergraph S₀ (Set S₀) × Hypergraph S₀ (Set S₀))),
-          θ ≤ θ_G → IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p := by
-  induction k using Nat.strong_induction_on with
-  | h k ih =>
-    intro S₀ _ _ hS₀ hbd₀ ⟨a₀, b₀, c₀, hk, ⟨e₀⟩⟩ p
+          theorem_5_2_iter V k_cap k p ≤ θ_G →
+          IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p := by
+  intro k
+  induction k with
+  | zero =>
+    intro hk_le S₀ _ _ hS₀ hbd₀ ⟨a₀, b₀, c₀, hk, ⟨e₀⟩⟩ p Γ θ_G 𝒯 hθ_G h𝒯 hL
+    haveI : T2Space S₀ := hS₀.2.1
+    have hcl₀ : IsClosedSurface S₀ := isClosedSurface_of_bd_eq_empty hS₀ hbd₀
+    obtain ⟨a₁, b₁, ⟨e₁⟩⟩ := GM12.exists_closed_surface_model hcl₀
+    obtain ⟨hc₀, heuler, _⟩ := (modelCriterion.2 a₁ b₁ 0 a₀ b₀ c₀).mp ⟨e₁.symm.trans e₀⟩
+    have hab₁ : 4 * a₁ + 2 * b₁ ≤ k_cap := by omega
     have h_simpler : ∀ (S' : Type) [TopologicalSpace S'] [ConnectedSpace S'],
         IsSurface S' → bd S' = ∅ → IsSimplerThan S' S₀ →
-        ∀ (p' : ℕ), ∃ θ : ℕ, 1 ≤ θ ∧
-          ∀ (Γ : Surface.Drawing S') (θ_G : ℕ)
-            (𝒯 : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
-            θ ≤ θ_G → IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p' := by
-      intro S' _ _ hS' hbd' ⟨a, b, c, a', b', c', ⟨e⟩, ⟨e'⟩, _, _, hlt⟩ p'
+        ∀ (p' : ℕ) (Γ' : Surface.Drawing S') (θ_G' : ℕ)
+          (𝒯' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+          1 ≤ θ_G' → IsTangle Γ'.toHypergraph θ_G' 𝒯' → ¬ HasVitalPLinkage Γ'.toHypergraph p' := by
+      intro S' _ _ _ _ ⟨a, b, c, a', b', c', _, ⟨e'⟩, _, _, hlt⟩
       obtain ⟨h_eq1, h_eq2, -⟩ := (modelCriterion.2 a₀ b₀ c₀ a' b' c').mp ⟨e₀.symm.trans e'⟩
-      have h_lt_k : 4 * a + 2 * b + c < k := by omega
-      exact ih (4 * a + 2 * b + c) h_lt_k S' hS' hbd' ⟨a, b, c, le_rfl, ⟨e⟩⟩ p'
-    exact reduce_5_2_to_star hS₀ hbd₀ (claim_5_2_star hS₀ hbd₀ h_simpler) p
+      omega
+    have hstar := claim_5_2_star_explicit V hV hS₀ hbd₀ ⟨a₁, b₁, hab₁, ⟨e₁⟩⟩
+      (fun _ => 1) (fun _ _ _ => le_rfl) (fun _ => le_rfl) h_simpler
+    obtain ⟨L_vit, hL_vit⟩ := hL
+    obtain ⟨S, _, _, hS, hcap, hcuffs_le, Γ_W, 𝒯_W, L_W, hprop_W, hbd_W, h𝒯_W, hL_W, hterm_W⟩ :=
+      exists_punctured_surface_at_terminals hS₀ hbd₀ Γ h𝒯 hL_vit
+    have hle_star : starBound52 V (fun _ => 1) k_cap (cuffs S).ncard p ≤ θ_G := by
+      have h1 : starBound52 V (fun _ => 1) k_cap (cuffs S).ncard p ≤
+          starBound52 V (fun _ => 1) k_cap p p :=
+        starBound52_mono (fun _ _ _ => le_rfl) le_rfl hcuffs_le le_rfl
+      rw [← theorem_5_2_iter_zero] at h1
+      exact h1.trans hθ_G
+    exact hstar (cuffs S).ncard S hS hcap rfl p Γ_W θ_G 𝒯_W L_W hprop_W hbd_W hle_star h𝒯_W hL_W hterm_W
+  | succ k ih =>
+    intro hk_le S₀ _ _ hS₀ hbd₀ ⟨a₀, b₀, c₀, hk, ⟨e₀⟩⟩ p Γ θ_G 𝒯 hθ_G h𝒯 hL
+    haveI : T2Space S₀ := hS₀.2.1
+    have hcl₀ : IsClosedSurface S₀ := isClosedSurface_of_bd_eq_empty hS₀ hbd₀
+    obtain ⟨a₁, b₁, ⟨e₁⟩⟩ := GM12.exists_closed_surface_model hcl₀
+    obtain ⟨hc₀, heuler, _⟩ := (modelCriterion.2 a₁ b₁ 0 a₀ b₀ c₀).mp ⟨e₁.symm.trans e₀⟩
+    have hab₁ : 4 * a₁ + 2 * b₁ ≤ k_cap := by omega
+    have h_simpler : ∀ (S' : Type) [TopologicalSpace S'] [ConnectedSpace S'],
+        IsSurface S' → bd S' = ∅ → IsSimplerThan S' S₀ →
+        ∀ (p' : ℕ) (Γ' : Surface.Drawing S') (θ_G' : ℕ)
+          (𝒯' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+          theorem_5_2_iter V k_cap k p' ≤ θ_G' →
+          IsTangle Γ'.toHypergraph θ_G' 𝒯' → ¬ HasVitalPLinkage Γ'.toHypergraph p' := by
+      intro S' _ _ hS' hbd' ⟨a, b, c, a', b', c', ⟨e⟩, ⟨e'⟩, _, _, hlt⟩ p' Γ' θ_G' 𝒯' hθ' h𝒯'
+      obtain ⟨h_eq1, h_eq2, -⟩ := (modelCriterion.2 a₀ b₀ c₀ a' b' c').mp ⟨e₀.symm.trans e'⟩
+      have h_le_k : 4 * a + 2 * b + c ≤ k := by omega
+      exact ih (by omega) S' hS' hbd' ⟨a, b, c, h_le_k, ⟨e⟩⟩ p' Γ' θ_G' 𝒯' hθ' h𝒯'
+    have hstar := claim_5_2_star_explicit V hV hS₀ hbd₀ ⟨a₁, b₁, hab₁, ⟨e₁⟩⟩
+      (theorem_5_2_iter V k_cap k) (theorem_5_2_iter_mono_p V k_cap k)
+      (one_le_theorem_5_2_iter V k_cap k) h_simpler
+    obtain ⟨L_vit, hL_vit⟩ := hL
+    obtain ⟨S, _, _, hS, hcap, hcuffs_le, Γ_W, 𝒯_W, L_W, hprop_W, hbd_W, h𝒯_W, hL_W, hterm_W⟩ :=
+      exists_punctured_surface_at_terminals hS₀ hbd₀ Γ h𝒯 hL_vit
+    have hle_star : starBound52 V (theorem_5_2_iter V k_cap k) k_cap (cuffs S).ncard p ≤ θ_G := by
+      have h1 : starBound52 V (theorem_5_2_iter V k_cap k) k_cap (cuffs S).ncard p ≤
+          starBound52 V (theorem_5_2_iter V k_cap k) k_cap p p :=
+        starBound52_mono (theorem_5_2_iter_mono_p V k_cap k) le_rfl hcuffs_le le_rfl
+      rw [← theorem_5_2_iter_succ] at h1
+      exact h1.trans hθ_G
+    exact hstar (cuffs S).ncard S hS hcap rfl p Γ_W θ_G 𝒯_W L_W hprop_W hbd_W hle_star h𝒯_W hL_W hterm_W
+
+/-- Explicit version of **Graph Minors XXI, (5.2)** (page 17 of the preprint) with bound
+`theorem_5_2_bound V k p`. -/
+theorem theorem_5_2_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S₀ : Type} [TopologicalSpace S₀] [ConnectedSpace S₀]
+    (hS₀ : IsSurface S₀) (hbd₀ : bd S₀ = ∅)
+    {k : ℕ} (hk : ∃ a₀ b₀ c₀, 4 * a₀ + 2 * b₀ + c₀ ≤ k ∧ Nonempty (S₀ ≃ₜ SurfaceModel a₀ b₀ c₀))
+    (p : ℕ) :
+    ∀ (Γ : Surface.Drawing S₀) (θ_G : ℕ)
+      (𝒯 : Set (Hypergraph S₀ (Set S₀) × Hypergraph S₀ (Set S₀))),
+      theorem_5_2_bound V k p ≤ θ_G →
+      IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p :=
+  prove_5_2_by_complexity_explicit V hV k k le_rfl S₀ hS₀ hbd₀ hk p
 
 /-- **Graph Minors XXI, (5.2)** (page 17 of the preprint):
 "For every surface $\Sigma$ with $bd(\Sigma) = \emptyset$ and every integer $p \ge 0$ there exists
@@ -692,8 +977,9 @@ theorem theorem_5_2_proof
         (𝒯 : Set (Hypergraph S₀ (Set S₀) × Hypergraph S₀ (Set S₀))),
         θ ≤ θ_G → IsTangle Γ.toHypergraph θ_G 𝒯 → ¬ HasVitalPLinkage Γ.toHypergraph p := by
   obtain ⟨a₀, b₀, c₀, ⟨e₀⟩⟩ := classification S₀ hS₀ inferInstance
-  exact prove_5_2_by_complexity (4 * a₀ + 2 * b₀ + c₀) S₀ hS₀ hbd₀
-    ⟨a₀, b₀, c₀, le_rfl, ⟨e₀⟩⟩ p
+  exact ⟨theorem_5_2_bound GM07.vModel (4 * a₀ + 2 * b₀ + c₀) p,
+    one_le_theorem_5_2_bound _ _ _,
+    theorem_5_2_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS₀ hbd₀ ⟨a₀, b₀, c₀, le_rfl, ⟨e₀⟩⟩ p⟩
 
 /-- Proof of `GM21Theorem52Statement` (`Parallel.lean`) from `theorem_5_2_proof`. -/
 theorem theorem_5_2_parallel : GM21Theorem52Statement :=

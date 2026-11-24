@@ -18,11 +18,10 @@ namespace GraphMinor.GM16
 open Set Graph GraphMinor.Surface GraphMinor.GM09 GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- Separated old-graph paths satisfy the marked-path threshold chosen
-for the proof of XVI (6.3). -/
-theorem controlsMinor_of_separated_hPaths
-    {S : Type w} [TopologicalSpace S] [T2Space S]
-    (hS : IsClosedSurface S) (hConn : ConnectedSpace S) (p : ℕ)
+/-- Separated old-graph paths satisfy any marked-path threshold `r₀`. -/
+theorem controlsMinor_of_separated_hPaths_of
+    {S : Type w} [TopologicalSpace S] [T2Space S] {p r₀ : ℕ}
+    (hr₀ : IsMarkedPathThreshold.{u, v, w} S p r₀)
     {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
     {θ_star θ_span : ℕ}
     {T_star : Set (Hypergraph α β × Hypergraph α β)}
@@ -30,12 +29,12 @@ theorem controlsMinor_of_separated_hPaths
     {d : Set S → Set S → ℕ}
     {P : Fin (p * (p - 1) / 2) → Graph α β} {s t : Fin (p * (p - 1) / 2) → S}
     (hSpan : IsSigmaSpan G H η θ_star θ_span T_star T) (hMet : HasTangleMetric H θ_span T d)
-    (horder : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ θ_span)
+    (horder : r₀ ≤ θ_span)
     (hst : ∀ i, s i ∈ H.V ∧ t i ∈ H.V)
     (hP : ∀ i, IsHPathWithEnds G η.imageGraph (P i) (η.vMap (s i)) (η.vMap (t i)))
     (hPP : Pairwise (fun i j => Disjoint V(P i) V(P j)))
     (hsep : ∀ a ∈ range s ∪ range t, ∀ b ∈ range s ∪ range t,
-      a ≠ b → cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ d {a} {b}) :
+      a ≠ b → r₀ ≤ d {a} {b}) :
     ControlsMinor G (completeGraph p) T_star := by
   let K := subgraphSUnion G (range P)
   let Y := range s ∪ range t
@@ -61,12 +60,56 @@ theorem controlsMinor_of_separated_hPaths
     rintro y (⟨i, rfl⟩ | ⟨i, rfl⟩)
     · exact (hst i).1
     · exact (hst i).2
-  apply (cliquePathThreshold_spec hS hConn p).2 G K θ_star θ_span T_star H η T d Y
+  apply hr₀ G K θ_star θ_span T_star H η T d Y
     P (fun i => η.vMap (s i)) (fun i => η.vMap (t i)) hSpan hMet horder hY hsep hKG hKH hKY
   · intro i
     exact ⟨(hP i).2.2.2.1, (hP i).2.2.2.2.1, (hP i).2.2.1,
       (hP i).2.1.of_le (le_subgraphSUnion hF ⟨i, rfl⟩)⟩
   · exact hPP
+
+/-- Separated old-graph paths satisfy the marked-path threshold chosen
+for the proof of XVI (6.3). -/
+theorem controlsMinor_of_separated_hPaths
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S) (p : ℕ)
+    {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
+    {θ_star θ_span : ℕ}
+    {T_star : Set (Hypergraph α β × Hypergraph α β)}
+    {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
+    {d : Set S → Set S → ℕ}
+    {P : Fin (p * (p - 1) / 2) → Graph α β} {s t : Fin (p * (p - 1) / 2) → S}
+    (hSpan : IsSigmaSpan G H η θ_star θ_span T_star T) (hMet : HasTangleMetric H θ_span T d)
+    (horder : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ θ_span)
+    (hst : ∀ i, s i ∈ H.V ∧ t i ∈ H.V)
+    (hP : ∀ i, IsHPathWithEnds G η.imageGraph (P i) (η.vMap (s i)) (η.vMap (t i)))
+    (hPP : Pairwise (fun i j => Disjoint V(P i) V(P j)))
+    (hsep : ∀ a ∈ range s ∪ range t, ∀ b ∈ range s ∪ range t,
+      a ≠ b → cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ d {a} {b}) :
+    ControlsMinor G (completeGraph p) T_star :=
+  controlsMinor_of_separated_hPaths_of (cliquePathThreshold_spec hS hConn p).2
+    hSpan hMet horder hst hP hPP hsep
+
+/-- When `p` has no pair of distinct vertices, any marked-path threshold `r₀` yields a `K_p`-minor. -/
+theorem controlsMinor_of_zero_pairs_of
+    {S : Type w} [TopologicalSpace S] [T2Space S] {p r₀ : ℕ}
+    (hr₀ : IsMarkedPathThreshold.{u, v, w} S p r₀)
+    {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
+    {θ_star θ_span : ℕ}
+    {T_star : Set (Hypergraph α β × Hypergraph α β)}
+    {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
+    {d : Set S → Set S → ℕ}
+    (hSpan : IsSigmaSpan G H η θ_star θ_span T_star T) (hMet : HasTangleMetric H θ_span T d)
+    (horder : r₀ ≤ θ_span)
+    (hμ : p * (p - 1) / 2 = 0) : ControlsMinor G (completeGraph p) T_star := by
+  have hempty : Fin (p * (p - 1) / 2) → False := by
+    intro i
+    have hi := i.isLt
+    omega
+  apply controlsMinor_of_separated_hPaths_of hr₀
+    (P := fun i => (hempty i).elim) (s := fun i => (hempty i).elim)
+    (t := fun i => (hempty i).elim) hSpan hMet horder
+    (fun i => (hempty i).elim) (fun i => (hempty i).elim) (fun i => (hempty i).elim)
+  rintro a (⟨i, _⟩ | ⟨i, _⟩) <;> exact (hempty i).elim
 
 /-- When `p` has no pair of distinct vertices, the path requirement is
 empty. This supplies the small-`p` case of XVI (6.3), page 59. -/
@@ -80,15 +123,7 @@ theorem controlsMinor_of_zero_pairs
     {d : Set S → Set S → ℕ}
     (hSpan : IsSigmaSpan G H η θ_star θ_span T_star T) (hMet : HasTangleMetric H θ_span T d)
     (horder : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ θ_span)
-    (hμ : p * (p - 1) / 2 = 0) : ControlsMinor G (completeGraph p) T_star := by
-  have hempty : Fin (p * (p - 1) / 2) → False := by
-    intro i
-    have hi := i.isLt
-    omega
-  apply controlsMinor_of_separated_hPaths hS hConn p
-    (P := fun i => (hempty i).elim) (s := fun i => (hempty i).elim)
-    (t := fun i => (hempty i).elim) hSpan hMet horder
-    (fun i => (hempty i).elim) (fun i => (hempty i).elim) (fun i => (hempty i).elim)
-  rintro a (⟨i, _⟩ | ⟨i, _⟩) <;> exact (hempty i).elim
+    (hμ : p * (p - 1) / 2 = 0) : ControlsMinor G (completeGraph p) T_star :=
+  controlsMinor_of_zero_pairs_of (cliquePathThreshold_spec hS hConn p).2 hSpan hMet horder hμ
 
 end GraphMinor.GM16

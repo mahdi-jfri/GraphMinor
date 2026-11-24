@@ -185,6 +185,35 @@ def GM16Theorem52Statement : Prop :=
         Pairwise (fun i j => Disjoint V(Q i) V(Q j)) →
         ControlsMinor G (completeGraph p) T_star
 
+/-- **Graph Minors XVI, (5.2)** (page 55), with explicit threshold `GM12.theorem_4_4_bound V a b p`. -/
+theorem theorem_5_2_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hconn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (p : ℕ) :
+    let μ := p * (p - 1) / 2
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Drawing S) (η : SpanEmbedding H G)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ)
+      (s t : Fin μ → S) (Q : Fin μ → Graph α β),
+      IsSigmaSpan G H η θ_star θ_span T_star T →
+      HasTangleMetric H θ_span T d →
+      GM12.theorem_4_4_bound V a b p ≤ θ_span →
+      (∀ i : Fin μ, s i ∈ H.V ∧ t i ∈ H.V ∧ s i ≠ t i) →
+      Injective s → Injective t → Disjoint (range s) (range t) →
+      (∀ u ∈ range s ∪ range t, ∀ v ∈ range s ∪ range t, u ≠ v →
+        GM12.theorem_4_4_bound V a b p ≤ d {u} {v}) →
+      (∀ i : Fin μ, IsHPathWithEnds G η.imageGraph (Q i) (η.vMap (s i)) (η.vMap (t i))) →
+      Pairwise (fun i j => Disjoint V(Q i) V(Q j)) →
+      ControlsMinor G (completeGraph p) T_star := by
+  dsimp only
+  intro α β G θ_star θ_span T_star H η T d s t Q hSpan hMet hθ hst hs ht hdisj_st hd hQ hdisj_Q
+  exact controlsMinor_of_gm12
+    (GraphMinor.GM12.gm16_theorem44_explicit.{u, v, w} V hV hS hconn he p
+      G θ_star θ_span T_star H η T d s t Q hSpan hMet hθ hst hs ht hdisj_st hd hQ hdisj_Q)
+
 /-- **Graph Minors XVI, (5.2)** (page 55, citing Graph Minors XII, (4.4)):
 "Let $\Sigma$ be a surface and let $p \ge 0$. Then there exists $\theta \ge 1$ such that if
 $\mathscr{T}^*$ is a tangle in a graph $G$, and $H, \eta, \mathscr{T}$ is a $\Sigma$-span of order

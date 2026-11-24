@@ -35,26 +35,31 @@ open Set Topology Surface GM11 GM14
 
 universe u
 
-/-- Graph Minors XII (3.2), page 247, for two prescribed discs.
-The two prescribed regions are displayed explicitly. -/
-theorem theorem_3_2_two_discs
+/-- Explicit threshold for the two-disc case of XII (3.2). -/
+@[expose] def theorem_3_2_two_discs_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b z : ℕ) : ℕ :=
+  2 * theorem_3_2_three_discs_bound V a b z + 1
+
+/-- Explicit version of `theorem_3_2_two_discs`. -/
+theorem theorem_3_2_two_discs_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
-    (hS : IsClosedSurface S) (z : ℕ) :
-    ∃ η : ℕ, 1 ≤ η ∧ ∀ (Γ : Drawing S) (θ : ℕ)
+    (hS : IsClosedSurface S) {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (z : ℕ) :
+    ∀ (Γ : Drawing S) (θ : ℕ)
       (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
       (d : Set S → Set S → ℕ) (Δ r : Fin 2 → Set S) (p : ℕ) (Zs : Fin p → Set S),
-      HasTangleMetric Γ θ T d → η ≤ θ →
+      HasTangleMetric Γ θ T d → theorem_3_2_two_discs_bound V a b z ≤ θ →
       (∀ i, IsClosedDisc (Δ i)) → Pairwise (fun i j => Disjoint (Δ i) (Δ j)) →
       (∀ i, Γ.U ∩ Δ i = Γ.V ∩ discBd (Δ i)) →
       (∀ i, r i ∈ Γ.R) → (∀ i, (r i ∩ Δ i).Nonempty) →
-      (∀ i j, i ≠ j → η ≤ d (r i) (r j)) →
+      (∀ i j, i ≠ j → theorem_3_2_two_discs_bound V a b z ≤ d (r i) (r j)) →
       (∀ i, GM10.IsFreeSet Γ.toHypergraph T θ (Γ.V ∩ discBd (Δ i))) →
       (discBoundaryVertices Γ Δ).ncard ≤ z →
       (⋃ j, Zs j) = discBoundaryVertices Γ Δ →
       (∀ i j, i ≠ j → Disjoint (Zs i) (Zs j)) → IsTopologicallyFeasible Δ Zs →
       HasConnectingSubdrawings Γ (discBoundaryVertices Γ Δ) Zs := by
-  obtain ⟨η', hη'pos, hthree⟩ := theorem_3_2_three_discs_of_forest hS z
-  refine ⟨2 * η' + 1, Nat.succ_le_succ (Nat.zero_le _), ?_⟩
+  have hthree := theorem_3_2_three_discs_of_forest_explicit V hV hS he z
+  set η' := theorem_3_2_three_discs_bound V a b z
+  have hη'pos : 1 ≤ η' := Nat.succ_le_succ (Nat.zero_le _)
   intro Γ θ T d Δ r p Zs hm horder hΔ hdis havoid hr hrΔ hsep hfree hcount hcover hdisZ hfeasible
   have hfar := hsep 0 1 (by decide)
   obtain ⟨q, hq, hq0, _, hq1⟩ := exists_intermediate_region hS hm hη'pos (hr 0) (hr 1) hfar
@@ -123,8 +128,9 @@ theorem theorem_3_2_two_discs
         exact hqfar i
       · intro hij
         change η' ≤ d (r i) (r j)
-        exact (Nat.le_add_right η' η' |>.trans (Nat.le_succ _)).trans
-          (by simpa only [two_mul] using hsep i j (fun he => hij (congrArg Fin.succ he)))
+        have h := hsep i j (fun he => hij (congrArg Fin.succ he))
+        dsimp only [theorem_3_2_two_discs_bound] at h
+        omega
   have hfree' : ∀ i, GM10.IsFreeSet Γ.toHypergraph T θ (Γ.V ∩ discBd (Δ' i)) := by
     refine Fin.forall_fin_succ.mpr ⟨?_, hfree⟩
     change GM10.IsFreeSet Γ.toHypergraph T θ (Γ.V ∩ discBd E)
@@ -149,10 +155,33 @@ theorem theorem_3_2_two_discs
     intro i j hij
     rw [← heq (r' i) (Or.inr (hr' i)) (r' j) (Or.inr (hr' j))]
     exact hsep' i j hij
-  have hηorder : η' ≤ θ := (Nat.le_add_right η' η' |>.trans (Nat.le_succ _)).trans
-    (by simpa only [two_mul] using horder)
+  have hηorder : η' ≤ θ := by
+    dsimp only [theorem_3_2_two_discs_bound] at horder
+    omega
   have hresult := hthree Γ K θ T ins Δ' r' p Zs hT.2.1 hT.2.2 hK hd hηorder hΔ' hdis' havoid'
     hr' hrΔ' hsepmetric hfree' (hZeq ▸ hcount) (hcover.trans hZeq.symm) hdisZ H hHF hHB hclasses
   rwa [hZeq] at hresult
+
+/-- Graph Minors XII (3.2), page 247, for two prescribed discs.
+The two prescribed regions are displayed explicitly. -/
+theorem theorem_3_2_two_discs
+    {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (z : ℕ) :
+    ∃ η : ℕ, 1 ≤ η ∧ ∀ (Γ : Drawing S) (θ : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (Δ r : Fin 2 → Set S) (p : ℕ) (Zs : Fin p → Set S),
+      HasTangleMetric Γ θ T d → η ≤ θ →
+      (∀ i, IsClosedDisc (Δ i)) → Pairwise (fun i j => Disjoint (Δ i) (Δ j)) →
+      (∀ i, Γ.U ∩ Δ i = Γ.V ∩ discBd (Δ i)) →
+      (∀ i, r i ∈ Γ.R) → (∀ i, (r i ∩ Δ i).Nonempty) →
+      (∀ i j, i ≠ j → η ≤ d (r i) (r j)) →
+      (∀ i, GM10.IsFreeSet Γ.toHypergraph T θ (Γ.V ∩ discBd (Δ i))) →
+      (discBoundaryVertices Γ Δ).ncard ≤ z →
+      (⋃ j, Zs j) = discBoundaryVertices Γ Δ →
+      (∀ i j, i ≠ j → Disjoint (Zs i) (Zs j)) → IsTopologicallyFeasible Δ Zs →
+      HasConnectingSubdrawings Γ (discBoundaryVertices Γ Δ) Zs := by
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_3_2_two_discs_bound GM07.vModel a b z, Nat.succ_le_succ (Nat.zero_le _),
+    theorem_3_2_two_discs_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS he z⟩
 
 end GraphMinor.GM12

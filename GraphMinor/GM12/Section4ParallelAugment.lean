@@ -26,13 +26,13 @@ namespace GraphMinor.GM12
 open Set Surface GM11
 
 /-- The parallel-edge part of the loopless minimum-degree-two
-target replacement in XII (4.3), page 249. -/
-theorem exists_parallel_edge_augmentation
+target replacement in XII (4.3), page 249, with explicit edge-count bound. -/
+theorem exists_parallel_edge_augmentation_bounded
     {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
     (hS : IsClosedSurface S) (Γ : Drawing S) (u v : Set S → S)
     (hl : ∀ e ∈ Γ.E, Γ.toGraph.IsLink e (u e) (v e))
     (hne : ∀ e ∈ Γ.E, u e ≠ v e) :
-    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧
+    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧ H.E.ncard ≤ 2 * Γ.E.ncard ∧
       (∀ e x, ¬ H.toGraph.IsLink e x x) ∧
       ∀ e ∈ Γ.E, ∃ g ∈ H.E, g ≠ e ∧
         H.toGraph.IsLink e (u e) (v e) ∧ H.toGraph.IsLink g (u e) (v e) := by
@@ -64,6 +64,9 @@ theorem exists_parallel_edge_augmentation
     change Γ.V ∪ K.V = Γ.V
     rw [hKV, union_self]
   have hHE : H.E = Γ.E ∪ K.E := Drawing.glue_E hglue
+  have hHEcard : H.E.ncard ≤ 2 * Γ.E.ncard := by
+    rw [hHE, hKE, two_mul]
+    exact (Set.ncard_union_le _ _).trans (Nat.add_le_add_left (Set.ncard_image_le Γ.finite_edges) _)
   have hΓH : Γ.IsSubdrawing H := by
     refine ⟨?_, ?_⟩
     · rw [hHV]
@@ -82,7 +85,7 @@ theorem exists_parallel_edge_augmentation
     rcases hg with hg | ⟨e, he, rfl⟩
     · exact ⟨u g, v g, hne g hg, (hΓH.isLink_iff hg).mp (hl g hg)⟩
     · exact ⟨u e, v e, hne e he, hlink e he⟩
-  refine ⟨H, hΓH, hHV, ?_, ?_⟩
+  refine ⟨H, hΓH, hHV, hHEcard, ?_, ?_⟩
   · intro g x hloop
     obtain ⟨y, z, hyz, hlink'⟩ := hnonloop g hloop.edge_mem
     have hy : y = x := (H.toGraph.eq_or_eq_of_isLink_of_isLink hlink' hloop).elim id id
@@ -95,14 +98,28 @@ theorem exists_parallel_edge_augmentation
     have hxnew : x ∈ P e \ {u e, v e} := heq.symm ▸ hxe
     exact hxnew.2 ((hP e he).2.1.subset ⟨hxnew.1, (he.2.1 hxe).1⟩)
 
+/-- The parallel-edge part of the loopless minimum-degree-two
+target replacement in XII (4.3), page 249. -/
+theorem exists_parallel_edge_augmentation
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (Γ : Drawing S) (u v : Set S → S)
+    (hl : ∀ e ∈ Γ.E, Γ.toGraph.IsLink e (u e) (v e))
+    (hne : ∀ e ∈ Γ.E, u e ≠ v e) :
+    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧
+      (∀ e x, ¬ H.toGraph.IsLink e x x) ∧
+      ∀ e ∈ Γ.E, ∃ g ∈ H.E, g ≠ e ∧
+        H.toGraph.IsLink e (u e) (v e) ∧ H.toGraph.IsLink g (u e) (v e) := by
+  obtain ⟨H, hΓH, hHV, _, hloop, hpar⟩ := exists_parallel_edge_augmentation_bounded hS Γ u v hl hne
+  exact ⟨H, hΓH, hHV, hloop, hpar⟩
+
 /-- Doubling edges makes every nonisolated vertex incident with at
-least two distinct edges, while preserving the vertex set and looplessness. -/
-theorem exists_minimum_degree_two_augmentation
+least two distinct edges, with an explicit bound on the edge count. -/
+theorem exists_minimum_degree_two_augmentation_bounded
     {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
     (hS : IsClosedSurface S) (Γ : Drawing S)
     (hloopless : ∀ e x, ¬ Γ.toGraph.IsLink e x x)
     (hincident : ∀ x ∈ Γ.V, ∃ e, Γ.toGraph.Inc e x) :
-    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧
+    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧ H.E.ncard ≤ 2 * Γ.E.ncard ∧
       (∀ e x, ¬ H.toGraph.IsLink e x x) ∧
       ∀ x ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e x ∧ H.toGraph.Inc f x := by
   classical
@@ -120,8 +137,9 @@ theorem exists_minimum_degree_two_augmentation
     have h := hl e he
     rw [heq] at h
     exact hloopless e (v e) h
-  obtain ⟨H, hΓH, hHV, hHloop, hparallel⟩ := exists_parallel_edge_augmentation hS Γ u v hl hne
-  refine ⟨H, hΓH, hHV, hHloop, ?_⟩
+  obtain ⟨H, hΓH, hHV, hHE, hHloop, hparallel⟩ :=
+    exists_parallel_edge_augmentation_bounded hS Γ u v hl hne
+  refine ⟨H, hΓH, hHV, hHE, hHloop, ?_⟩
   intro x hx
   have hxΓ : x ∈ Γ.V := hHV ▸ hx
   obtain ⟨e, hex⟩ := hincident x hxΓ
@@ -134,5 +152,19 @@ theorem exists_minimum_degree_two_augmentation
   · rcases hex.eq_or_eq_of_isLink (hl e he) with hx | hx
     · exact hx ▸ hfH.inc_left
     · exact hx ▸ hfH.inc_right
+
+/-- Doubling edges makes every nonisolated vertex incident with at
+least two distinct edges, while preserving the vertex set and looplessness. -/
+theorem exists_minimum_degree_two_augmentation
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (Γ : Drawing S)
+    (hloopless : ∀ e x, ¬ Γ.toGraph.IsLink e x x)
+    (hincident : ∀ x ∈ Γ.V, ∃ e, Γ.toGraph.Inc e x) :
+    ∃ H : Drawing S, Γ.IsSubdrawing H ∧ H.V = Γ.V ∧
+      (∀ e x, ¬ H.toGraph.IsLink e x x) ∧
+      ∀ x ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e x ∧ H.toGraph.Inc f x := by
+  obtain ⟨H, hΓH, hHV, _, hHloop, htwo⟩ :=
+    exists_minimum_degree_two_augmentation_bounded hS Γ hloopless hincident
+  exact ⟨H, hΓH, hHV, hHloop, htwo⟩
 
 end GraphMinor.GM12

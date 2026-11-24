@@ -56,7 +56,8 @@ import GraphMinor.GM16.Tower
 
 import GraphMinor.GM16.InductionsProved
 
-import GraphMinor.GM17.Section13Proved
+public import GraphMinor.GM17.Section13Proved
+public import GraphMinor.GM20.Draw8
 
 /-!
 # Graph Minors XXI, Section 10: The main proof
@@ -262,6 +263,93 @@ theorem gm17_theorem_13_1_assembled : GM17.Theorem131Statement.{u, v} := by
   intro α' β' H hH
   exact @GM17.theorem_13_1_proof.{u, v} α' β' H hH
 
+private lemma completeHypergraph_vertexSet_ncard (n : ℕ) :
+    (completeHypergraph n).vertexSet.ncard ≤ n := by
+  change (univ : Set (Fin n)).ncard ≤ n
+  rw [ncard_univ, Nat.card_eq_fintype_card, Fintype.card_fin]
+
+private lemma completeHypergraph_edgeSet_ncard (n : ℕ) :
+    (completeHypergraph n).edgeSet.ncard ≤ n * n := by
+  calc (completeHypergraph n).edgeSet.ncard
+      ≤ (univ : Set (Sym2 (Fin n))).ncard := ncard_le_ncard (subset_univ _) finite_univ
+    _ = Fintype.card (Sym2 (Fin n)) := by rw [ncard_univ, Nat.card_eq_fintype_card]
+    _ = Nat.choose (n + 1) 2 := by rw [Sym2.card, Fintype.card_fin]
+    _ ≤ n * n := by
+      rcases n with _ | n
+      · simp
+      · rw [Nat.choose_two_right, Nat.add_sub_cancel]
+        exact Nat.div_le_of_le_mul (by nlinarith)
+
+/-- Explicit parameter tuple `(ρ, ξ, q, θ)` for **Graph Minors XXI, (10.1)**, parameterized by an
+upper bound `V` on `GM07.vModel`. -/
+def theorem_10_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (n : ℕ) : ℕ × ℕ × ℕ × ℕ :=
+  let res := GM17.theorem_13_4_bound V (fun _ _ _ p _ => 2 * p + 3) n (n * n)
+  (res.2.1, res.2.2.1, res.1 + 1, max res.2.2.2 (res.2.2.1 + 4 * res.1 + 6))
+
+/-- Explicit version of **Graph Minors XXI, (10.1)** (page 41 of the preprint) with parameter tuple
+`theorem_10_1_bound V n`. -/
+theorem theorem_10_1_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (n : ℕ) :
+    let res := theorem_10_1_bound V n
+    let ρ := res.1
+    let ξ := res.2.1
+    let q := res.2.2.1
+    let θ := res.2.2.2
+    1 ≤ q ∧ ξ < θ ∧
+      ∀ {α : Type u} {β : Type v} (G : Hypergraph α β) (θ_G : ℕ)
+        (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+        G.IsGraph →
+        ¬ HasCliqueMinor G n →
+        θ ≤ θ_G →
+        IsTangle G θ_G 𝒯 →
+        ∃ (S : Type) (_ : TopologicalSpace S),
+          IsSurface S ∧
+          ConnectedSpace S ∧
+          (cuffs S).ncard ≤ ρ ∧
+          ¬ GM17.CanBeDrawn S (completeHypergraph n) ∧
+          ∃ (Z : Set α) (Γ : GM17.Painting S) (ιN : S → α)
+            (α_cell : Set S → Hypergraph α β) (α_vert : S → Hypergraph α β),
+            Z ⊆ G.vertexSet ∧
+            Z.ncard ≤ ξ ∧
+            PortraitHasDepthLe21 (G.deleteVertices Z) Γ ιN α_cell α_vert q ∧
+            PortraitSurroundsTangle21 Γ α_cell (deleteVerticesTangle G Z 𝒯 θ_G) := by
+  dsimp only [theorem_10_1_bound]
+  let σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ := fun _ _ p _ => 2 * p + 3
+  have hσ : GM17.IsStandard σ := fun _ _ _ _ _ _ _ _ _ _ _ => rfl
+  set res := GM17.theorem_13_4_bound V (fun _ _ _ p _ => 2 * p + 3) n (n * n)
+  obtain ⟨hξ_lt, h134⟩ :=
+    GM17.theorem_13_4_explicit.{u, v} V hV
+      (completeHypergraph n) (isGraph_completeHypergraph n)
+      (completeHypergraph_vertexSet_ncard n) (completeHypergraph_edgeSet_ncard n)
+      σ hσ (fun _ _ _ p _ => 2 * p + 3) (fun _ _ _ _ _ => le_rfl)
+  set p := res.1
+  set ρ := res.2.1
+  set ξ := res.2.2.1
+  set θ₀ := res.2.2.2
+  set q := p + 1
+  set θ := max θ₀ (ξ + 4 * p + 6)
+  refine ⟨by omega, by omega, ?_⟩
+  intro α β G θ_G 𝒯 hG hnoKn hθ_le h𝒯
+  have hθ₀_le : θ₀ ≤ θ_G := (le_max_left _ _).trans hθ_le
+  have hθ_red : ξ + 4 * p + 6 ≤ θ_G := (le_max_right _ _).trans hθ_le
+  rcases h134 G hG θ_G 𝒯 h𝒯 hθ₀_le with
+    hctrl | ⟨Z, hZ_sub, hZ_card, π, hwarp, hcuffs, hnodraw, htrue, hred⟩
+  · exact (hnoKn (hasCliqueMinor_of_controlsMinor hG hctrl)).elim
+  · have hZ_lt : Z.ncard < θ_G := by omega
+    have h𝒯_del : IsTangle (G.deleteVertices Z) (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G) :=
+      theorem_3_2_proof hG h𝒯 hZ_sub hZ_lt
+    have hG_del : (G.deleteVertices Z).IsGraph := isGraph_deleteVertices hG Z
+    obtain ⟨ιN, α_cell, α_vert, hport_depth, hport_surr⟩ :=
+      exists_portrait_of_true_portrayal hG_del h𝒯_del π htrue hred hwarp (by omega)
+    have hcuffs_ncard : (cuffs π.S).ncard ≤ ρ := by
+      have hcast : ((cuffs π.S).ncard : ℕ∞) = (cuffs π.S).encard :=
+        π.finite_cuffs.cast_ncard_eq
+      rw [← hcast] at hcuffs
+      exact_mod_cast hcuffs
+    exact ⟨π.S, π.top, π.isSurface, π.connected, hcuffs_ncard, hnodraw,
+      Z, π.Γ, ιN, α_cell, α_vert, hZ_sub, hZ_card, hport_depth, hport_surr⟩
+
 /-- **Graph Minors XXI, (10.1)** (page 41 of the preprint):
 "**10.1** *For every integer* $n \ge 0$ *there exist* $\rho, \xi \ge 0, q \ge 1$ *and* $\theta > \xi$
 *such that, if a graph* $G$ *has no* $K_n$*-minor, and* $\mathcal{T}$ *is a tangle in* $G$ *of order*
@@ -289,33 +377,9 @@ theorem theorem_10_1_proof (n : ℕ) :
             Z.ncard ≤ ξ ∧
             PortraitHasDepthLe21 (G.deleteVertices Z) Γ ιN α_cell α_vert q ∧
             PortraitSurroundsTangle21 Γ α_cell (deleteVerticesTangle G Z 𝒯 θ_G) := by
-  let σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ := fun _ _ p _ => 2 * p + 3
-  have hσ : GM17.IsStandard σ := fun _ _ _ _ _ _ _ _ _ _ _ => rfl
-  obtain ⟨p, ρ, ξ, θ₀, hξ_lt, h134⟩ :=
-    GM17.theorem_13_4_proof
-      (completeHypergraph n) (isGraph_completeHypergraph n) σ hσ
-  let q := p + 1
-  let θ := max θ₀ (ξ + 4 * p + 6)
-  refine ⟨ρ, ξ, q, θ, by omega, by omega, ?_⟩
-  intro α β G θ_G 𝒯 hG hnoKn hθ_le h𝒯
-  have hθ₀_le : θ₀ ≤ θ_G := (le_max_left _ _).trans hθ_le
-  have hθ_red : ξ + 4 * p + 6 ≤ θ_G := (le_max_right _ _).trans hθ_le
-  rcases h134 G hG θ_G 𝒯 h𝒯 hθ₀_le with
-    hctrl | ⟨Z, hZ_sub, hZ_card, π, hwarp, hcuffs, hnodraw, htrue, hred⟩
-  · exact (hnoKn (hasCliqueMinor_of_controlsMinor hG hctrl)).elim
-  · have hZ_lt : Z.ncard < θ_G := by omega
-    have h𝒯_del : IsTangle (G.deleteVertices Z) (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G) :=
-      theorem_3_2_proof hG h𝒯 hZ_sub hZ_lt
-    have hG_del : (G.deleteVertices Z).IsGraph := isGraph_deleteVertices hG Z
-    obtain ⟨ιN, α_cell, α_vert, hport_depth, hport_surr⟩ :=
-      exists_portrait_of_true_portrayal hG_del h𝒯_del π htrue hred hwarp (by omega)
-    have hcuffs_ncard : (cuffs π.S).ncard ≤ ρ := by
-      have hcast : ((cuffs π.S).ncard : ℕ∞) = (cuffs π.S).encard :=
-        π.finite_cuffs.cast_ncard_eq
-      rw [← hcast] at hcuffs
-      exact_mod_cast hcuffs
-    exact ⟨π.S, π.top, π.isSurface, π.connected, hcuffs_ncard, hnodraw,
-      Z, π.Γ, ιN, α_cell, α_vert, hZ_sub, hZ_card, hport_depth, hport_surr⟩
+  let res := theorem_10_1_bound GM07.vModel n
+  exact ⟨res.1, res.2.1, res.2.2.1, res.2.2.2,
+    theorem_10_1_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) n⟩
 
 /-! ## (10.2): Graphs with no `K_n`-minor and a high-order tangle have no vital `p`-linkage -/
 
@@ -581,7 +645,118 @@ theorem hasVitalPLinkage_mono {α : Type u} {β : Type v}
   rcases h with ⟨L, hvit, hL_link, hL_card⟩
   exact ⟨L, hvit, hL_link, hL_card.trans hle⟩
 
+/-- Explicit tangle-order bound for **Graph Minors XXI, (10.2)**, parameterized by an upper bound
+`V` on `GM07.vModel`. -/
+def theorem_10_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (n p : ℕ) : ℕ :=
+  let res := theorem_10_1_bound V n
+  let ρ := res.1
+  let ξ := res.2.1
+  let q := res.2.2.1
+  let θ₁ := res.2.2.2
+  let L := GM20.Draw.drawBound (n * n)
+  let θ₂ := max 1 (GM17.maxRange L fun a =>
+    GM17.maxRange L fun b =>
+      GM17.maxRange (ρ + 1) fun c => theorem_9_2_bound V a b c (p + 2 * ξ) q)
+  max θ₁ (ξ + θ₂)
+
+lemma one_le_theorem_10_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (n p : ℕ) :
+    1 ≤ theorem_10_2_bound V n p := by
+  dsimp only [theorem_10_2_bound]
+  have h1 : 1 ≤ max 1 (GM17.maxRange (GM20.Draw.drawBound (n * n)) fun a =>
+      GM17.maxRange (GM20.Draw.drawBound (n * n)) fun b =>
+        GM17.maxRange ((theorem_10_1_bound V n).1 + 1) fun c =>
+          theorem_9_2_bound V a b c (p + 2 * (theorem_10_1_bound V n).2.1) (theorem_10_1_bound V n).2.2.1) :=
+    le_max_left _ _
+  have h2 := le_max_right (theorem_10_1_bound V n).2.2.2
+    ((theorem_10_1_bound V n).2.1 + max 1 (GM17.maxRange (GM20.Draw.drawBound (n * n)) fun a =>
+      GM17.maxRange (GM20.Draw.drawBound (n * n)) fun b =>
+        GM17.maxRange ((theorem_10_1_bound V n).1 + 1) fun c =>
+          theorem_9_2_bound V a b c (p + 2 * (theorem_10_1_bound V n).2.1) (theorem_10_1_bound V n).2.2.1))
+  omega
+
 set_option linter.style.haveILetI false in
+/-- Explicit version of **Graph Minors XXI, (10.2)** (page 42 of the preprint) with threshold
+`theorem_10_2_bound V n p`. -/
+theorem theorem_10_2_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (n p : ℕ) :
+    ∀ {α : Type u} {β : Type v}
+      (G : Hypergraph α β) (θ_G : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+      G.IsGraph →
+      ¬ HasCliqueMinor G n →
+      theorem_10_2_bound V n p ≤ θ_G →
+      IsTangle G θ_G 𝒯 →
+      ¬ HasVitalPLinkage G p := by
+  classical
+  dsimp only [theorem_10_2_bound]
+  set res := theorem_10_1_bound V n
+  set ρ := res.1
+  set ξ := res.2.1
+  set q := res.2.2.1
+  set θ₁ := res.2.2.2
+  obtain ⟨hq_pos, hξ_lt, h101⟩ := theorem_10_1_explicit.{u, v} V hV n
+  set L := GM20.Draw.drawBound (n * n)
+  set θ₂ := max 1 (GM17.maxRange L fun a =>
+    GM17.maxRange L fun b =>
+      GM17.maxRange (ρ + 1) fun c => theorem_9_2_bound V a b c (p + 2 * ξ) q)
+  intro α β G θ_G 𝒯 hG hnoKn hθ_le h𝒯 hvit_G
+  have hθ₁_le : θ₁ ≤ θ_G := (le_max_left _ _).trans hθ_le
+  have hθ₂_le : ξ + θ₂ ≤ θ_G := (le_max_right _ _).trans hθ_le
+  obtain ⟨S, topS, hS, hconn, hcuffs_le, hnodraw, Z, Γ, ιN, α_cell, α_vert,
+    hZ_sub, hZ_card, hport_depth, hport_surr⟩ :=
+    h101 G θ_G 𝒯 hG hnoKn hθ₁_le h𝒯
+  change ξ < θ₁ at hξ_lt
+  change Z.ncard ≤ ξ at hZ_card
+  letI : TopologicalSpace S := topS
+  have : T2Space S := hS.2.1
+  obtain ⟨a, b, c, ⟨ψ⟩⟩ := classification S hS hconn
+  have : T2Space (SurfaceModel a b c) := (isSurface_model a b c).1.2.1
+  have : ConnectedSpace (SurfaceModel a b c) := (isSurface_model a b c).2
+  have hc_le : c ≤ ρ := by
+    rw [← GM17.ncard_cuffs_of_homeo ψ]
+    exact hcuffs_le
+  have hab : a < L ∧ b < L := by
+    by_contra hn
+    exact hnodraw (GM20.Draw.CanBeDrawn.map ψ.symm
+      (GM20.Draw.canBeDrawn_of_drawBound (completeHypergraph n) (isGraph_completeHypergraph n)
+        (completeHypergraph_edgeSet_ncard n) a b c (by omega)))
+  have h92_le : theorem_9_2_bound V a b c (p + 2 * ξ) q ≤ θ₂ := by
+    have h1 : theorem_9_2_bound V a b c (p + 2 * ξ) q ≤
+        GM17.maxRange (ρ + 1) (fun c' => theorem_9_2_bound V a b c' (p + 2 * ξ) q) :=
+      GM17.le_maxRange (f := fun c' => theorem_9_2_bound V a b c' (p + 2 * ξ) q) (by omega)
+    have h2 : GM17.maxRange (ρ + 1) (fun c' => theorem_9_2_bound V a b c' (p + 2 * ξ) q) ≤
+        GM17.maxRange L (fun b' => GM17.maxRange (ρ + 1)
+          (fun c' => theorem_9_2_bound V a b' c' (p + 2 * ξ) q)) :=
+      GM17.le_maxRange (f := fun b' => GM17.maxRange (ρ + 1)
+        (fun c' => theorem_9_2_bound V a b' c' (p + 2 * ξ) q)) hab.2
+    have h3 : GM17.maxRange L (fun b' => GM17.maxRange (ρ + 1)
+          (fun c' => theorem_9_2_bound V a b' c' (p + 2 * ξ) q)) ≤
+        GM17.maxRange L (fun a' => GM17.maxRange L fun b' =>
+          GM17.maxRange (ρ + 1) fun c' => theorem_9_2_bound V a' b' c' (p + 2 * ξ) q) :=
+      GM17.le_maxRange (f := fun a' => GM17.maxRange L fun b' =>
+        GM17.maxRange (ρ + 1) fun c' => theorem_9_2_bound V a' b' c' (p + 2 * ξ) q) hab.1
+    exact ((h1.trans h2).trans h3).trans (le_max_right 1 _)
+  have hZ_lt : Z.ncard < θ_G := by omega
+  have h𝒯_del : IsTangle (G.deleteVertices Z) (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G) :=
+    theorem_3_2_proof hG h𝒯 hZ_sub hZ_lt
+  have hG_del : (G.deleteVertices Z).IsGraph := isGraph_deleteVertices hG Z
+  have hdepth_model :=
+    portraitHasDepthLe21_map_homeo ψ (isSurface_model a b c).1 (isSurface_model a b c).2 hport_depth
+  have hsurr_model :=
+    portraitSurroundsTangle21_map_homeo ψ hport_surr
+  have hno_vit_del : ¬ HasVitalPLinkage (G.deleteVertices Z) (p + 2 * ξ) :=
+    theorem_9_2_shapes_explicit.{u, v} V hV (SurfaceModel a b c) (isSurface_model a b c).1
+      ⟨Homeomorph.refl _⟩ (p + 2 * ξ) q hq_pos
+      (G.deleteVertices Z) hG_del (mapPaintingHomeo ψ Γ) (ιN ∘ ψ.symm)
+      (fun c' => α_cell (ψ.symm '' c')) (α_vert ∘ ψ.symm)
+      (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G)
+      hdepth_model (by omega) h𝒯_del hsurr_model
+  rcases hvit_G with ⟨L_vit, hL_vit⟩
+  have hvit_del_Z : HasVitalPLinkage (G.deleteVertices Z) (p + 2 * Z.ncard) :=
+    ⟨L_vit.deleteVertices Z, theorem_2_1_proof hL_vit hZ_sub⟩
+  exact hno_vit_del (hasVitalPLinkage_mono (by omega) hvit_del_Z)
+
 /-- **Graph Minors XXI, (10.2)** (page 42 of the preprint):
 "**10.2** *For all integers* $n, p \ge 0$ *there exists* $\theta \ge 1$ *such that, if a graph* $G$
 *has a tangle of order* $\ge \theta$ *and has no* $K_n$*-minor then* $G$ *has no vital*
@@ -596,72 +771,9 @@ theorem theorem_10_2_proof
         ¬ HasCliqueMinor G n →
         θ ≤ θ_G →
         IsTangle G θ_G 𝒯 →
-        ¬ HasVitalPLinkage G p := by
-  classical
-  obtain ⟨ρ, ξ, q, θ₁, hq_pos, hξ_lt, h101⟩ := theorem_10_1_proof.{u, v} n
-  obtain ⟨L, hL⟩ :=
-    GM20.Draw.exists_canBeDrawn (completeHypergraph n) (isGraph_completeHypergraph n)
-  have h92_model : ∀ t : ℕ × ℕ × ℕ,
-      ∃ θ_t : ℕ, 1 ≤ θ_t ∧
-        ∀ {α : Type u} {β : Type v} (G' : Hypergraph α β), G'.IsGraph →
-          ∀ (Γ' : GM17.Painting (SurfaceModel t.1 t.2.1 t.2.2))
-            (ιN' : SurfaceModel t.1 t.2.1 t.2.2 → α)
-            (α_cell' : Set (SurfaceModel t.1 t.2.1 t.2.2) → Hypergraph α β)
-            (α_vert' : SurfaceModel t.1 t.2.1 t.2.2 → Hypergraph α β)
-            (θ' : ℕ) (𝒯' : Set (Hypergraph α β × Hypergraph α β)),
-            PortraitHasDepthLe21 G' Γ' ιN' α_cell' α_vert' q →
-            θ_t ≤ θ' →
-            IsTangle G' θ' 𝒯' →
-            PortraitSurroundsTangle21 Γ' α_cell' 𝒯' →
-            ¬ HasVitalPLinkage G' (p + 2 * ξ) := by
-    intro t
-    have : ConnectedSpace (SurfaceModel t.1 t.2.1 t.2.2) :=
-      (isSurface_model t.1 t.2.1 t.2.2).2
-    exact theorem_9_2_shapes (SurfaceModel t.1 t.2.1 t.2.2)
-      (isSurface_model t.1 t.2.1 t.2.2).1 (p + 2 * ξ) q hq_pos
-  choose θ_fn hθ_fn_pos hθ_fn_spec using h92_model
-  let F : Finset (ℕ × ℕ × ℕ) := Finset.Iio L ×ˢ (Finset.Iio L ×ˢ Finset.Iic ρ)
-  let θ₂ : ℕ := max 1 (F.sup θ_fn)
-  let θ : ℕ := max θ₁ (ξ + θ₂)
-  refine ⟨θ, by omega, ?_⟩
-  intro α β G θ_G 𝒯 hG hnoKn hθ_le h𝒯 hvit_G
-  have hθ₁_le : θ₁ ≤ θ_G := (le_max_left _ _).trans hθ_le
-  have hθ₂_le : ξ + θ₂ ≤ θ_G := (le_max_right _ _).trans hθ_le
-  obtain ⟨S, topS, hS, hconn, hcuffs_le, hnodraw, Z, Γ, ιN, α_cell, α_vert,
-    hZ_sub, hZ_card, hport_depth, hport_surr⟩ :=
-    h101 G θ_G 𝒯 hG hnoKn hθ₁_le h𝒯
-  letI : TopologicalSpace S := topS
-  have : T2Space S := hS.2.1
-  obtain ⟨a, b, c, ⟨ψ⟩⟩ := classification S hS hconn
-  have : T2Space (SurfaceModel a b c) := (isSurface_model a b c).1.2.1
-  have hc_le : c ≤ ρ := by
-    rw [← GM17.ncard_cuffs_of_homeo ψ]
-    exact hcuffs_le
-  have hab : a < L ∧ b < L := by
-    by_contra hn
-    exact hnodraw (GM20.Draw.CanBeDrawn.map ψ.symm (hL a b c (by omega)))
-  have ht_mem : (a, (b, c)) ∈ F := by
-    simp only [F, Finset.mem_product, Finset.mem_Iio, Finset.mem_Iic]
-    exact ⟨hab.1, hab.2, hc_le⟩
-  have hθ_fn_le : θ_fn (a, (b, c)) ≤ θ₂ :=
-    (Finset.le_sup ht_mem).trans (le_max_right 1 _)
-  have hZ_lt : Z.ncard < θ_G := by omega
-  have h𝒯_del : IsTangle (G.deleteVertices Z) (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G) :=
-    theorem_3_2_proof hG h𝒯 hZ_sub hZ_lt
-  have hG_del : (G.deleteVertices Z).IsGraph := isGraph_deleteVertices hG Z
-  have hdepth_model :=
-    portraitHasDepthLe21_map_homeo ψ (isSurface_model a b c).1 (isSurface_model a b c).2 hport_depth
-  have hsurr_model :=
-    portraitSurroundsTangle21_map_homeo ψ hport_surr
-  have hno_vit_del : ¬ HasVitalPLinkage (G.deleteVertices Z) (p + 2 * ξ) :=
-    hθ_fn_spec (a, (b, c)) (G.deleteVertices Z) hG_del (mapPaintingHomeo ψ Γ) (ιN ∘ ψ.symm)
-      (fun c' => α_cell (ψ.symm '' c')) (α_vert ∘ ψ.symm)
-      (θ_G - Z.ncard) (deleteVerticesTangle G Z 𝒯 θ_G)
-      hdepth_model (by omega) h𝒯_del hsurr_model
-  rcases hvit_G with ⟨L_vit, hL_vit⟩
-  have hvit_del_Z : HasVitalPLinkage (G.deleteVertices Z) (p + 2 * Z.ncard) :=
-    ⟨L_vit.deleteVertices Z, theorem_2_1_proof hL_vit hZ_sub⟩
-  exact hno_vit_del (hasVitalPLinkage_mono (by omega) hvit_del_Z)
+        ¬ HasVitalPLinkage G p :=
+  ⟨theorem_10_2_bound GM07.vModel n p, one_le_theorem_10_2_bound _ n p,
+    theorem_10_2_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) n p⟩
 
 /-! ## (10.3) and (10.4): Excluding a `K_n`-minor and the main tangle theorem -/
 
@@ -1507,6 +1619,32 @@ theorem theorem_10_3_proof (p : ℕ)
     fun hvL' => (hL'_le_Gv.vertexSet_subset hvL').2 rfl
   exact hv_not_L' hv_in_L'
 
+/-- Explicit tangle-order bound for **Graph Minors XXI, (10.4)**, parameterized by an upper bound
+`V` on `GM07.vModel`. -/
+def theorem_10_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  theorem_10_2_bound V ((5 * p) / 2 + 1) p
+
+lemma one_le_theorem_10_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) :
+    1 ≤ theorem_10_4_bound V p :=
+  one_le_theorem_10_2_bound V _ p
+
+/-- Explicit version of **Graph Minors XXI, (10.4)** (page 42 of the preprint) with threshold
+`theorem_10_4_bound V p`. -/
+theorem theorem_10_4_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) :
+    ∀ {α : Type u} {β : Type v}
+      (G : Hypergraph α β) (θ_G : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+      G.IsGraph →
+      theorem_10_4_bound V p ≤ θ_G →
+      IsTangle G θ_G 𝒯 →
+      ¬ HasVitalPLinkage G p := by
+  intro α β G θ_G 𝒯 hG hθ_le h𝒯
+  by_cases hKn : HasCliqueMinor G ((5 * p) / 2 + 1)
+  · exact theorem_10_3_proof p G hG hKn
+  · exact theorem_10_2_explicit.{u, v} V hV ((5 * p) / 2 + 1) p G θ_G 𝒯 hG hKn hθ_le h𝒯
+
 /-- **Graph Minors XXI, (10.4)** (page 42 of the preprint):
 "**10.4** *For every integer* $p \ge 0$ *there exists* $\theta \ge 1$ *such that, if a graph* $G$
 *has a tangle of order* $\ge \theta$ *then* $G$ *has no vital* $p$*-linkage.*" -/
@@ -1519,14 +1657,9 @@ theorem theorem_10_4_proof
         G.IsGraph →
         θ ≤ θ_G →
         IsTangle G θ_G 𝒯 →
-        ¬ HasVitalPLinkage G p := by
-  let n : ℕ := (5 * p) / 2 + 1
-  obtain ⟨θ, hθ_pos, h102⟩ := theorem_10_2_proof n p
-  refine ⟨θ, hθ_pos, ?_⟩
-  intro α β G θ_G 𝒯 hG hθ_le h𝒯
-  by_cases hKn : HasCliqueMinor G n
-  · exact theorem_10_3_proof p G hG hKn
-  · exact h102 G θ_G 𝒯 hG hKn hθ_le h𝒯
+        ¬ HasVitalPLinkage G p :=
+  ⟨theorem_10_4_bound GM07.vModel p, one_le_theorem_10_4_bound _ p,
+    theorem_10_4_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 end GM21
 end GraphMinor

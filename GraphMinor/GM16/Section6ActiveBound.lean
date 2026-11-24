@@ -25,20 +25,18 @@ namespace GraphMinor.GM16
 open Set Graph GraphMinor.Surface GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- Graph Minors XVI, proof of (6.3), Claims (1) and (2) and their
-application of (5.3), page 60. The only exclusions are the two desired
-outcomes of (6.3), not intermediate claims of its proof. -/
-theorem theorem_6_3_active_bound
-    {S : Type w} [TopologicalSpace S] [T2Space S]
-    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+/-- General threshold form of `theorem_6_3_active_bound`. -/
+theorem theorem_6_3_active_bound_of
+    {S : Type w} [TopologicalSpace S] [T2Space S] {p r₀ : ℕ}
+    (hr₀ : IsMarkedPathThreshold.{u, v, w} S p r₀)
     {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
-    {p τ τ' χ δ θ_star θ_span θ σ ψ : ℕ}
+    {τ τ' χ δ θ_star θ_span θ σ ψ : ℕ}
     {T_star : Set (Hypergraph α β × Hypergraph α β)}
     {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
     {d : Set S → Set S → ℕ} {X : Set α} {Y : Set S}
     (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ θ σ)
     (F : HairFamily G H η d X Y θ)
-    (hθ : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ θ)
+    (hθ : r₀ ≤ θ)
     (hψ : 1 ≤ ψ) (hψθ : ψ ≤ θ) (hτσ : τ ≤ σ) (hττ' : τ ≤ τ') (hτ' : 2 ≤ τ')
     (hNoClique : ¬ ControlsMinor G (completeGraph p) T_star)
     (hNoHorn : ¬ HasHairlessAnimal S G T_star θ_star (χ + 1) ψ τ) :
@@ -64,7 +62,7 @@ theorem theorem_6_3_active_bound
       (activeMarkedVertices_subset_vertexSet _ _) (activeMarkedVertices_component_hyp _ _) hlarge with
     ⟨P, a, b, hPP, hP⟩ | ⟨x, P, b, hxG0, hinter, hP⟩
   · apply hNoClique
-    apply (cliquePathThreshold_spec hS hConn p).2 G F.unionGraph θ_star θ_span
+    apply hr₀ G F.unionGraph θ_star θ_span
       T_star H η T d Y P a b hSpan hMet (hθ.trans horder) hYsub
       (fun y hy z hz hyz => hθ.trans (hsep y hy z hz hyz)) F.union_le
       F.union_edges_disjoint_old F.union_inter_old.subset
@@ -91,5 +89,26 @@ theorem theorem_6_3_active_bound
     apply hNoHorn
     apply hSaved.add_horn hψ hψθ hτσ hxX
     exact ⟨_, _, hHorn.mono le_rfl hττ'⟩
+
+/-- Graph Minors XVI, proof of (6.3), Claims (1) and (2) and their
+application of (5.3), page 60. The only exclusions are the two desired
+outcomes of (6.3), not intermediate claims of its proof. -/
+theorem theorem_6_3_active_bound
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
+    {p τ τ' χ δ θ_star θ_span θ σ ψ : ℕ}
+    {T_star : Set (Hypergraph α β × Hypergraph α β)}
+    {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
+    {d : Set S → Set S → ℕ} {X : Set α} {Y : Set S}
+    (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ θ σ)
+    (F : HairFamily G H η d X Y θ)
+    (hθ : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ θ)
+    (hψ : 1 ≤ ψ) (hψθ : ψ ≤ θ) (hτσ : τ ≤ σ) (hττ' : τ ≤ τ') (hτ' : 2 ≤ τ')
+    (hNoClique : ¬ ControlsMinor G (completeGraph p) T_star)
+    (hNoHorn : ¬ HasHairlessAnimal S G T_star θ_star (χ + 1) ψ τ) :
+    F.active.ncard ≤ (p * (p - 1) / 2 - 1) * τ' :=
+  theorem_6_3_active_bound_of (cliquePathThreshold_spec hS hConn p).2
+    hAnim F hθ hψ hψθ hτσ hττ' hτ' hNoClique hNoHorn
 
 end GraphMinor.GM16

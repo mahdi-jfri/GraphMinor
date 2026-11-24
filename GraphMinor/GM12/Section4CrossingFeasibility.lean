@@ -29,19 +29,16 @@ namespace GraphMinor.GM12
 
 open Set Surface Graph Metric
 
-/-- The ordered-parameter form of Graph Minors XII, (4.5), claim (1), page 253: the source
-subdivision supplies a feasible endpoint partition on any
-prescribed disjoint four-marked discs. The witness discs are
-stated explicitly so that the vertex type can be relabelled
-when applying (3.2). This source construction works for `p ≥ 4`.
-The paper uses it after reducing to `p ≥ 5`. -/
-theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+/-- The ordered-parameter form of Graph Minors XII, (4.5), claim (1), page 253,
+together with explicit upper bounds on `t` and `Nat.card W`. -/
+theorem theorem_4_5_claim_1_ordered_bounded {S : Type} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
     (hS : IsClosedSurface S) {p : ℕ} (hp : 4 ≤ p) :
     ∃ (W E : Type) (L : Graph W E) (κ : E × Bool → W) (t : ℕ) (σ : Fin t × Bool ≃ E),
       Finite W ∧ Finite E ∧ IsIsoMinor (GM16.completeGraph p) L ∧
       L.vertexSet = univ ∧ L.edgeSet = univ ∧
       (∀ e, L.IsLink e (κ (e, false)) (κ (e, true))) ∧
       (∀ e, κ (e, false) ≠ κ (e, true)) ∧ 2 ≤ t ∧
+      t ≤ (p * (p - 1) / 2) ^ 2 ∧ Nat.card W ≤ p + 2 * (p * (p - 1) / 2) ^ 2 ∧
       (∀ w, ∃ i j, i ≠ j ∧ ∃ b c d e : Bool,
         κ (σ (i, b), c) = w ∧ κ (σ (j, d), e) = w) ∧
       ∀ (Δ : Fin t → Set S) (q : Fin t → Circle → S) (β : Fin t → Fin 4 → ℝ),
@@ -57,7 +54,8 @@ theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] 
             {q i (ee (β i 1)), q i (ee (β i 3))}) := by
   classical
   obtain ⟨W, E, L, v, κ, P, hW, hE, hminor, hvinj, hLV, hLE, hlink, hPline,
-    hPV, _, htriple, hcross, htwo, hM, hMtwo, _, hlocal⟩ := exists_clique_one_crossing_source hp
+    hPV, _, htriple, hcross, htwo, hM, hMtwo, hMle, hWle, _, hlocal⟩ :=
+    exists_clique_one_crossing_source_bounded hp
   have hκne : ∀ e, κ (e, false) ≠ κ (e, true) := by
     intro e heq
     obtain ⟨g, hg, -, hg0, hg1⟩ := (hPline e).exists_arc
@@ -75,11 +73,9 @@ theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] 
     exists_one_crossing_disc_system v P (fun e => (hPline e).isCompact.isClosed)
       hM htriple hcross hlocal
   let σ : Fin t × Bool ≃ E := (ν.prodCongr (Equiv.refl Bool)).trans σ₀
-  have ht : 2 ≤ t := by
-    have hcard : Fintype.card X = X.ncard := fintypeCard_eq_ncard X
-    change 2 ≤ Fintype.card X
-    rw [hcard]
-    exact hMtwo
+  have hcardX : t = X.ncard := fintypeCard_eq_ncard X
+  have ht : 2 ≤ t := hcardX ▸ hMtwo
+  have htle : t ≤ (p * (p - 1) / 2) ^ 2 := hcardX ▸ hMle
   have hxV : ∀ x : X, x.val ∉ range v := by
     intro x
     obtain ⟨_, _, _, _, hx⟩ := x.property
@@ -115,7 +111,7 @@ theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] 
     refine ⟨hf.continuous.comp hp₀.1, hf.injective.comp hp₀.2.1, ?_⟩
     change range (f ∘ crossDiscParam (A x) x.val (r x)) = _
     rw [range_comp, hp₀.2.2, (himage x).2]
-  refine ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htwoFin, ?_⟩
+  refine ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htle, hWle, htwoFin, ?_⟩
   intro Δ q β hΔ hΔΔ htarget hβ hβ01
   have hβ03 : ∀ x : X, β (ν.symm x) 3 < β (ν.symm x) 0 + 1 := fun x => by
     linarith [(hβ01 (ν.symm x) 3).2, (hβ01 (ν.symm x) 0).1]
@@ -147,5 +143,35 @@ theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] 
   · intro i
     simpa only [σ, Equiv.trans_apply, Equiv.prodCongr_apply, Prod.map, Equiv.refl_apply,
       ν.symm_apply_apply] using h1 (ν i)
+
+/-- The ordered-parameter form of Graph Minors XII, (4.5), claim (1), page 253: the source
+subdivision supplies a feasible endpoint partition on any
+prescribed disjoint four-marked discs. The witness discs are
+stated explicitly so that the vertex type can be relabelled
+when applying (3.2). This source construction works for `p ≥ 4`.
+The paper uses it after reducing to `p ≥ 5`. -/
+theorem theorem_4_5_claim_1_ordered {S : Type} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) {p : ℕ} (hp : 4 ≤ p) :
+    ∃ (W E : Type) (L : Graph W E) (κ : E × Bool → W) (t : ℕ) (σ : Fin t × Bool ≃ E),
+      Finite W ∧ Finite E ∧ IsIsoMinor (GM16.completeGraph p) L ∧
+      L.vertexSet = univ ∧ L.edgeSet = univ ∧
+      (∀ e, L.IsLink e (κ (e, false)) (κ (e, true))) ∧
+      (∀ e, κ (e, false) ≠ κ (e, true)) ∧ 2 ≤ t ∧
+      (∀ w, ∃ i j, i ≠ j ∧ ∃ b c d e : Bool,
+        κ (σ (i, b), c) = w ∧ κ (σ (j, d), e) = w) ∧
+      ∀ (Δ : Fin t → Set S) (q : Fin t → Circle → S) (β : Fin t → Fin 4 → ℝ),
+        (∀ i, IsClosedDisc (Δ i)) → Pairwise (fun i j => Disjoint (Δ i) (Δ j)) →
+        (∀ i, Continuous (q i) ∧ Function.Injective (q i) ∧ range (q i) = discBd (Δ i)) →
+        (∀ i, StrictMono (β i)) → (∀ i j, β i j ∈ Ico 0 1) →
+        ∃ (ends : E × Bool → S) (B : W → Set S), Function.Injective ends ∧
+          (∀ w, IsClosedDisc (B w)) ∧ Pairwise (fun w z => Disjoint (B w) (B z)) ∧
+          (∀ w, B w ∩ (⋃ i, Δ i) = edgeEndClass ends κ w) ∧
+          (∀ i, ({ends (σ (i, false), false), ends (σ (i, false), true)} : Set S) =
+            {q i (ee (β i 0)), q i (ee (β i 2))}) ∧
+          (∀ i, ({ends (σ (i, true), false), ends (σ (i, true), true)} : Set S) =
+            {q i (ee (β i 1)), q i (ee (β i 3))}) := by
+  obtain ⟨W, E, L, κ, t, σ, hW, hE, hmin, hLV, hLE, hlink, hκne, ht, _, _, htwo, hmain⟩ :=
+    theorem_4_5_claim_1_ordered_bounded hS hp
+  exact ⟨W, E, L, κ, t, σ, hW, hE, hmin, hLV, hLE, hlink, hκne, ht, htwo, hmain⟩
 
 end GraphMinor.GM12

@@ -2,7 +2,7 @@ module
 
 public import GraphMinor.GM16.Section8
 public import GraphMinor.GM15.Section4
-import GraphMinor.GM16.Section9Parameters
+public import GraphMinor.GM16.Section9Parameters
 import GraphMinor.GM16.SpanCongr
 import GraphMinor.GM16.Section9Rigidity
 import GraphMinor.GM16.Section9Zones
@@ -44,64 +44,71 @@ namespace GraphMinor.GM16
 open Set Topology Graph GraphMinor.Surface GraphMinor.GM09 GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- Graph Minors XVI, (8.1), pages 64 and 71–75, by the complete
-battlefield, clearing, linkage, and clean-annulus proof of Section 9.
-Only statements of other papers are assumed. The separation constant
-is increased by `4 * φ + 8` from the printed choice on page 71 to
-supply the line condition missing from the printed XV (3.5). -/
-theorem theorem_8_1_with_radius
-     :
-  ∀ {S : Type w} [TopologicalSpace S] [T2Space S],
-    IsClosedSurface S → ConnectedSpace S →
-    ∀ δ φ ψ : ℕ, 3 ≤ φ → 3 ≤ ψ →
-      ∃ γ θ : ℕ, 2 ≤ γ ∧ (4 * γ + 2) * δ < θ ∧
-        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
-          (T_star : Set (Hypergraph α β × Hypergraph α β))
-          (H : Drawing S) (η : SpanEmbedding H G)
-          (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-          (d : Set S → Set S → ℕ) (Y : Set S),
-          θ ≤ θ_span →
-          IsSigmaSpan G H η θ_star θ_span T_star T →
-          HasTangleMetric H θ_span T d →
-          Y ⊆ H.V → Y.ncard = δ →
-          (∀ y₁ ∈ Y, ∀ y₂ ∈ Y, y₁ ≠ y₂ → θ ≤ d {y₁} {y₂}) →
-          (∃ (S' : Type w) (_ : TopologicalSpace S') (_ : T2Space S')
-            (H' : Drawing S') (η' : SpanEmbedding H' G) (θ_span' : ℕ)
-            (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
-            IsObtainedByAddingHandle S S' ∧
-            φ ≤ θ_span' ∧ IsSigmaSpan G H' η' θ_star θ_span' T_star T') ∨
-          (∃ (P : Graph α β) (s t : S),
-            s ∈ H.V ∧ t ∈ H.V ∧
-            IsHPathWithEnds G η.imageGraph P (η.vMap s) (η.vMap t) ∧
-            ψ ≤ d {s} {t} ∧ ∀ y ∈ Y, ψ ≤ d {s} {y}) ∨
-          (∃ (Λ : S → Set S) (Z : Set α)
-            (T' : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-            (d' : Set S → Set S → ℕ),
-            IsEnvelope H d Y γ Λ ∧
-            Z ⊆ V(G) \ V((restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph) ∧
-            Z.ncard ≤ (δ ^ 2 * φ ^ 2) / 2 ∧
-            IsSigmaSpan G (clearEnvelopeDrawing H Y Λ)
-              (restrictCleared η (⋃ y ∈ Y, Λ y)) θ_star (θ_span - (4 * γ + 2) * δ) T_star T' ∧
-            IsLambdaCompression H (clearEnvelopeDrawing H Y Λ)
-              θ_span ((4 * γ + 2) * δ) T T' d d' ∧
-            ∀ (P : Graph α β) (s t : S),
-              s ∈ (clearEnvelopeDrawing H Y Λ).V →
-              t ∈ (clearEnvelopeDrawing H Y Λ).V →
-              IsHPathWithEnds G (restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph P
-                (η.vMap s) (η.vMap t) →
-              2 * ψ ≤ d' {s} {t} →
-              (Z ∩ V(P)).Nonempty) := by
+/-- Explicit envelope radius `γ` for Graph Minors XVI, (8.1). -/
+@[expose] def theorem_8_1_gamma (δ φ ψ : ℕ) : ℕ :=
+  3 * section9Beta δ φ ψ + 3
+
+/-- Explicit order threshold `θ` for Graph Minors XVI, (8.1). -/
+@[expose] def theorem_8_1_theta (δ φ ψ : ℕ) : ℕ :=
+  12 * (δ + 3) * (section9Beta δ φ ψ + 1) + 4 * φ + 8
+
+/-- Explicit version of `theorem_8_1_with_radius` with `γ = theorem_8_1_gamma δ φ ψ` and
+`θ = theorem_8_1_theta δ φ ψ`. -/
+theorem theorem_8_1_explicit
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    (δ φ ψ : ℕ) (hφ : 3 ≤ φ) (hψ : 3 ≤ ψ) :
+    2 ≤ theorem_8_1_gamma δ φ ψ ∧
+    (4 * theorem_8_1_gamma δ φ ψ + 2) * δ < theorem_8_1_theta δ φ ψ ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Drawing S) (η : SpanEmbedding H G)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (Y : Set S),
+      theorem_8_1_theta δ φ ψ ≤ θ_span →
+      IsSigmaSpan G H η θ_star θ_span T_star T →
+      HasTangleMetric H θ_span T d →
+      Y ⊆ H.V → Y.ncard = δ →
+      (∀ y₁ ∈ Y, ∀ y₂ ∈ Y, y₁ ≠ y₂ → theorem_8_1_theta δ φ ψ ≤ d {y₁} {y₂}) →
+      (∃ (S' : Type w) (_ : TopologicalSpace S') (_ : T2Space S')
+        (H' : Drawing S') (η' : SpanEmbedding H' G) (θ_span' : ℕ)
+        (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+        IsObtainedByAddingHandle S S' ∧
+        φ ≤ θ_span' ∧ IsSigmaSpan G H' η' θ_star θ_span' T_star T') ∨
+      (∃ (P : Graph α β) (s t : S),
+        s ∈ H.V ∧ t ∈ H.V ∧
+        IsHPathWithEnds G η.imageGraph P (η.vMap s) (η.vMap t) ∧
+        ψ ≤ d {s} {t} ∧ ∀ y ∈ Y, ψ ≤ d {s} {y}) ∨
+      (∃ (Λ : S → Set S) (Z : Set α)
+        (T' : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (d' : Set S → Set S → ℕ),
+        IsEnvelope H d Y (theorem_8_1_gamma δ φ ψ) Λ ∧
+        Z ⊆ V(G) \ V((restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph) ∧
+        Z.ncard ≤ (δ ^ 2 * φ ^ 2) / 2 ∧
+        IsSigmaSpan G (clearEnvelopeDrawing H Y Λ)
+          (restrictCleared η (⋃ y ∈ Y, Λ y)) θ_star
+          (θ_span - (4 * theorem_8_1_gamma δ φ ψ + 2) * δ) T_star T' ∧
+        IsLambdaCompression H (clearEnvelopeDrawing H Y Λ)
+          θ_span ((4 * theorem_8_1_gamma δ φ ψ + 2) * δ) T T' d d' ∧
+        ∀ (P : Graph α β) (s t : S),
+          s ∈ (clearEnvelopeDrawing H Y Λ).V →
+          t ∈ (clearEnvelopeDrawing H Y Λ).V →
+          IsHPathWithEnds G (restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph P
+            (η.vMap s) (η.vMap t) →
+          2 * ψ ≤ d' {s} {t} →
+          (Z ∩ V(P)).Nonempty) := by
   classical
-  intro S _ _ hS hConn δ φ ψ hφ hψ
   letI : ConnectedSpace S := hConn
-  obtain ⟨κ, β, γ, τ₀, hκEq, hκpos, hEven, hLow, _, hγ, hτ₀, hβ4, hClear₀, hBig₀, _, hMax⟩ :=
-    section9_parameters δ φ ψ hφ hψ
-  -- The corrected XV (3.5) needs room for a normal line with fewer than φ vertices.
-  let τ := τ₀ + 4 * φ + 8
-  have hClear : (4 * γ + 2) * δ < τ := by dsimp [τ]; omega
-  have hBig : 16 * β + 17 ≤ τ := by dsimp [τ]; omega
-  subst γ
-  refine ⟨3 * β + 3, τ, by omega, hClear, ?_⟩
+  let κ := δ ^ 2 * φ ^ 2 / 2 + 1
+  let β := section9Beta δ φ ψ
+  let γ := theorem_8_1_gamma δ φ ψ
+  let τ₀ := 12 * (δ + 3) * (β + 1)
+  obtain ⟨hκpos, hEven, hLow, _, hβ4, hClear₀, hBig₀, _, hMax⟩ :=
+    section9_parameters_explicit δ φ ψ hφ hψ
+  let τ := theorem_8_1_theta δ φ ψ
+  have hClear : (4 * γ + 2) * δ < τ := by dsimp [τ, theorem_8_1_theta, γ, theorem_8_1_gamma]; omega
+  have hBig : 16 * β + 17 ≤ τ := by dsimp [τ, theorem_8_1_theta]; omega
+  refine ⟨by dsimp [theorem_8_1_gamma]; omega, hClear, ?_⟩
   intro α βe G θ_star θ_span T_star H η T d Y hτSpan hSpan hMet hY hYCard hSep
   obtain ⟨hψβ, hκβ, hβθ, hκθ, hSepBudget⟩ := section9_path_bounds hκpos hLow hψ hBig hτSpan
   by_cases hOld : ∃ (P : Graph α βe) (s t : S), s ∈ H.V ∧ t ∈ H.V ∧
@@ -159,18 +166,17 @@ theorem theorem_8_1_with_radius
     simpa only [hysCard] using hSpanY'
   have hLeY : ∀ x y : S, pointDist (clearEnvelopeDrawing H Y Λ) d' x y ≤ pointDist H d x y := by
     simpa only [hys] using hLe
-  have hδκ : δ ≤ κ := by rw [hκEq]; exact section9_hairs_le_kappa δ φ hφ
+  have hδκ : δ ≤ κ := section9_hairs_le_kappa δ φ hφ
   have hδβ : δ ≤ β := hδκ.trans (by omega)
   have hParam : 2 * β + 6 * (3 * β + 3) + 2 +
       (4 * (3 * β + 3) + 2) * ys.card < τ := by
     rw [hysCard]
     have hfree := section9_free_bound δ β hδβ
-    dsimp [τ]
-    rw [hτ₀]
+    dsimp only [τ, theorem_8_1_theta, β] at hfree ⊢
     omega
   have hLineBudget : 4 * φ + (4 * (3 * β + 3) + 2) * ys.card ≤ τ := by
     rw [hysCard]
-    dsimp [τ]
+    dsimp only [τ, theorem_8_1_theta, γ, theorem_8_1_gamma, β] at hClear ⊢
     omega
   have hBudget : (4 * (3 * β + 3) + 2) * ys.card + 8 < τ := by omega
   letI : Fintype Y := hYFin.fintype
@@ -215,7 +221,7 @@ theorem theorem_8_1_with_radius
     exact Or.inl ⟨S', instS', instT2', H', ηH', φ, T'', hHandle, Nat.le_refl _, hSpan'⟩
   · obtain ⟨Z₀, hZ₀G, hZ₀Card, _, hZ₀Cut⟩ := hCut
     have hZ₀Fin := hSpan.isControlling.isTangle_star.finite_V.subset hZ₀G
-    have hCardκ : Z₀.ncard < κ := by rwa [← hκEq] at hZ₀Card
+    have hCardκ : Z₀.ncard < κ := hZ₀Card
     have hCutY : ∀ y ∈ Y, ∀ z ∈ Y, y ≠ z → ∀ Q a b,
         IsHPathWithEnds G η'.imageGraph Q a b →
         a ∈ η.vMap '' X y → b ∈ η.vMap '' X z → (V(Q) ∩ Z₀).Nonempty := by
@@ -234,8 +240,59 @@ theorem theorem_8_1_with_radius
       omega
     · intro P s t hs ht hP hLong
       exact section9_long_new_path_meets_separator hS η η' hMap hMet hCompY.hasMetric'
-        hY hBattle hSep hLeY hNoPath (by rw [hYCard]; exact hκEq) hφ hψ hψβ hκβ hβθ hκθ
+        hY hBattle hSep hLeY hNoPath (by rw [hYCard]) hφ hψ hψβ hκβ hβθ hκθ
         hSepBudget hMax hZ₀Fin hCardκ hCutY hs ht hP hLong
+
+/-- Graph Minors XVI, (8.1), pages 64 and 71–75, by the complete
+battlefield, clearing, linkage, and clean-annulus proof of Section 9.
+Only statements of other papers are assumed. The separation constant
+is increased by `4 * φ + 8` from the printed choice on page 71 to
+supply the line condition missing from the printed XV (3.5). -/
+theorem theorem_8_1_with_radius
+     :
+  ∀ {S : Type w} [TopologicalSpace S] [T2Space S],
+    IsClosedSurface S → ConnectedSpace S →
+    ∀ δ φ ψ : ℕ, 3 ≤ φ → 3 ≤ ψ →
+      ∃ γ θ : ℕ, 2 ≤ γ ∧ (4 * γ + 2) * δ < θ ∧
+        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+          (T_star : Set (Hypergraph α β × Hypergraph α β))
+          (H : Drawing S) (η : SpanEmbedding H G)
+          (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+          (d : Set S → Set S → ℕ) (Y : Set S),
+          θ ≤ θ_span →
+          IsSigmaSpan G H η θ_star θ_span T_star T →
+          HasTangleMetric H θ_span T d →
+          Y ⊆ H.V → Y.ncard = δ →
+          (∀ y₁ ∈ Y, ∀ y₂ ∈ Y, y₁ ≠ y₂ → θ ≤ d {y₁} {y₂}) →
+          (∃ (S' : Type w) (_ : TopologicalSpace S') (_ : T2Space S')
+            (H' : Drawing S') (η' : SpanEmbedding H' G) (θ_span' : ℕ)
+            (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+            IsObtainedByAddingHandle S S' ∧
+            φ ≤ θ_span' ∧ IsSigmaSpan G H' η' θ_star θ_span' T_star T') ∨
+          (∃ (P : Graph α β) (s t : S),
+            s ∈ H.V ∧ t ∈ H.V ∧
+            IsHPathWithEnds G η.imageGraph P (η.vMap s) (η.vMap t) ∧
+            ψ ≤ d {s} {t} ∧ ∀ y ∈ Y, ψ ≤ d {s} {y}) ∨
+          (∃ (Λ : S → Set S) (Z : Set α)
+            (T' : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+            (d' : Set S → Set S → ℕ),
+            IsEnvelope H d Y γ Λ ∧
+            Z ⊆ V(G) \ V((restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph) ∧
+            Z.ncard ≤ (δ ^ 2 * φ ^ 2) / 2 ∧
+            IsSigmaSpan G (clearEnvelopeDrawing H Y Λ)
+              (restrictCleared η (⋃ y ∈ Y, Λ y)) θ_star (θ_span - (4 * γ + 2) * δ) T_star T' ∧
+            IsLambdaCompression H (clearEnvelopeDrawing H Y Λ)
+              θ_span ((4 * γ + 2) * δ) T T' d d' ∧
+            ∀ (P : Graph α β) (s t : S),
+              s ∈ (clearEnvelopeDrawing H Y Λ).V →
+              t ∈ (clearEnvelopeDrawing H Y Λ).V →
+              IsHPathWithEnds G (restrictCleared η (⋃ y ∈ Y, Λ y)).imageGraph P
+                (η.vMap s) (η.vMap t) →
+              2 * ψ ≤ d' {s} {t} →
+              (Z ∩ V(P)).Nonempty) := by
+  intro S _ _ hS hConn δ φ ψ hφ hψ
+  exact ⟨theorem_8_1_gamma δ φ ψ, theorem_8_1_theta δ φ ψ,
+    theorem_8_1_explicit.{u, v, w} hS hConn δ φ ψ hφ hψ⟩
 
 /-- Graph Minors XVI, (8.1), with the printed statement. The proof
 above also records that its chosen zone radius is at least two. -/

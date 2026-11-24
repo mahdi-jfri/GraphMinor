@@ -150,6 +150,34 @@ lemma isPseudoPresentation_mapInl {S : Type w} [TopologicalSpace S]
     rw [h.p4_inter_null C hC] at hv
     exact hv
 
+/-- Explicit version of **Graph Minors XXI, (8.4)** (page 36 of the preprint) with no hypothesis
+on `α` and threshold `theorem_8_4_bound V a b c p r q`. -/
+theorem theorem_8_4_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (S : Type) [TopologicalSpace S] [ConnectedSpace S]
+    (hS : IsSurface S) {a b c : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b c))
+    (p r q : ℕ) (hq : 1 ≤ q) :
+    ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph →
+      ∀ (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α) (ιE : Set S → β)
+        (r' : ℕ) (F_star : Fin r' → Set S)
+        (μ : BoundaryUnit S → Hypergraph α β)
+        (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+        r' ≤ r →
+        PseudoPresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star μ q →
+        theorem_8_4_bound V a b c p r q ≤ θ_G →
+        IsTangle G θ_G 𝒯 →
+        PseudoPresentationSurroundsTangle Γ r' F_star μ 𝒯 →
+        ¬ HasVitalPLinkage G p := by
+  intro α β G hG Γ Γ_sub ιV ιE r' F_star μ θ_G 𝒯 hr ⟨qv, hpp, hqv, hr0⟩ hθ h𝒯 hsurr hvit
+  refine theorem_8_4_of_infinite_explicit.{u, v} V hV S hS he p r q hq
+    (mapInl G) (mapInl_isGraph hG) Γ (mapInl Γ_sub) (Sum.inl ∘ ιV) ιE r' F_star
+    (fun x => mapInl (μ x)) θ_G (Prod.map mapInl mapInl '' 𝒯) hr
+    ⟨qv, isPseudoPresentation_mapInl hpp, hqv, hr0⟩ hθ (mapInl_isTangle h𝒯) ?_
+    (mapInl_hasVitalPLinkage hvit)
+  intro s hs hsF
+  obtain ⟨B, hB⟩ := hsurr s hs hsF
+  exact ⟨mapInl B, (μ (.space s), B), hB, rfl⟩
+
 /-- **Graph Minors XXI, (8.4)** (page 36 of the preprint):
 "For every surface $\Sigma$ and all integers $p, r \ge 0$ and $q \ge 1$, there exists
 $\theta \ge 1$ such that, if a graph $G$ has a pseudo-presentation in $\Sigma$ of depth $\le q$ and
@@ -173,16 +201,10 @@ theorem theorem_8_4_proof
           IsTangle G θ_G 𝒯 →
           PseudoPresentationSurroundsTangle Γ r' F_star μ 𝒯 →
           ¬ HasVitalPLinkage G p := by
-  obtain ⟨θ, hθ_pos, h84⟩ := theorem_8_4_of_infinite.{u, v} S hS p r q hq
-  refine ⟨θ, hθ_pos, ?_⟩
-  intro α β G hG Γ Γ_sub ιV ιE r' F_star μ θ_G 𝒯 hr ⟨qv, hpp, hqv, hr0⟩ hθ h𝒯 hsurr hvit
-  refine h84 (mapInl G) (mapInl_isGraph hG) Γ (mapInl Γ_sub) (Sum.inl ∘ ιV) ιE r' F_star
-    (fun x => mapInl (μ x)) θ_G (Prod.map mapInl mapInl '' 𝒯) hr
-    ⟨qv, isPseudoPresentation_mapInl hpp, hqv, hr0⟩ hθ (mapInl_isTangle h𝒯) ?_
-    (mapInl_hasVitalPLinkage hvit)
-  intro s hs hsF
-  obtain ⟨B, hB⟩ := hsurr s hs hsF
-  exact ⟨mapInl B, (μ (.space s), B), hB, rfl⟩
+  obtain ⟨a, b, c, he⟩ := classification S hS inferInstance
+  exact ⟨theorem_8_4_bound GM07.vModel a b c p r q,
+    one_le_theorem_8_4_bound _ a b c p r q,
+    theorem_8_4_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) S hS he p r q hq⟩
 
 end GM21
 end GraphMinor

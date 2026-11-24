@@ -2723,32 +2723,72 @@ theorem exists_border_cell_for_unit_in_cuff_arc {α : Type u} {β : Type v}
     · left
       simp only [hμ_vert, hv_N, ↓reduceIte]
 
-/-- Shape-based form of **Graph Minors XXI, (9.2)** (page 38 of the preprint) using
-`PortraitHasDepthLe21` and `PortraitSurroundsTangle21`. -/
-theorem theorem_9_2_shapes
+/-- Explicit tangle-order bound for **Graph Minors XXI, (9.2)** over a surface model `(a, b, c)`,
+parameterized by an upper bound `V` on `GM07.vModel`. -/
+def theorem_9_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p q : ℕ) : ℕ :=
+  let r := 3 * p + c
+  let n := 3 * p + 2 * q * r
+  max (theorem_8_4_bound V a b c (p + n) r q) (2 * q + 4) + n
+
+lemma one_le_theorem_9_2_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p q : ℕ) :
+    1 ≤ theorem_9_2_bound V a b c p q := by
+  dsimp only [theorem_9_2_bound]
+  have : 2 * q + 4 ≤ max (theorem_8_4_bound V a b c (p + (3 * p + 2 * q * (3 * p + c))) (3 * p + c) q)
+      (2 * q + 4) := le_max_right _ _
+  omega
+
+/-- Explicit shape-based form of **Graph Minors XXI, (9.2)** (page 38 of the preprint) with
+threshold `theorem_9_2_bound V a b c p q`. -/
+theorem theorem_9_2_shapes_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     (S : Type) [TopologicalSpace S] [ConnectedSpace S]
-    (hS : IsSurface S) (p q : ℕ) (hq : 1 ≤ q) :
-    ∃ θ : ℕ, 1 ≤ θ ∧
-      ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph →
-        ∀ (Γ : GM17.Painting S) (ιN : S → α)
-          (α_cell : Set S → Hypergraph α β) (α_vert : S → Hypergraph α β)
-          (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
-          PortraitHasDepthLe21 G Γ ιN α_cell α_vert q →
-          θ ≤ θ_G →
-          IsTangle G θ_G 𝒯 →
-          PortraitSurroundsTangle21 Γ α_cell 𝒯 →
-          ¬ HasVitalPLinkage G p := by
+    (hS : IsSurface S) {a b c : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b c))
+    (p q : ℕ) (hq : 1 ≤ q) :
+    ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph →
+      ∀ (Γ : GM17.Painting S) (ιN : S → α)
+        (α_cell : Set S → Hypergraph α β) (α_vert : S → Hypergraph α β)
+        (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+        PortraitHasDepthLe21 G Γ ιN α_cell α_vert q →
+        theorem_9_2_bound V a b c p q ≤ θ_G →
+        IsTangle G θ_G 𝒯 →
+        PortraitSurroundsTangle21 Γ α_cell 𝒯 →
+        ¬ HasVitalPLinkage G p := by
+  dsimp only [theorem_9_2_bound]
   have : T2Space S := hS.2.1
+  have hcuffs_eq : (cuffs S).ncard = c := by
+    rcases he with ⟨eS⟩
+    have h := GM19.numCuffs_eq eS
+    rw [GM19.numCuffs_model] at h
+    exact h
   let n := portraitSeparationBound S p q
   let r := 3 * p + (cuffs S).ncard
-  obtain ⟨θ₈₄, hθ₈₄_pos, h84⟩ := theorem_8_4_proof S hS (p + n) r q hq
-  let θ' := max θ₈₄ (2 * q + 4)
-  let θ := θ' + n
+  have hr_eq : r = 3 * p + c := by dsimp only [r]; rw [hcuffs_eq]
+  have hn_eq : n = 3 * p + 2 * q * (3 * p + c) := by
+    dsimp only [n, portraitSeparationBound]; rw [hcuffs_eq]
+  set θ₈₄ := theorem_8_4_bound V a b c (p + (3 * p + 2 * q * (3 * p + c))) (3 * p + c) q
+  have hθ₈₄_pos : 1 ≤ θ₈₄ := one_le_theorem_8_4_bound V a b c _ _ q
+  set θ' := max θ₈₄ (2 * q + 4)
+  set θ := θ' + (3 * p + 2 * q * (3 * p + c))
+  have hθ_eq : θ = θ' + n := by rw [hn_eq]
   have hθ'_gt_2q : 2 * q + 3 < θ' := Nat.lt_of_succ_le (le_max_right θ₈₄ (2 * q + 4))
   have hθ'_ge_84 : θ₈₄ ≤ θ' := le_max_left θ₈₄ (2 * q + 4)
-  have hθ_pos : 1 ≤ θ := le_trans hθ₈₄_pos (le_trans hθ'_ge_84 (Nat.le_add_right θ' n))
-  refine ⟨θ, hθ_pos, ?_⟩
+  have hθ_pos : 1 ≤ θ := le_trans hθ₈₄_pos (le_trans hθ'_ge_84 (Nat.le_add_right θ' _))
   intro α β G hG Γ ιN α_cell α_vert θ_G 𝒯 ⟨q_cuff, hport, hq_cuff⟩ hθ_le h𝒯 hsurr ⟨L, hL⟩
+  have h84 : ∀ (G' : Hypergraph α β), G'.IsGraph →
+      ∀ (Γ' : Drawing S) (Γ_sub' : Hypergraph α β) (ιV' : S → α) (ιE' : Set S → β)
+        (r' : ℕ) (F_star : Fin r' → Set S)
+        (μ : BoundaryUnit S → Hypergraph α β)
+        (θ_G' : ℕ) (𝒯' : Set (Hypergraph α β × Hypergraph α β)),
+        r' ≤ r →
+        PseudoPresentationHasDepthLe G' Γ' Γ_sub' ιV' ιE' r' F_star μ q →
+        θ₈₄ ≤ θ_G' →
+        IsTangle G' θ_G' 𝒯' →
+        PseudoPresentationSurroundsTangle Γ' r' F_star μ 𝒯' →
+        ¬ HasVitalPLinkage G' (p + n) := by
+    rw [hr_eq, hn_eq]
+    exact fun G' => theorem_8_4_explicit.{u, v} V hV S hS he
+      (p + (3 * p + 2 * q * (3 * p + c))) (3 * p + c) q hq G'
+  rw [hθ_eq] at hθ_le
   -- `G` has an edge, since its tangle has order at least 2, so `α` is not empty.
   have : Nonempty α := by
     obtain ⟨e, he⟩ := exists_edge_of_isTangle h𝒯 (by omega)
@@ -3612,6 +3652,26 @@ theorem theorem_9_2_shapes
     _ ≤ (terminals L).ncard + separationOrder A₀ G' :=
         Nat.add_le_add (ncard_le_ncard sdiff_subset hterm_fin) le_rfl
     _ ≤ p + n := Nat.add_le_add hL.2.2 hord_A₀G'
+
+/-- Shape-based form of **Graph Minors XXI, (9.2)** (page 38 of the preprint) using
+`PortraitHasDepthLe21` and `PortraitSurroundsTangle21`. -/
+theorem theorem_9_2_shapes
+    (S : Type) [TopologicalSpace S] [ConnectedSpace S]
+    (hS : IsSurface S) (p q : ℕ) (hq : 1 ≤ q) :
+    ∃ θ : ℕ, 1 ≤ θ ∧
+      ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph →
+        ∀ (Γ : GM17.Painting S) (ιN : S → α)
+          (α_cell : Set S → Hypergraph α β) (α_vert : S → Hypergraph α β)
+          (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+          PortraitHasDepthLe21 G Γ ιN α_cell α_vert q →
+          θ ≤ θ_G →
+          IsTangle G θ_G 𝒯 →
+          PortraitSurroundsTangle21 Γ α_cell 𝒯 →
+          ¬ HasVitalPLinkage G p := by
+  obtain ⟨a, b, c, he⟩ := classification S hS inferInstance
+  exact ⟨theorem_9_2_bound GM07.vModel a b c p q,
+    one_le_theorem_9_2_bound _ a b c p q,
+    theorem_9_2_shapes_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) S hS he p q hq⟩
 
 /-- **Graph Minors XXI, (9.2)** (page 38 of the preprint):
 "**9.2** *For every surface $\Sigma$, and all integers $p \ge 0$ and $q \ge 1$, there exists

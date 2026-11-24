@@ -23,16 +23,28 @@ namespace GraphMinor.GM16
 open Set Function Graph GraphMinor.Surface GraphMinor.GM09 GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- **Graph Minors XVI, (5.5)** (pages 57–58), by the paper's induction
-on disjoint paths and then (5.2). The metric laws are supplied by XI (9.1),
-and (5.2) uses XII (4.4). No statement of XVI is assumed. -/
-theorem theorem_5_5_proof
-     : GM16Theorem55Statement.{u, v, w} := by
+/-- Explicit threshold for Graph Minors XVI, (5.5). -/
+@[expose] def theorem_5_5_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p : ℕ) : ℕ :=
+  2 * GM12.theorem_4_4_bound V a b p
+
+/-- **Graph Minors XVI, (5.5)** (pages 57–58), with explicit threshold `theorem_5_5_bound V a b p`. -/
+theorem theorem_5_5_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (p : ℕ) :
+    1 ≤ theorem_5_5_bound V a b p ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β)),
+      IsGraphTangle G θ_star T_star →
+      HasHairlessAnimal S G T_star θ_star (p * (p - 1) / 2)
+        (theorem_5_5_bound V a b p) (4 * p * (p - 1)) →
+      ControlsMinor G (completeGraph p) T_star := by
   classical
-  intro S _ _ hS hConn p
   let μ := p * (p - 1) / 2
-  obtain ⟨r, hr, h52⟩ := theorem_5_2_proof hS hConn p
-  refine ⟨2 * r, by omega, ?_⟩
+  set r := GM12.theorem_4_4_bound V a b p
+  have hr : 1 ≤ r := GM12.one_le_theorem_4_4_bound V a b p
+  refine ⟨by unfold theorem_5_5_bound; omega, ?_⟩
   intro α β G θ_star T_star hT hAnimal
   obtain ⟨H, η, θ_span, T, d, X, Y, hAnim⟩ := hAnimal
   have hσ : 8 * μ ≤ 4 * p * (p - 1) := by
@@ -79,7 +91,19 @@ theorem theorem_5_5_proof
       have htj' := IsGraphPathWithEnds.right_mem (hQ j).2.1
       have heq := congrArg η.vMap htj
       exact (Set.disjoint_left.mp (hQQ hij)) hsi (heq ▸ htj')
-  exact h52 G θ_star θ_span T_star H η T d s t Q hSpan hMet (by omega)
+  exact theorem_5_2_explicit.{u, v, w} V hV hS hConn he p
+    G θ_star θ_span T_star H η T d s t Q hSpan hMet (by omega)
     hst hs ht hstdisj hdist hQ hQQ
+
+/-- **Graph Minors XVI, (5.5)** (pages 57–58), by the paper's induction
+on disjoint paths and then (5.2). The metric laws are supplied by XI (9.1),
+and (5.2) uses XII (4.4). No statement of XVI is assumed. -/
+theorem theorem_5_5_proof
+     : GM16Theorem55Statement.{u, v, w} := by
+  intro S _ _ hS hConn p
+  let : ConnectedSpace S := hConn
+  obtain ⟨a, b, he⟩ := GM12.exists_closed_surface_model hS
+  exact ⟨theorem_5_5_bound GM07.vModel a b p,
+    theorem_5_5_explicit.{u, v, w} GM07.vModel (fun _ _ _ _ => le_rfl) hS hConn he p⟩
 
 end GraphMinor.GM16

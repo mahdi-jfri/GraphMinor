@@ -22,38 +22,40 @@ namespace GraphMinor.GM16
 open Set Graph GraphMinor.Surface GraphMinor.GM09 GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- Graph Minors XVI, (8.3), pages 65–68. The proof uses the metric laws of
-XI (9.1) and the proved truncation, vertex-deletion, and rearrangement lemmas.
-The larger constant term `31` provides the buffer in Claim (12). -/
-theorem theorem_8_3_with_bound :
-  ∀ {S : Type w} [TopologicalSpace S] [T2Space S],
-    IsClosedSurface S → ConnectedSpace S →
-    ∀ lower τ χ δ lam ζ ψ : ℕ, 3 ≤ ψ →
-      ∃ θ : ℕ, lower ≤ θ ∧ ζ < θ ∧
-        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
-          (T_star : Set (Hypergraph α β × Hypergraph α β))
-          (H : Drawing S) (η : SpanEmbedding H G)
-          (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-          (d : Set S → Set S → ℕ) (X : Set α) (Y : Set S) (Z : Set α)
-          (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ θ (ζ + τ))
-          (_ : Z ⊆ V(G)) (hZ_disj : Disjoint V(η.imageGraph) Z)
-          (_ : X ⊆ Z) (_ : Z.ncard ≤ ζ),
-          HasAnimal S G T_star θ_star χ (δ + 1) ψ τ ∨
-          (∃ (P : Graph α β) (s₁ s₂ y₁ y₂ : S),
-            s₁ ∈ H.V ∧ s₂ ∈ H.V ∧ y₁ ∈ Y ∧ y₂ ∈ Y ∧ y₁ ≠ y₂ ∧
-            IsHPathWithEnds (GM09.deleteVertices G Z) η.imageGraph P
-              (η.vMap s₁) (η.vMap s₂) ∧
-            d {s₁} {y₁} < ψ ∧ d {s₂} {y₂} < ψ) ∨
-          (∃ d₀ : Set S → Set S → ℕ,
-            IsLevelSpan (GM09.deleteVertices G Z) H (restrictDeleteVertices η Z hZ_disj)
-              (θ_star - Z.ncard) (θ - Z.ncard) lam (2 * ψ)
-              (deleteGraphVerticesTangle G hAnim.2.2.1.isControlling.isTangle_star.finite_V
-                hAnim.2.2.1.isControlling.isTangle_star.finite_E Z T_star θ_star)
-              (GM10.truncation T (θ - Z.ncard)) d₀) := by
+/-- Explicit order threshold for Graph Minors XVI, (8.3). -/
+@[expose] def theorem_8_3_bound (lower lam ζ ψ : ℕ) : ℕ :=
+  lower + 4 * ψ + 10 * lam + 3 * ζ + 31
+
+/-- Explicit version of `theorem_8_3_with_bound` with `θ = theorem_8_3_bound lower lam ζ ψ`. -/
+theorem theorem_8_3_explicit
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    (lower τ χ δ lam ζ ψ : ℕ) (hψ : 3 ≤ ψ) :
+    lower ≤ theorem_8_3_bound lower lam ζ ψ ∧ ζ < theorem_8_3_bound lower lam ζ ψ ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Drawing S) (η : SpanEmbedding H G)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (X : Set α) (Y : Set S) (Z : Set α)
+      (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ
+        (theorem_8_3_bound lower lam ζ ψ) (ζ + τ))
+      (_ : Z ⊆ V(G)) (hZ_disj : Disjoint V(η.imageGraph) Z)
+      (_ : X ⊆ Z) (_ : Z.ncard ≤ ζ),
+      HasAnimal S G T_star θ_star χ (δ + 1) ψ τ ∨
+      (∃ (P : Graph α β) (s₁ s₂ y₁ y₂ : S),
+        s₁ ∈ H.V ∧ s₂ ∈ H.V ∧ y₁ ∈ Y ∧ y₂ ∈ Y ∧ y₁ ≠ y₂ ∧
+        IsHPathWithEnds (GM09.deleteVertices G Z) η.imageGraph P
+          (η.vMap s₁) (η.vMap s₂) ∧
+        d {s₁} {y₁} < ψ ∧ d {s₂} {y₂} < ψ) ∨
+      (∃ d₀ : Set S → Set S → ℕ,
+        IsLevelSpan (GM09.deleteVertices G Z) H (restrictDeleteVertices η Z hZ_disj)
+          (θ_star - Z.ncard) (theorem_8_3_bound lower lam ζ ψ - Z.ncard) lam (2 * ψ)
+          (deleteGraphVerticesTangle G hAnim.2.2.1.isControlling.isTangle_star.finite_V
+            hAnim.2.2.1.isControlling.isTangle_star.finite_E Z T_star θ_star)
+          (GM10.truncation T (theorem_8_3_bound lower lam ζ ψ - Z.ncard)) d₀) := by
   classical
-  intro S _ _ hS hConn lower τ χ δ lam ζ ψ hψ
-  let θ := lower + 4 * ψ + 10 * lam + 3 * ζ + 31
-  refine ⟨θ, by dsimp [θ]; omega, by dsimp [θ]; omega, ?_⟩
+  let θ := theorem_8_3_bound lower lam ζ ψ
+  refine ⟨by dsimp [θ, theorem_8_3_bound]; omega, by dsimp [θ, theorem_8_3_bound]; omega, ?_⟩
   intro α β G θ_star θ_span T_star H η T d X Y Z hAnim hZsub hZdisj hXZ hZcard
   let T₀ := GM10.truncation T θ
   let d₀ : Set S → Set S → ℕ := fun a b => min (d a b) θ
@@ -63,10 +65,10 @@ theorem theorem_8_3_with_bound :
   have hMet := hNorm.2.2.2.1
   have hT := hSpan.isControlling.isTangle_star
   have hZfin : Z.Finite := hT.finite_V.subset hZsub
-  have hZlt : Z.ncard < θ := by dsimp [θ]; omega
+  have hZlt : Z.ncard < θ := by dsimp [θ, theorem_8_3_bound]; omega
   have hZltStar : Z.ncard < θ_star := hZlt.trans_le hSpan.isControlling.theta_le
   obtain ⟨_, hself, _, hsymm, htri, _⟩ := GraphMinor.GM11.gm15_theorem_9_1.{w} H θ T₀ d₀ hS hConn hMet
-  have hψθ : ψ ≤ θ := by dsimp [θ]; omega
+  have hψθ : ψ ≤ θ := by dsimp [θ, theorem_8_3_bound]; omega
   have hOldDel : η.imageGraph ≤ GM09.deleteVertices G Z :=
     le_deleteVertices_of_disjoint η.imageGraph_le hZdisj
   by_cases hshort : ∀ (P : Graph α β) (s t : S), s ∈ H.V → t ∈ H.V →
@@ -99,12 +101,12 @@ theorem theorem_8_3_with_bound :
         change 2 * ψ ≤ min (d₀ {s} {t}) (θ - Z.ncard) at hlong
         omega
       obtain ⟨H', η', T'', d'', z, P, s, t, hRearr, hStep, hsnear, htnear⟩ :=
-        theorem_8_3_claim_3 hDel hDelMet (by dsimp [θ]; omega) hnotstep hlevel
+        theorem_8_3_claim_3 hDel hDelMet (by dsimp [θ, theorem_8_3_bound]; omega) hnotstep hlevel
       let lam' := lam + (Z.ncard + 3) / 4
       have hbudget : Z.ncard + (4 * lam + 2) ≤ 4 * lam' + 2 := by dsimp [lam']; omega
       have hlam : lam ≤ lam' := Nat.le_add_right _ _
-      have hgap : lam' < θ - Z.ncard := by dsimp [lam', θ]; omega
-      have hnewpos : 4 * lam' + 2 < θ := by dsimp [lam', θ]; omega
+      have hgap : lam' < θ - Z.ncard := by dsimp [lam', θ, theorem_8_3_bound]; omega
+      have hnewpos : 4 * lam' + 2 < θ := by dsimp [lam', θ, theorem_8_3_bound]; omega
       have hLift := theorem_8_3_claim_4 hSpan hMet hZsub hZdisj η' hRearr hlam hgap hbudget hnewpos
       let η_new := liftSpanEmbedding η' (G.induce_le sdiff_subset)
       let T_new := GM10.truncation T'' (θ - (4 * lam' + 2))
@@ -119,7 +121,7 @@ theorem theorem_8_3_with_bound :
       have hlong : 2 * ψ ≤ d_new {s} {t} := by
         have hb := hStep.2.2.2
         change 2 * ψ ≤ min (d'' {s} {t}) (θ - (4 * lam' + 2))
-        have hcut : 2 * ψ ≤ θ - (4 * lam' + 2) := by dsimp [θ, lam']; omega
+        have hcut : 2 * ψ ≤ θ - (4 * lam' + 2) := by dsimp [θ, theorem_8_3_bound, lam']; omega
         exact le_min hb hcut
       have hsnear' : pointAtomDist H d₀ s z ≤ lam' := by
         change pointAtomDist H (fun a b => min (d₀ a b) (θ - Z.ncard)) s z ≤ lam at hsnear
@@ -132,7 +134,9 @@ theorem theorem_8_3_with_bound :
       left
       exact animal_of_rearrangement hS hNorm hNew hZfin hXZ hZcard hnewZ hshort
         hStep.1 hStep.2.1 hPG hPZ hlong hsnear' htnear' hψ
-        (by dsimp [θ, lam']; omega) (by dsimp [θ, lam']; omega) (by dsimp [θ, lam']; omega)
+        (by dsimp [θ, theorem_8_3_bound, lam']; omega)
+        (by dsimp [θ, theorem_8_3_bound, lam']; omega)
+        (by dsimp [θ, theorem_8_3_bound, lam']; omega)
   · push Not at hshort
     obtain ⟨P, s, t, hs, ht, hP, hPZ, hlong⟩ := hshort
     rcases theorem_8_3_claim_2 hNorm (by omega) hψθ (show τ ≤ ζ + τ by omega) hsymm hself htri
@@ -146,6 +150,38 @@ theorem theorem_8_3_with_bound :
         omega
       · change min (d {t} {y₂}) θ < ψ at hnear₂
         omega
+
+/-- Graph Minors XVI, (8.3), pages 65–68. The proof uses the metric laws of
+XI (9.1) and the proved truncation, vertex-deletion, and rearrangement lemmas.
+The larger constant term `31` provides the buffer in Claim (12). -/
+theorem theorem_8_3_with_bound :
+  ∀ {S : Type w} [TopologicalSpace S] [T2Space S],
+    IsClosedSurface S → ConnectedSpace S →
+    ∀ lower τ χ δ lam ζ ψ : ℕ, 3 ≤ ψ →
+      ∃ θ : ℕ, lower ≤ θ ∧ ζ < θ ∧
+        ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star θ_span : ℕ)
+          (T_star : Set (Hypergraph α β × Hypergraph α β))
+          (H : Drawing S) (η : SpanEmbedding H G)
+          (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+          (d : Set S → Set S → ℕ) (X : Set α) (Y : Set S) (Z : Set α)
+          (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ θ (ζ + τ))
+          (_ : Z ⊆ V(G)) (hZ_disj : Disjoint V(η.imageGraph) Z)
+          (_ : X ⊆ Z) (_ : Z.ncard ≤ ζ),
+          HasAnimal S G T_star θ_star χ (δ + 1) ψ τ ∨
+          (∃ (P : Graph α β) (s₁ s₂ y₁ y₂ : S),
+            s₁ ∈ H.V ∧ s₂ ∈ H.V ∧ y₁ ∈ Y ∧ y₂ ∈ Y ∧ y₁ ≠ y₂ ∧
+            IsHPathWithEnds (GM09.deleteVertices G Z) η.imageGraph P
+              (η.vMap s₁) (η.vMap s₂) ∧
+            d {s₁} {y₁} < ψ ∧ d {s₂} {y₂} < ψ) ∨
+          (∃ d₀ : Set S → Set S → ℕ,
+            IsLevelSpan (GM09.deleteVertices G Z) H (restrictDeleteVertices η Z hZ_disj)
+              (θ_star - Z.ncard) (θ - Z.ncard) lam (2 * ψ)
+              (deleteGraphVerticesTangle G hAnim.2.2.1.isControlling.isTangle_star.finite_V
+                hAnim.2.2.1.isControlling.isTangle_star.finite_E Z T_star θ_star)
+              (GM10.truncation T (θ - Z.ncard)) d₀) := by
+  intro S _ _ hS hConn lower τ χ δ lam ζ ψ hψ
+  exact ⟨theorem_8_3_bound lower lam ζ ψ,
+    theorem_8_3_explicit.{u, v, w} hS hConn lower τ χ δ lam ζ ψ hψ⟩
 
 /-- Graph Minors XVI, (8.3), with its printed statement. The strengthened
 proof also permits any prescribed lower bound on the chosen threshold,

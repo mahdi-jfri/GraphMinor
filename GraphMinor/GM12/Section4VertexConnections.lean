@@ -2,7 +2,7 @@ module
 
 public import GraphMinor.GM12.Section4EndPartition
 public import GraphMinor.GM12.Cited
-import GraphMinor.GM12.Section3Theorem
+public import GraphMinor.GM12.Section3Theorem
 import GraphMinor.GM12.Section3DiscRegion
 import GraphMinor.GM12.Section4SingletonFeasibility
 import GraphMinor.GM12.Section4SingletonDiscs
@@ -32,23 +32,26 @@ open Set Surface GM10 GM14
 
 universe u
 
-/-- The connection step of XII (4.4), pages 251--252, for any
-partition of finitely many distant prescribed vertices. -/
-theorem exists_threshold_for_vertex_connections
+/-- Explicit threshold for `exists_threshold_for_vertex_connections`. -/
+@[expose] def vertexConnectionsBound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p t : ℕ) : ℕ :=
+  max (theorem_3_2_bound V a b t t) (2 * p) + 2
+
+/-- Explicit version of `exists_threshold_for_vertex_connections`. -/
+theorem exists_threshold_for_vertex_connections_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
-    (hS : IsClosedSurface S) (p t : ℕ) :
-    ∃ N : ℕ, 1 ≤ N ∧ 2 * p + 2 ≤ N ∧
-      ∀ (Γ : Drawing S) (θ : ℕ) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
-        (d : Set S → Set S → ℕ) (z : Fin t → S) (κ : Fin t → Fin p),
-      HasTangleMetric Γ θ T d → N ≤ θ →
+    (hS : IsClosedSurface S) {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (p t : ℕ) :
+    ∀ (Γ : Drawing S) (θ : ℕ) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (z : Fin t → S) (κ : Fin t → Fin p),
+      HasTangleMetric Γ θ T d → vertexConnectionsBound V a b p t ≤ θ →
       (∀ i, z i ∈ Γ.V) → Function.Injective z →
-      (∀ i j, i ≠ j → N ≤ d {z i} {z j}) →
+      (∀ i j, i ≠ j → vertexConnectionsBound V a b p t ≤ d {z i} {z j}) →
       HasConnectingSubdrawings Γ (range z) (edgeEndClass z κ) := by
-  obtain ⟨η, hη, hmain⟩ := theorem_3_2_proof hS t t
-  let N := max η (2 * p) + 2
+  have hmain := theorem_3_2_explicit V hV hS he t t
+  set η := theorem_3_2_bound V a b t t
+  set N := vertexConnectionsBound V a b p t
+  have hη : 1 ≤ η := one_le_theorem_3_2_bound V a b t t
   have hηN : η + 2 ≤ N := Nat.add_le_add_right (le_max_left _ _) 2
-  have hpN : 2 * p + 2 ≤ N := Nat.add_le_add_right (le_max_right _ _) 2
-  refine ⟨N, (by omega), hpN, ?_⟩
   intro Γ θ T d z κ hm hN hz hinj hfar
   obtain ⟨Δ, hΔ, hdisj⟩ := exists_disjoint_single_vertex_discs hS Γ z hz hinj
   have havoid : ∀ i, Γ.U ∩ Δ i = Γ.V ∩ discBd (Δ i) :=
@@ -87,5 +90,23 @@ theorem exists_threshold_for_vertex_connections
     (fun i j hij => disjoint_edgeEndClass z κ hinj hij) hfeas
     (by omega) hm hreg hfree
   rwa [hZ] at hconn
+
+/-- The connection step of XII (4.4), pages 251--252, for any
+partition of finitely many distant prescribed vertices. -/
+theorem exists_threshold_for_vertex_connections
+    {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (p t : ℕ) :
+    ∃ N : ℕ, 1 ≤ N ∧ 2 * p + 2 ≤ N ∧
+      ∀ (Γ : Drawing S) (θ : ℕ) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (d : Set S → Set S → ℕ) (z : Fin t → S) (κ : Fin t → Fin p),
+      HasTangleMetric Γ θ T d → N ≤ θ →
+      (∀ i, z i ∈ Γ.V) → Function.Injective z →
+      (∀ i j, i ≠ j → N ≤ d {z i} {z j}) →
+      HasConnectingSubdrawings Γ (range z) (edgeEndClass z κ) := by
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨vertexConnectionsBound GM07.vModel a b p t, by unfold vertexConnectionsBound; omega,
+    Nat.add_le_add_right (le_max_right _ _) 2,
+    exists_threshold_for_vertex_connections_explicit GM07.vModel (fun _ _ _ _ => le_rfl)
+      hS he p t⟩
 
 end GraphMinor.GM12

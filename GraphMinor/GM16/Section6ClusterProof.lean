@@ -32,15 +32,12 @@ private theorem hair_cluster_count_arithmetic {μ τ' : ℕ} (hμ : 1 ≤ μ) (h
   have hpos : 0 < μ ^ 2 * τ' := Nat.mul_pos (pow_pos (by omega) _) (by omega)
   nlinarith
 
-/-- Graph Minors XVI, proof of (6.3), page 60: if neither conclusion
-holds, many far hair ends lie within distance less than `r` of one vertex.
-This includes the construction of the maximal separated family, not a
-hypothesis asserting its consequence. -/
-theorem theorem_6_3_far_end_cluster
-    {S : Type w} [TopologicalSpace S] [T2Space S]
-    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+/-- General threshold form of `theorem_6_3_far_end_cluster`. -/
+theorem theorem_6_3_far_end_cluster_of
+    {S : Type w} [TopologicalSpace S] [T2Space S] {p r₀ : ℕ}
+    (hr₀_spec : IsMarkedPathThreshold.{u, v, w} S p r₀)
     {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
-    {p τ τ' χ δ θ_star θ_span θ σ ψ r : ℕ}
+    {τ τ' χ δ θ_star θ_span θ σ ψ r : ℕ}
     {T_star : Set (Hypergraph α β × Hypergraph α β)}
     {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
     {d : Set S → Set S → ℕ} {X : Set α} {Y : Set S}
@@ -48,7 +45,7 @@ theorem theorem_6_3_far_end_cluster
     (F : HairFamily G H η d X Y θ)
     (hμ : 1 ≤ p * (p - 1) / 2)
     (hδ : δ = 2 * (p * (p - 1) / 2) ^ 2 * τ' ^ 2)
-    (hr₀ : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ r) (hr : 1 ≤ r) (hθ : 2 * r < θ)
+    (hr₀ : r₀ ≤ r) (hr : 1 ≤ r) (hθ : 2 * r < θ)
     (hψ : 1 ≤ ψ) (hψθ : ψ ≤ θ) (hτσ : τ ≤ σ) (hττ' : τ ≤ τ') (hτ' : 2 ≤ τ')
     (hself : ∀ a ∈ H.V, d {a} {a} = 0)
     (hsymm : ∀ a ∈ H.V, ∀ b ∈ H.V, d {a} {b} = d {b} {a})
@@ -64,7 +61,7 @@ theorem theorem_6_3_far_end_cluster
   obtain ⟨_, horder, hSpan, hMet, _, _, hYsub, hYcard, _, _, hsep⟩ := hAnim
   have hrθ : r ≤ θ := by omega
   have hYfin : Y.Finite := H.finite_V.subset hYsub
-  have hsmall := theorem_6_3_active_bound hS hConn hSaved F (hr₀.trans hrθ)
+  have hsmall := theorem_6_3_active_bound_of hr₀_spec hSaved F (hr₀.trans hrθ)
     hψ hψθ hτσ hττ' hτ' hNoClique hNoHorn
   have hnum : 2 * (μ - 1) * (μ * τ') < (Y \ F.active).ncard := by
     have ha := hair_cluster_count_arithmetic hμ hτ'
@@ -116,11 +113,40 @@ theorem theorem_6_3_far_end_cluster
           (mem_insert_of_mem _ (mem_singleton _))
     apply False.elim
     apply hNoClique
-    exact controlsMinor_of_separated_hPaths hS hConn p hSpan hMet
+    exact controlsMinor_of_separated_hPaths_of hr₀_spec hSpan hMet
       (hr₀.trans (hrθ.trans horder))
       (fun i => ⟨hYsub (hf i).1, F.far_mem (f i) (hf i).1⟩)
       (fun i => F.is_hPath (f i) (hf i).1) hPP
       (fun a ha b hb hab => hr₀.trans (hsepR a ha b hb hab))
   · exact ⟨w, hw, Y₄, fun y hy => (hY₄ hy).1, hY₄card, hnear⟩
+
+/-- Graph Minors XVI, proof of (6.3), page 60: if neither conclusion
+holds, many far hair ends lie within distance less than `r` of one vertex.
+This includes the construction of the maximal separated family, not a
+hypothesis asserting its consequence. -/
+theorem theorem_6_3_far_end_cluster
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    {α : Type u} {β : Type v} {G : Graph α β} {H : Drawing S} {η : SpanEmbedding H G}
+    {p τ τ' χ δ θ_star θ_span θ σ ψ r : ℕ}
+    {T_star : Set (Hypergraph α β × Hypergraph α β)}
+    {T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))}
+    {d : Set S → Set S → ℕ} {X : Set α} {Y : Set S}
+    (hAnim : IsAnimal G T_star θ_star H η θ_span T d X Y χ δ θ σ)
+    (F : HairFamily G H η d X Y θ)
+    (hμ : 1 ≤ p * (p - 1) / 2)
+    (hδ : δ = 2 * (p * (p - 1) / 2) ^ 2 * τ' ^ 2)
+    (hr₀ : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ r) (hr : 1 ≤ r) (hθ : 2 * r < θ)
+    (hψ : 1 ≤ ψ) (hψθ : ψ ≤ θ) (hτσ : τ ≤ σ) (hττ' : τ ≤ τ') (hτ' : 2 ≤ τ')
+    (hself : ∀ a ∈ H.V, d {a} {a} = 0)
+    (hsymm : ∀ a ∈ H.V, ∀ b ∈ H.V, d {a} {b} = d {b} {a})
+    (htri : ∀ a ∈ H.V, ∀ b ∈ H.V, ∀ c ∈ H.V,
+      d {a} {c} ≤ d {a} {b} + d {b} {c})
+    (hNoClique : ¬ ControlsMinor G (completeGraph p) T_star)
+    (hNoHorn : ¬ HasHairlessAnimal S G T_star θ_star (χ + 1) ψ τ) :
+    ∃ w ∈ H.V, ∃ Y₄ ⊆ Y, (p * (p - 1) / 2) * τ' ≤ Y₄.ncard ∧
+      ∀ y ∈ Y₄, d {F.far y} {w} < r :=
+  theorem_6_3_far_end_cluster_of (cliquePathThreshold_spec hS hConn p).2
+    hAnim F hμ hδ hr₀ hr hθ hψ hψθ hτσ hττ' hτ' hself hsymm htri hNoClique hNoHorn
 
 end GraphMinor.GM16

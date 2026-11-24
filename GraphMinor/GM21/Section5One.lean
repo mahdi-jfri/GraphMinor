@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM21.Section5ThreeTwo
 public import GraphMinor.GM21.Section5Linkage
+public import GraphMinor.GM17.Section13b
 import GraphMinor.GM21.Section2
 import GraphMinor.GM12.Section3DiscRegion
 import GraphMinor.GM12.Section72RadialExists
@@ -748,21 +749,73 @@ theorem claim_5_1_3 {S Shat : Type} [TopologicalSpace S] [TopologicalSpace Shat]
     (GM12.theorem_7_9_proof hcl hd hSub htwo' (by omega : 10 < θ₀) hd' hge').1
   exact ⟨T', d', hd', hsep_mem', hge'⟩
 
-/-- **Graph Minors XXI, (5.1)** (page 15 of the preprint):
-"For every surface $\Sigma$ and integer $p \ge 0$, there exists $\theta > p$ with the following
-property. Let $\Gamma$ be a drawing in $\Sigma$ with $|V(\Gamma) \cap bd(\Sigma)| = p$, and let
-$\mathcal{T}$ be a respectful tangle in $\Gamma$ of order $\ge \theta$. Suppose that
-(i) there is no $\Gamma$-normal $O$-arc $F \subseteq \Sigma$ such that
-$|F \cap V(\Gamma)| < |C \cap V(\Gamma)|$ and $C \subseteq ins(F)$ for some cuff $C$ of $\Sigma$,
-and
-(ii) for every two cuffs $C_1, C_2$, the corresponding cuff regions $r_1, r_2$ satisfy
-$d(r_1, r_2) \ge \theta$ where $d$ is the metric of $\mathcal{T}$.
-Then there is no vital linkage in $\Gamma$ with set of terminals $V(\Gamma) \cap bd(\Sigma)$." -/
-theorem theorem_5_1_proof {S Shat : Type} [TopologicalSpace S] [TopologicalSpace Shat] [T2Space Shat]
-    (hS : IsSurface S) (cap : IsCappedSurface S Shat) (p : ℕ) :
-    ∃ θ : ℕ, p < θ ∧ ∀ (Γ : Surface.Drawing S), Γ.IsProper →
+private lemma maxRange_mono {n₁ n₂ : ℕ} {f g : ℕ → ℕ} (hn : n₁ ≤ n₂)
+    (hfg : ∀ i, f i ≤ g i) :
+    GM17.maxRange n₁ f ≤ GM17.maxRange n₂ g := by
+  have h1 : ∀ n, GM17.maxRange n f ≤ GM17.maxRange n g := by
+    intro n
+    induction n with
+    | zero => exact le_rfl
+    | succ n ih => exact max_le_max ih (hfg n)
+  have h2 : ∀ a b, a ≤ b → GM17.maxRange a g ≤ GM17.maxRange b g := by
+    intro a b hab
+    induction hab with
+    | refl => exact le_rfl
+    | @step m _ ih => exact ih.trans (le_max_left _ _)
+  exact (h1 n₁).trans (h2 n₁ n₂ hn)
+
+/-- Raw explicit threshold for Graph Minors XXI, (5.1) over closed capped surfaces with
+`4 * a + 2 * b ≤ k`. -/
+def theorem_5_1_bound_raw (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  let η := GM17.maxRange (k + 1) fun a =>
+    GM17.maxRange (k + 1) fun b => theorem_3_2_of_cuff_ins_bound V a b c p
+  2 * max η (p + 11) + 1
+
+/-- Monotone explicit threshold for Graph Minors XXI, (5.1), parameterized by an upper bound `V` on
+`GM07.vModel`, capped-surface complexity bound `k`, cuff-count bound `c`, and boundary vertex count
+`p`. -/
+def theorem_5_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) : ℕ :=
+  GM17.maxRange (c + 1) fun c' =>
+    GM17.maxRange (p + 1) fun p' => theorem_5_1_bound_raw V k c' p'
+
+theorem theorem_5_1_bound_mono {V : ℕ → ℕ → ℕ → ℕ → ℕ} {k₁ k₂ c₁ c₂ p₁ p₂ : ℕ}
+    (hk : k₁ ≤ k₂) (hc : c₁ ≤ c₂) (hp : p₁ ≤ p₂) :
+    theorem_5_1_bound V k₁ c₁ p₁ ≤ theorem_5_1_bound V k₂ c₂ p₂ := by
+  refine maxRange_mono (by omega) fun c' => maxRange_mono (by omega) fun p' => ?_
+  dsimp only [theorem_5_1_bound_raw]
+  have hη : GM17.maxRange (k₁ + 1) (fun a => GM17.maxRange (k₁ + 1)
+        (fun b => theorem_3_2_of_cuff_ins_bound V a b c' p')) ≤
+      GM17.maxRange (k₂ + 1) (fun a => GM17.maxRange (k₂ + 1)
+        (fun b => theorem_3_2_of_cuff_ins_bound V a b c' p')) :=
+    maxRange_mono (by omega) fun a => maxRange_mono (by omega) fun _ => le_rfl
+  have hmax := max_le_max hη (le_rfl (a := p' + 11))
+  omega
+
+theorem lt_theorem_5_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (k c p : ℕ) :
+    p < theorem_5_1_bound V k c p := by
+  have hraw : theorem_5_1_bound_raw V k c p ≤ theorem_5_1_bound V k c p :=
+    (GM17.le_maxRange (f := fun p' => theorem_5_1_bound_raw V k c p') (Nat.lt_succ_self p)).trans
+      (GM17.le_maxRange (f := fun c' => GM17.maxRange (p + 1) (fun p' => theorem_5_1_bound_raw V k c' p'))
+        (Nat.lt_succ_self c))
+  have hraw_gt : p < theorem_5_1_bound_raw V k c p := by
+    dsimp only [theorem_5_1_bound_raw]
+    have : p + 11 ≤ max (GM17.maxRange (k + 1) fun a =>
+        GM17.maxRange (k + 1) fun b => theorem_3_2_of_cuff_ins_bound V a b c p) (p + 11) :=
+      le_max_right _ _
+    omega
+  omega
+
+/-- Explicit version of **Graph Minors XXI, (5.1)** (page 15 of the preprint) with threshold
+`theorem_5_1_bound V k c p`. -/
+theorem theorem_5_1_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S Shat : Type} [TopologicalSpace S] [TopologicalSpace Shat] [T2Space Shat]
+    (hS : IsSurface S) (cap : IsCappedSurface S Shat)
+    {k c : ℕ} (hk : ∃ a b, 4 * a + 2 * b ≤ k ∧ Nonempty (Shat ≃ₜ SurfaceModel a b 0))
+    (hc : (cuffs S).ncard ≤ c) (p : ℕ) :
+    ∀ (Γ : Surface.Drawing S), Γ.IsProper →
       (Γ.V ∩ bd S).ncard = p →
-      ∀ (θ₀ : ℕ), θ ≤ θ₀ →
+      ∀ (θ₀ : ℕ), theorem_5_1_bound V k c p ≤ θ₀ →
       ∀ (T : Set (Hypergraph Shat (Set Shat) × Hypergraph Shat (Set Shat)))
         (d : Set Shat → Set Shat → ℕ),
       HasTangleMetric (capDrawing hS cap Γ) θ₀ T d →
@@ -775,7 +828,7 @@ theorem theorem_5_1_proof {S Shat : Type} [TopologicalSpace S] [TopologicalSpace
         ¬ cap.emb '' C ⊆ D) →
       (∀ (C₁ C₂ : Set S) (r₁ r₂ : Set Shat),
         C₁ ≠ C₂ → IsCuffRegion hS cap Γ C₁ r₁ → IsCuffRegion hS cap Γ C₂ r₂ →
-        θ ≤ d r₁ r₂) →
+        theorem_5_1_bound V k c p ≤ d r₁ r₂) →
       ∀ (L : Hypergraph S (Set S)), IsVitalLinkage Γ.toHypergraph L →
         terminals L ≠ Γ.V ∩ bd S := by
   have : CompactSpace S := hS.1
@@ -783,18 +836,39 @@ theorem theorem_5_1_proof {S Shat : Type} [TopologicalSpace S] [TopologicalSpace
   have hcl : IsClosedSurface Shat := cap.isClosedSurface
   have : ConnectedSpace Shat := cap.connected
   classical
+  rcases hk with ⟨a, b, hab, he⟩
   let t := (cuffs S).ncard
-  obtain ⟨θ₁, hθ₁_pos, h32⟩ := theorem_3_2_of_cuff_ins hcl t p
-  let θ' := max θ₁ (p + 11)
-  let θ := 2 * θ' + 1
+  have h32 := theorem_3_2_of_cuff_ins_explicit V hV hcl he t p
+  set θ₁ := theorem_3_2_of_cuff_ins_bound V a b t p
+  have hθ₁_pos : 1 ≤ θ₁ := one_le_theorem_3_2_of_cuff_ins_bound V a b t p
+  set θ' := max θ₁ (p + 11)
+  set θ := theorem_5_1_bound V k c p
   have hθ'_ge_θ₁ : θ₁ ≤ θ' := le_max_left _ _
   have hθ'_ge_p11 : p + 11 ≤ θ' := le_max_right _ _
-  have hθ_def : θ = 2 * θ' + 1 := rfl
-  refine ⟨θ, by omega, ?_⟩
+  have h2θ'_le : 2 * θ' + 1 ≤ θ := by
+    have h1 : θ₁ ≤ GM17.maxRange (k + 1) (fun b' => theorem_3_2_of_cuff_ins_bound V a b' t p) :=
+      GM17.le_maxRange (f := fun b' => theorem_3_2_of_cuff_ins_bound V a b' t p) (by omega)
+    have h2 : GM17.maxRange (k + 1) (fun b' => theorem_3_2_of_cuff_ins_bound V a b' t p) ≤
+        GM17.maxRange (k + 1) (fun a' => GM17.maxRange (k + 1)
+          (fun b' => theorem_3_2_of_cuff_ins_bound V a' b' t p)) :=
+      GM17.le_maxRange (f := fun a' => GM17.maxRange (k + 1)
+        (fun b' => theorem_3_2_of_cuff_ins_bound V a' b' t p)) (by omega)
+    have h3 : 2 * θ' + 1 ≤ theorem_5_1_bound_raw V k t p := by
+      dsimp only [theorem_5_1_bound_raw]
+      have hmax := max_le_max (h1.trans h2) (le_rfl (a := p + 11))
+      omega
+    have h4 : theorem_5_1_bound_raw V k t p ≤
+        GM17.maxRange (p + 1) (fun p' => theorem_5_1_bound_raw V k t p') :=
+      GM17.le_maxRange (f := fun p' => theorem_5_1_bound_raw V k t p') (Nat.lt_succ_self p)
+    have h5 : GM17.maxRange (p + 1) (fun p' => theorem_5_1_bound_raw V k t p') ≤ θ :=
+      GM17.le_maxRange (f := fun c' => GM17.maxRange (p + 1) (fun p' => theorem_5_1_bound_raw V k c' p'))
+        (by omega : t < c + 1)
+    exact (h3.trans h4).trans h5
   intro Γ hprop hp θ₀ hθ₀ T d hd hi hii L hL hterm
   -- Claim (1): find `v ∈ Γ.V` with `d({cap.emb v}, r) ≥ θ'` for every cuff region `r`.
   obtain ⟨v, hv, hv_dist⟩ :=
-    claim_5_1_1 hS cap hprop (by omega : 2 ≤ θ') hθ₀ hd hii
+    claim_5_1_1 hS cap hprop (by omega : 2 ≤ θ') (by omega : 2 * θ' + 1 ≤ θ₀) hd
+      (fun C₁ C₂ r₁ r₂ hne hr₁ hr₂ => h2θ'_le.trans (hii C₁ C₂ r₁ r₂ hne hr₁ hr₂))
   let Γ_hat := capDrawing hS cap Γ
   let Γ' := GM12.deleteVertices Γ_hat {cap.emb v}
   have hv_hat : cap.emb v ∈ Γ_hat.V := mem_image_of_mem _ hv
@@ -1106,6 +1180,43 @@ theorem theorem_5_1_proof {S Shat : Type} [TopologicalSpace S] [TopologicalSpace
   have hL'_eq_L : L' = L := hL.2.2 L' hL'_link hpat_L'
   subst hL'_eq_L
   exact hv_not_L' (hL.2.1.symm ▸ hv)
+
+/-- **Graph Minors XXI, (5.1)** (page 15 of the preprint):
+"For every surface $\Sigma$ and integer $p \ge 0$, there exists $\theta > p$ with the following
+property. Let $\Gamma$ be a drawing in $\Sigma$ with $|V(\Gamma) \cap bd(\Sigma)| = p$, and let
+$\mathcal{T}$ be a respectful tangle in $\Gamma$ of order $\ge \theta$. Suppose that
+(i) there is no $\Gamma$-normal $O$-arc $F \subseteq \Sigma$ such that
+$|F \cap V(\Gamma)| < |C \cap V(\Gamma)|$ and $C \subseteq ins(F)$ for some cuff $C$ of $\Sigma$,
+and
+(ii) for every two cuffs $C_1, C_2$, the corresponding cuff regions $r_1, r_2$ satisfy
+$d(r_1, r_2) \ge \theta$ where $d$ is the metric of $\mathcal{T}$.
+Then there is no vital linkage in $\Gamma$ with set of terminals $V(\Gamma) \cap bd(\Sigma)$." -/
+theorem theorem_5_1_proof {S Shat : Type} [TopologicalSpace S] [TopologicalSpace Shat] [T2Space Shat]
+    (hS : IsSurface S) (cap : IsCappedSurface S Shat) (p : ℕ) :
+    ∃ θ : ℕ, p < θ ∧ ∀ (Γ : Surface.Drawing S), Γ.IsProper →
+      (Γ.V ∩ bd S).ncard = p →
+      ∀ (θ₀ : ℕ), θ ≤ θ₀ →
+      ∀ (T : Set (Hypergraph Shat (Set Shat) × Hypergraph Shat (Set Shat)))
+        (d : Set Shat → Set Shat → ℕ),
+      HasTangleMetric (capDrawing hS cap Γ) θ₀ T d →
+      (∀ (F : Set S) (D : Set Shat) (C : Set S),
+        (PaintingOrDrawing.drawing Γ).IsNormal F → IsOArc F →
+        (F ∩ Γ.V).ncard < (C ∩ Γ.V).ncard → C ∈ cuffs S →
+        IsClosedDisc D → subBd D = cap.emb '' F →
+        ((PaintingOrDrawing.drawing (capDrawing hS cap Γ)).inter D,
+          (PaintingOrDrawing.drawing (capDrawing hS cap Γ)).interOutside D) ∈ T →
+        ¬ cap.emb '' C ⊆ D) →
+      (∀ (C₁ C₂ : Set S) (r₁ r₂ : Set Shat),
+        C₁ ≠ C₂ → IsCuffRegion hS cap Γ C₁ r₁ → IsCuffRegion hS cap Γ C₂ r₂ →
+        θ ≤ d r₁ r₂) →
+      ∀ (L : Hypergraph S (Set S)), IsVitalLinkage Γ.toHypergraph L →
+        terminals L ≠ Γ.V ∩ bd S := by
+  have : T2Space S := hS.2.1
+  have : ConnectedSpace Shat := cap.connected
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model cap.isClosedSurface
+  exact ⟨theorem_5_1_bound GM07.vModel (4 * a + 2 * b) (cuffs S).ncard p,
+    lt_theorem_5_1_bound _ _ _ _,
+    theorem_5_1_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS cap ⟨a, b, le_rfl, he⟩ le_rfl p⟩
 
 end GM21
 end GraphMinor

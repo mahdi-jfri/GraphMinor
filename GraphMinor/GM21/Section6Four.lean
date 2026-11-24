@@ -392,26 +392,32 @@ universe u v w
 
 open Set GraphMinor.Surface GraphMinor.GM21.Cuts
 
-/-- **Graph Minors XXI, (6.4)** (page 24 of the preprint): "*For all integers $p \ge 0$ and
-$q \ge 1$ there exists $\lambda \ge 0$ such that, if $G$ has a presentation in a disc $\Sigma$ of
-depth $\le q$ and defect 1, and there is an exhaustive vital $p$-linkage in $G$, then there are at
-most $\lambda$ $\Sigma$-jumps.*"
+/-- Explicit jump bound for Graph Minors XXI, (6.4). -/
+def theorem_6_4_bound (p q : ℕ) : ℕ :=
+  let n := theorem_2_6_bound p (2 * q)
+  n ^ n
 
-A disc is a space homeomorphic to the closed unit disc (`GM06.IsClosedDiscSpace`). As in the paper,
-`n` comes from (2.6) with `k = 2q`, and `λ = n^n`. Claim (4) (`DiscCut.not_isStrictChain`) says that
-there is no strict chain of `n` cuts, and the tree of regions gives at most `n^n` jumps
-(`RegionTree.ncard_jumpSet_le`). -/
-theorem theorem_6_4_proof (p q : ℕ) (_hq : 1 ≤ q) :
-    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
+theorem theorem_6_4_bound_mono {p₁ p₂ q₁ q₂ : ℕ} (hp : p₁ ≤ p₂) (hq : q₁ ≤ q₂) :
+    theorem_6_4_bound p₁ q₁ ≤ theorem_6_4_bound p₂ q₂ := by
+  dsimp only [theorem_6_4_bound]
+  have hle : theorem_2_6_bound p₁ (2 * q₁) ≤ theorem_2_6_bound p₂ (2 * q₂) :=
+    theorem_2_6_bound_mono hp (by omega)
+  have hpos : 1 ≤ theorem_2_6_bound p₂ (2 * q₂) :=
+    (by omega : 1 ≤ 2).trans (two_le_theorem_2_6_bound p₂ (2 * q₂))
+  exact (Nat.pow_le_pow_left hle _).trans (Nat.pow_le_pow_right hpos hle)
+
+/-- Explicit version of **Graph Minors XXI, (6.4)** with bound `theorem_6_4_bound p q`. -/
+theorem theorem_6_4_explicit (p q : ℕ) (_hq : 1 ≤ q) :
+    ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
       (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
       (ιE : Set S → β) (F_star : Fin 1 → Set S) (H : Fin 1 → Hypergraph α β)
       (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
       GM06.IsClosedDiscSpace S → G.IsGraph →
       PresentationHasDepthLe G Γ Γ_sub ιV ιE 1 F_star H μ q →
       IsExhaustiveLinkage G Γ_sub 1 H L → IsPLinkage G L p →
-      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam := by
-  obtain ⟨n, hn2, hn⟩ := theorem_2_6_proof.{u, v} p (2 * q)
-  refine ⟨n ^ n, ?_⟩
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ theorem_6_4_bound p q := by
+  let n := theorem_2_6_bound p (2 * q)
+  have hn2 : 2 ≤ n := two_le_theorem_2_6_bound p (2 * q)
   intro S _ α β G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL
   obtain ⟨qf, h_pres, hqf, -⟩ := hdepth
   obtain ⟨f, w₀, w₁, a, b, hW, -⟩ := DiscCut.exists_window h_pres hD 0
@@ -421,14 +427,26 @@ theorem theorem_6_4_proof (p q : ℕ) (_hq : 1 ≤ q) :
   have hT : (jumpSet Γ_sub (ιV '' (Γ.V ∩ bd S))).Finite := jumpSet_finite hdeg
   rw [sigmaJumps_eq_jumpSet h_pres.drawing_iso, ← hT.cast_ncard_eq]
   norm_cast
-  -- Every vertex of `Γ` in `bd(Σ)` lies in `F* = [a 0, b 0]`.
   have hin : ∀ {t : ℝ}, t ∈ Icc w₀ w₁ → GM19.cuffPoint f t ∈ Γ.V → t ∈ Icc (a 0) (b 0) := by
     intro t ht htV
     obtain ⟨j, hj⟩ := hW.exists_support h_pres ht htV
     rwa [Fin.fin_one_eq_zero j] at hj
   refine RegionTree.ncard_jumpSet_le h_pres hW hK hdeg hD (by omega) fun d hd => ?_
-  exact DiscCut.not_isStrictChain h_pres hC hW hK hdeg hG hL hpL (fun j => hqf j) le_rfl (hn G L)
+  exact DiscCut.not_isStrictChain h_pres hC hW hK hdeg hG hL hpL (fun j => hqf j) le_rfl
+    (theorem_2_6_explicit.{u, v} p (2 * q) G L)
     0 d (fun i => ⟨(hin (hd.1 i).1.1 (hd.1 i).1.2).1, (hin (hd.1 i).2.1.1 (hd.1 i).2.1.2).2⟩) hd
+
+/-- **Graph Minors XXI, (6.4)** (page 24 of the preprint). -/
+theorem theorem_6_4_proof (p q : ℕ) (hq : 1 ≤ q) :
+    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
+      (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
+      (ιE : Set S → β) (F_star : Fin 1 → Set S) (H : Fin 1 → Hypergraph α β)
+      (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
+      GM06.IsClosedDiscSpace S → G.IsGraph →
+      PresentationHasDepthLe G Γ Γ_sub ιV ιE 1 F_star H μ q →
+      IsExhaustiveLinkage G Γ_sub 1 H L → IsPLinkage G L p →
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam :=
+  ⟨theorem_6_4_bound p q, theorem_6_4_explicit.{u, v, w} p q hq⟩
 
 end GM21
 end GraphMinor

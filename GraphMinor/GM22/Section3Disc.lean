@@ -866,7 +866,7 @@ section ProperLineDiscIntersections
 /-- `ClosedUnitDisc` is a surface (`IsSurface ClosedUnitDisc`). -/
 theorem isSurface_closedUnitDisc : IsSurface ClosedUnitDisc := by
   obtain ⟨d⟩ := nonempty_disc_homeo
-  exact isSurface_of_homeo d (isSurface_model 0 0 1).1
+  exact Surface.isSurface_of_homeo d (isSurface_model 0 0 1).1
 
 /-- In `ClosedUnitDisc`, any line `F'` with ends `x', y' ∉ D` that passes through an interior point
 `v' ∈ D \ subBd D` of a closed set `D` meets `subBd D` in at least two distinct points. -/

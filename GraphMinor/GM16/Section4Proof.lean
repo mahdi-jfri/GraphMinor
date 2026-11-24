@@ -1,7 +1,7 @@
 module
 
 public import GraphMinor.GM16.Section4
-import GraphMinor.GM16.Section4Control
+public import GraphMinor.GM16.Section4Control
 import GraphMinor.GM16.SubcubicSubdivision
 import GraphMinor.GM16.WallSubdivisionRigidity
 import GraphMinor.GM16.InducedTangleEdgePatterns
@@ -29,23 +29,30 @@ namespace GraphMinor.GM16
 open Set Graph Hypergraph Topology Surface GM10 GM14 GM15
 universe u v w
 
-/-- Graph Minors XVI, (4.2), pages 53–54. Every sufficiently high-order
-graph tangle has a sphere span of the prescribed order. The wall,
-subdivision, drawing, and induced-tangle steps of the paper are all
-proved; the initial height is increased to an even value at least four. -/
-theorem theorem_4_2_proof : GM16Theorem42Statement.{u,v,w} := by
-  intro θ _hθ
+/-- Explicit tangle order threshold for Graph Minors XVI, (4.2) (sphere span of order `≥ θ`). -/
+@[expose] def theorem_4_2_bound (θ : ℕ) : ℕ :=
+  conformalWallBound (2 * (θ + 2)) + 2 * (θ + 2)
+
+/-- Graph Minors XVI, (4.2), pages 53–54, with explicit threshold `theorem_4_2_bound θ`. -/
+theorem theorem_4_2_explicit (θ : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θG : ℕ)
+      (Tstar : Set (Hypergraph α β × Hypergraph α β)),
+      IsGraphTangle G θG Tstar → theorem_4_2_bound θ ≤ θG →
+      ∀ (S : Type w) [TopologicalSpace S] [T2Space S],
+        IsClosedSurface S → ConnectedSpace S → IsSphere S →
+        ∃ (H : Drawing S) (η : SpanEmbedding H G) (θ_span : ℕ)
+          (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+          θ ≤ θ_span ∧ IsSigmaSpan G H η θG θ_span Tstar T := by
   let height := 2*(θ+2)
   have hHeight : 4 ≤ height := by dsimp only [height]; omega
   have hEven : Even height := ⟨θ+2,by dsimp only [height]; omega⟩
   have hTwo : 2 ≤ height := by omega
-  obtain ⟨θ₀,hθ₀,hWall⟩ := exists_conformal_wall_minor height hTwo
-  refine ⟨θ₀+height,by omega,?_⟩
   intro α β G θG Tstar hT hOrder S _ _ hS hConn hSphere
   let : ConnectedSpace S := hConn
-  have hHeightG : height ≤ θG := by omega
+  have hHeightG : height ≤ θG := (Nat.le_add_left _ _).trans hOrder
+  have hWallOrd : conformalWallBound height ≤ θG := (Nat.le_add_right _ _).trans hOrder
   obtain ⟨ηv,ηe,hModelG,KG,hVKG,hEKG,_,hImageG,_,_,hConformalG⟩ :=
-    hWall G θG Tstar hT (by omega)
+    exists_conformal_wall_minor_explicit.{u, v} height hTwo G θG Tstar hT hWallOrd
   obtain ⟨N,c,P,hNG,hcInj,_,hVN,hEN,hPaths,hInter,ηv',hModelN⟩ :=
     exists_subcubic_subdivision_with_minor hModelG (sphereWall_neighborSet_ncard_le_three height)
   have hNV : V(N).Finite := hT.finite_V.subset hNG.vertexSet_mono
@@ -93,5 +100,13 @@ theorem theorem_4_2_proof : GM16Theorem42Statement.{u,v,w} := by
   · dsimp only [height]
     omega
   · exact ⟨IsClosedSurface.isSurface hS,hConn,hBd,hRigid,hRespectful,hControl⟩
+
+/-- Graph Minors XVI, (4.2), pages 53–54. Every sufficiently high-order
+graph tangle has a sphere span of the prescribed order. The wall,
+subdivision, drawing, and induced-tangle steps of the paper are all
+proved; the initial height is increased to an even value at least four. -/
+theorem theorem_4_2_proof : GM16Theorem42Statement.{u,v,w} :=
+  fun θ _ => ⟨theorem_4_2_bound θ, by unfold theorem_4_2_bound; omega,
+    theorem_4_2_explicit.{u, v, w} θ⟩
 
 end GraphMinor.GM16

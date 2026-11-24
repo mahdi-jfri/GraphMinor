@@ -23,15 +23,16 @@ namespace GraphMinor.GM12
 open Set Surface Graph
 
 /-- The ordered-parameter form of XII (4.5), claim (1), page 253,
-in arbitrary surface universes. The small-copy construction
-retains all graph and disc witnesses without a size hypothesis. -/
-theorem theorem_4_5_claim_1_ordered_univ {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+in arbitrary surface universes, together with explicit upper bounds on `t` and `Nat.card W`. -/
+theorem theorem_4_5_claim_1_ordered_univ_bounded
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
     (hS : IsClosedSurface S) {p : ℕ} (hp : 4 ≤ p) :
     ∃ (W E : Type) (L : Graph W E) (κ : E × Bool → W) (t : ℕ) (σ : Fin t × Bool ≃ E),
       Finite W ∧ Finite E ∧ IsIsoMinor (GM16.completeGraph p) L ∧
       L.vertexSet = univ ∧ L.edgeSet = univ ∧
       (∀ e, L.IsLink e (κ (e, false)) (κ (e, true))) ∧
       (∀ e, κ (e, false) ≠ κ (e, true)) ∧ 2 ≤ t ∧
+      t ≤ (p * (p - 1) / 2) ^ 2 ∧ Nat.card W ≤ p + 2 * (p * (p - 1) / 2) ^ 2 ∧
       (∀ w, ∃ i j, i ≠ j ∧ ∃ b c d e : Bool,
         κ (σ (i, b), c) = w ∧ κ (σ (j, d), e) = w) ∧
       ∀ (Δ : Fin t → Set S) (q : Fin t → Circle → S) (β : Fin t → Fin 4 → ℝ),
@@ -50,9 +51,9 @@ theorem theorem_4_5_claim_1_ordered_univ {S : Type*} [TopologicalSpace S] [T2Spa
   let : TopologicalSpace S₀ := tS₀
   let : T2Space S₀ := hS₀.2.1
   let : ConnectedSpace S₀ := e.surjective.connectedSpace e.continuous
-  obtain ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htwo, hmain⟩ :=
-    theorem_4_5_claim_1_ordered hS₀ hp
-  refine ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htwo, ?_⟩
+  obtain ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htle, hWle, htwo, hmain⟩ :=
+    theorem_4_5_claim_1_ordered_bounded hS₀ hp
+  refine ⟨W, E, L, κ, t, σ, hW, hE, hminor, hLV, hLE, hlink, hκne, ht, htle, hWle, htwo, ?_⟩
   intro Δ q β hΔ hΔΔ hq hβ hβ01
   let Δ₀ := fun i => e '' Δ i
   let q₀ := fun i => e ∘ q i
@@ -78,5 +79,32 @@ theorem theorem_4_5_claim_1_ordered_univ {S : Type*} [TopologicalSpace S] [T2Spa
     have h := congrArg (fun X : Set S₀ => e.symm '' X) (h1 i)
     simp only [image_pair] at h
     simpa only [q₀, Function.comp_apply, e.symm_apply_apply] using h
+
+/-- The ordered-parameter form of XII (4.5), claim (1), page 253,
+in arbitrary surface universes. The small-copy construction
+retains all graph and disc witnesses without a size hypothesis. -/
+theorem theorem_4_5_claim_1_ordered_univ {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) {p : ℕ} (hp : 4 ≤ p) :
+    ∃ (W E : Type) (L : Graph W E) (κ : E × Bool → W) (t : ℕ) (σ : Fin t × Bool ≃ E),
+      Finite W ∧ Finite E ∧ IsIsoMinor (GM16.completeGraph p) L ∧
+      L.vertexSet = univ ∧ L.edgeSet = univ ∧
+      (∀ e, L.IsLink e (κ (e, false)) (κ (e, true))) ∧
+      (∀ e, κ (e, false) ≠ κ (e, true)) ∧ 2 ≤ t ∧
+      (∀ w, ∃ i j, i ≠ j ∧ ∃ b c d e : Bool,
+        κ (σ (i, b), c) = w ∧ κ (σ (j, d), e) = w) ∧
+      ∀ (Δ : Fin t → Set S) (q : Fin t → Circle → S) (β : Fin t → Fin 4 → ℝ),
+        (∀ i, IsClosedDisc (Δ i)) → Pairwise (fun i j => Disjoint (Δ i) (Δ j)) →
+        (∀ i, Continuous (q i) ∧ Function.Injective (q i) ∧ range (q i) = discBd (Δ i)) →
+        (∀ i, StrictMono (β i)) → (∀ i j, β i j ∈ Ico 0 1) →
+        ∃ (ends : E × Bool → S) (B : W → Set S), Function.Injective ends ∧
+          (∀ w, IsClosedDisc (B w)) ∧ Pairwise (fun w z => Disjoint (B w) (B z)) ∧
+          (∀ w, B w ∩ (⋃ i, Δ i) = edgeEndClass ends κ w) ∧
+          (∀ i, ({ends (σ (i, false), false), ends (σ (i, false), true)} : Set S) =
+            {q i (ee (β i 0)), q i (ee (β i 2))}) ∧
+          (∀ i, ({ends (σ (i, true), false), ends (σ (i, true), true)} : Set S) =
+            {q i (ee (β i 1)), q i (ee (β i 3))}) := by
+  obtain ⟨W, E, L, κ, t, σ, hW, hE, hmin, hLV, hLE, hlink, hκne, ht, _, _, htwo, hmain⟩ :=
+    theorem_4_5_claim_1_ordered_univ_bounded hS hp
+  exact ⟨W, E, L, κ, t, σ, hW, hE, hmin, hLV, hLE, hlink, hκne, ht, htwo, hmain⟩
 
 end GraphMinor.GM12

@@ -2,8 +2,8 @@ module
 
 public import GraphMinor.GM16.Section8
 public import GraphMinor.GM15.Section4
-import GraphMinor.GM16.Section9Proof
-import GraphMinor.GM16.Section8Proof
+public import GraphMinor.GM16.Section9Proof
+public import GraphMinor.GM16.Section8Proof
 import GraphMinor.GM16.Section8Truncation
 import GraphMinor.GM16.EnvelopeAnimal
 import GraphMinor.GM16.SeparatedHairsCut
@@ -41,30 +41,66 @@ namespace GraphMinor.GM16
 open Set Topology Graph GraphMinor.Surface GraphMinor.GM09 GraphMinor.GM10 GraphMinor.GM11 GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- Graph Minors XVI, (7.1), pages 62 and 69–70, by the complete
-proof using (8.1), (8.2), and (8.3), with all horns and hairs after
-clearing constructed. No statement of XVI is assumed. -/
-theorem theorem_7_1_proof
-     : GM16Theorem71Statement.{u, v, w} := by
-  classical
-  intro S _ _ hS hConn τ χ δ lam θreq φ ψ hθreq hφ hψ
-  letI : ConnectedSpace S := hConn
-  obtain ⟨γ, θ₁, hγ, hClear, h81⟩ := theorem_8_1_with_radius hS hConn δ φ ψ hφ hψ
+/-- Explicit `θ` threshold for Graph Minors XVI, (7.1). -/
+@[expose] def theorem_7_1_theta (χ δ lam θreq φ ψ : ℕ) : ℕ :=
+  let γ := theorem_8_1_gamma δ φ ψ
+  let θ₁ := theorem_8_1_theta δ φ ψ
   let ζ := χ + δ ^ 2 * φ ^ 2 / 2
-  obtain ⟨θ₂, hLower, hζθ₂, h83⟩ := theorem_8_3_with_bound hS hConn
+  let θ₂ := theorem_8_3_bound (max (θreq + ζ) (4 * ψ + 2)) lam ζ ψ
+  χ + θ₁ + 3 * γ + (4 * γ + 2) * δ + θ₂
+
+/-- Explicit `σ` threshold for Graph Minors XVI, (7.1). -/
+@[expose] def theorem_7_1_sigma (τ χ δ φ : ℕ) : ℕ :=
+  δ + τ + (χ + δ ^ 2 * φ ^ 2 / 2)
+
+/-- Graph Minors XVI, (7.1), pages 62 and 69–70, with explicit thresholds
+`theorem_7_1_theta` and `theorem_7_1_sigma`. -/
+theorem theorem_7_1_explicit
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    (τ χ δ lam θreq φ ψ : ℕ) (hθreq : 1 ≤ θreq) (hφ : 3 ≤ φ) (hψ : 3 ≤ ψ) :
+    1 ≤ theorem_7_1_theta χ δ lam θreq φ ψ ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (hT : IsGraphTangle G θ_star T_star),
+      HasAnimal S G T_star θ_star χ δ (theorem_7_1_theta χ δ lam θreq φ ψ)
+        (theorem_7_1_sigma τ χ δ φ) →
+      (∃ (S' : Type w) (_ : TopologicalSpace S') (_ : T2Space S')
+        (H' : Drawing S') (η' : SpanEmbedding H' G) (θ_span' : ℕ)
+        (T' : Set (Hypergraph S' (Set S') × Hypergraph S' (Set S'))),
+        IsClosedSurface S' ∧ ConnectedSpace S' ∧
+        IsObtainedByAddingHandle S S' ∧
+        φ ≤ θ_span' ∧ IsSigmaSpan G H' η' θ_star θ_span' T_star T') ∨
+      HasAnimal S G T_star θ_star χ (δ + 1) ψ τ ∨
+      (∃ (Z : Set α) (H' : Drawing S) (η' : SpanEmbedding H' (GM09.deleteVertices G Z))
+        (θ_span' : ℕ) (T' : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+        (d' : Set S → Set S → ℕ),
+        Z ⊆ V(G) ∧ Z.ncard ≤ χ + δ ^ 2 * φ ^ 2 / 2 ∧ Z.ncard < θ_star ∧
+        θreq ≤ θ_span' ∧
+        IsLevelSpan (GM09.deleteVertices G Z) H' η' (θ_star - Z.ncard) θ_span' lam (2 * ψ)
+          (deleteGraphVerticesTangle G hT.finite_V hT.finite_E Z T_star θ_star) T' d') := by
+  classical
+  letI : ConnectedSpace S := hConn
+  let γ := theorem_8_1_gamma δ φ ψ
+  let θ₁ := theorem_8_1_theta δ φ ψ
+  obtain ⟨hγ, hClear, h81⟩ := theorem_8_1_explicit.{u, v, w} hS hConn δ φ ψ hφ hψ
+  let ζ := χ + δ ^ 2 * φ ^ 2 / 2
+  let θ₂ := theorem_8_3_bound (max (θreq + ζ) (4 * ψ + 2)) lam ζ ψ
+  obtain ⟨hLower, hζθ₂, h83⟩ := theorem_8_3_explicit.{u, v, w} hS hConn
     (max (θreq + ζ) (4 * ψ + 2)) τ χ δ lam ζ ψ hψ
   have hReq : θreq + ζ ≤ θ₂ := (le_max_left _ _).trans hLower
   have hFour : 4 * ψ + 2 ≤ θ₂ := (le_max_right _ _).trans hLower
   have hθ₂ : 1 ≤ θ₂ := by omega
-  let σ := δ + τ + ζ
-  let θ := χ + θ₁ + 3 * γ + (4 * γ + 2) * δ + θ₂
-  refine ⟨θ, σ, by dsimp [θ]; omega, ?_⟩
+  let σ := theorem_7_1_sigma τ χ δ φ
+  let θ := theorem_7_1_theta χ δ lam θreq φ ψ
+  have hθ_eq : θ = χ + θ₁ + 3 * γ + (4 * γ + 2) * δ + θ₂ := rfl
+  refine ⟨by change 1 ≤ θ; rw [hθ_eq]; omega, ?_⟩
   intro α β G θ_star T_star hT hHas
   obtain ⟨H, η, θ_span, T, d, X, Y, hAnim⟩ := hHas
   have hSaved := hAnim
   obtain ⟨_, hθOrd, hSpan, hMet, hX, hXCard, hY, hYCard, _, _, _⟩ := hSaved
   let θ₀ := θ - χ
-  have hθ₀ : θ₀ = θ₁ + 3 * γ + (4 * γ + 2) * δ + θ₂ := by dsimp [θ₀, θ]; omega
+  have hθ₀ : θ₀ = θ₁ + 3 * γ + (4 * γ + 2) * δ + θ₂ := by dsimp only [θ₀]; rw [hθ_eq]; omega
   have hθ₀pos : 1 ≤ θ₀ := by rw [hθ₀]; omega
   have hθ₀θ : θ₀ ≤ θ := Nat.sub_le _ _
   have hθ₁₀ : θ₁ ≤ θ₀ := by rw [hθ₀]; omega
@@ -79,7 +115,7 @@ theorem theorem_7_1_proof
   have hXdis : Disjoint V(η.imageGraph) X := disjoint_left.mpr fun x hx hxX => (hX hxX).2 hx
   have hXlt : X.ncard < θ_span := by
     rw [hXCard]
-    have hχθ : χ < θ := by dsimp [θ]; omega
+    have hχθ : χ < θ := by rw [hθ_eq]; omega
     exact lt_of_lt_of_le hχθ hθOrd
   have hXltStar : X.ncard < θ_star := hXlt.trans_le hSpan.isControlling.theta_le
   let ηDel := restrictDeleteVertices η X hXdis
@@ -114,9 +150,10 @@ theorem theorem_7_1_proof
     have hstNe : s ≠ t := fun h => hP.2.2.1 (congrArg η.vMap h)
     refine Or.inr (Or.inl (theorem_7_1_claim_2 hAnim (by omega) ?_ ?_
       (fun _ _ _ _ => Nat.min_le_left _ _) hSymm hSelf hs ht hstNe hPG hPX hst hsyY))
-    · dsimp [θ]
+    · change ψ ≤ θ
+      rw [hθ_eq]
       omega
-    · dsimp [σ]
+    · dsimp [σ, theorem_7_1_sigma]
       omega
   · obtain ⟨Λ, Z, Tc, dc, hEnv, hZsub, hZCard, _, hComp, hCut⟩ := hEnvCase
     let K := clearEnvelopeDrawing H (ys : Set S) Λ
@@ -126,7 +163,7 @@ theorem theorem_7_1_proof
     have hAnimYS : IsAnimal G T_star θ_star H η θ₀ T₀ d₀ X (ys : Set S)
         χ ys.card θ₀ ((ζ + τ) + ys.card) := by
       rw [hys, hysCard]
-      have hσ : σ = (ζ + τ) + δ := by dsimp [σ]; omega
+      have hσ : σ = (ζ + τ) + δ := by dsimp [σ, theorem_7_1_sigma, ζ]; omega
       rw [← hσ]
       exact hNorm
     obtain ⟨Y', hNew⟩ := animal_after_clearFamily hS ys Λ hγ η
@@ -162,5 +199,14 @@ theorem theorem_7_1_proof
         θ₂ - Ztot.ncard, truncation Tc (θ₂ - Ztot.ncard), dLevel,
         hZtotSub, hZtotCard, hZtotLt, ?_, hLevel⟩)
       omega
+
+/-- Graph Minors XVI, (7.1), pages 62 and 69–70, by the complete
+proof using (8.1), (8.2), and (8.3), with all horns and hairs after
+clearing constructed. No statement of XVI is assumed. -/
+theorem theorem_7_1_proof
+     : GM16Theorem71Statement.{u, v, w} := by
+  intro S _ _ hS hConn τ χ δ lam θreq φ ψ hθreq hφ hψ
+  exact ⟨theorem_7_1_theta χ δ lam θreq φ ψ, theorem_7_1_sigma τ χ δ φ,
+    theorem_7_1_explicit.{u, v, w} hS hConn τ χ δ lam θreq φ ψ hθreq hφ hψ⟩
 
 end GraphMinor.GM16

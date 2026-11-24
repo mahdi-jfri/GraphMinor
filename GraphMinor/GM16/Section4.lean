@@ -1,8 +1,7 @@
 module
 
 public import GraphMinor.GM16.Section3
-
-import GraphMinor.GM12.Bridge
+public import GraphMinor.GM12.Bridge
 
 /-!
 # Graph Minors XVI, Section 4: Induction on the Surface
@@ -112,6 +111,31 @@ def GM16Theorem43Statement : Prop :=
         IsGraphTangle G θ_star T_star →
         ¬ ControlsMinor G L T_star →
         θ ≤ θ_span → ¬ IsSigmaSpan G H η θ_star θ_span T_star T
+
+/-- **Graph Minors XVI, (4.3)** (page 54), with explicit threshold `GM12.theorem_4_3_bound V a b vB eB`. -/
+theorem theorem_4_3_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    {α' : Type u'} {β' : Type v'} (L : Graph α' β')
+    (hS : IsClosedSurface S) (hconn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0))
+    (hVL : V(L).Finite) (hEL : E(L).Finite)
+    {vB eB : ℕ} (hvB : V(L).ncard ≤ vB) (heB : E(L).ncard ≤ eB)
+    (hdraw : CanBeDrawnIn S L) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Drawing S) (η : SpanEmbedding H G) (θ_span : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S))),
+      IsGraphTangle G θ_star T_star →
+      ¬ ControlsMinor G L T_star →
+      GM12.theorem_4_3_bound V a b vB eB ≤ θ_span →
+      ¬ IsSigmaSpan G H η θ_star θ_span T_star T := by
+  intro α β G θ_star T_star H η θ_span T hT hnot_ctrl hθ hSpan
+  have hnot_gm12 :
+      ¬ GM12.ControlsMinor (Hypergraph.ofGraph G hT.finite_V hT.finite_E) θ_star T_star L :=
+    fun h => hnot_ctrl (controlsMinor_of_gm12 h)
+  exact GraphMinor.GM12.gm16_theorem43_explicit.{u, v, w} V hV L hS hconn he hVL hEL hvB heB hdraw
+    G θ_star T_star H η θ_span T hT hnot_gm12 hθ hSpan
 
 /-- **Graph Minors XVI, (4.3)** (page 54, citing Graph Minors XII, (4.3)):
 "If $L$ is a graph and $\Sigma$ is a surface such that $L$ can be drawn in $\Sigma$, there is an

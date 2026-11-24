@@ -3,7 +3,7 @@ module
 public import GraphMinor.GM22.Section2Basic
 public import Mathlib.Algebra.BigOperators.Finprod
 
-import GraphMinor.GM22.GM21Proved
+public import GraphMinor.GM22.GM21Proved
 
 /-!
 # Graph Minors XXII, Section 2 (Part 2): Proofs of 2.3 and 2.1
@@ -734,15 +734,22 @@ theorem isVitalLinkage_of_isVitalFor_terminals {G L : Graph α β}
     rfl
   exact hvit.2.2 L' hL'.1 heff
 
-/-- **Graph Minors XXII, 2.1** (Section 2, page 531, proved on page 532):
-"For every integer $p \ge 0$, there exists $w \ge 0$ such that, if a graph $G$ has a subgraph which
-is vital for some $Z \subseteq V(G)$ with $|Z| \le p$, then $G$ has tree-width $\le w$." -/
-theorem theorem_2_1_proof  (p : ℕ) :
-    ∃ w : ℕ, ∀ {α : Type u} {β : Type v} (G L : Graph α β) (Z : Set α),
+/-- Explicit tree-width bound for **Graph Minors XXII, 2.1**, parameterized by an upper bound `V`
+on `GM07.vModel`. -/
+def theorem_2_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  GM21.theorem_1_1_bound V (7 * p)
+
+/-- Explicit version of **Graph Minors XXII, 2.1** (Section 2, page 531, proved on page 532) with
+tree-width bound `theorem_2_1_bound V p`. -/
+theorem theorem_2_1_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV_bound : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G L : Graph α β) (Z : Set α),
       V(G).Finite → E(G).Finite → Z ⊆ V(G) → Z.ncard ≤ p →
-      IsVitalFor G L Z → TreeWidthLE G w := by
-  obtain ⟨w, hw⟩ := GraphMinor.GM22.gm21Theorem11.{u, v} (7 * p)
-  refine ⟨w, fun {α} {β} G L Z hV hE hZ hZp hvit => ?_⟩
+      IsVitalFor G L Z → TreeWidthLE G (theorem_2_1_bound V p) := by
+  dsimp only [theorem_2_1_bound]
+  intro α β G L Z hV hE hZ hZp hvit
+  have hw := GraphMinor.GM22.gm21Theorem11_explicit.{u, v} V hV_bound (7 * p) (α := α) (β := β)
   have ⟨hF, hVL, hdeg2⟩ := theorem_2_2_proof hE hZ hvit
   have hVL_fin : V(L).Finite := hVL.symm ▸ hV
   have hEL_fin : E(L).Finite := hE.subset hvit.1.edgeSet_mono
@@ -845,5 +852,15 @@ theorem theorem_2_1_proof  (p : ℕ) :
     ⟨⟨hlink_L₁, by rw [hterm_L₁]; exact hZ'_card⟩,
       isVitalLinkage_of_isVitalFor_terminals hlink_L₁ hvit_term⟩
   exact hw G (L.deleteEdges F) hV hE hvit_plink
+
+/-- **Graph Minors XXII, 2.1** (Section 2, page 531, proved on page 532):
+"For every integer $p \ge 0$, there exists $w \ge 0$ such that, if a graph $G$ has a subgraph which
+is vital for some $Z \subseteq V(G)$ with $|Z| \le p$, then $G$ has tree-width $\le w$." -/
+theorem theorem_2_1_proof (p : ℕ) :
+    ∃ w : ℕ, ∀ {α : Type u} {β : Type v} (G L : Graph α β) (Z : Set α),
+      V(G).Finite → E(G).Finite → Z ⊆ V(G) → Z.ncard ≤ p →
+      IsVitalFor G L Z → TreeWidthLE G w :=
+  ⟨theorem_2_1_bound GM07.vModel p,
+    theorem_2_1_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 end GraphMinor.GM22

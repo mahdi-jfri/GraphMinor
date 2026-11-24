@@ -67,6 +67,33 @@ theorem sphereWallGridVertex_row_edges (θ : ℕ) (j : Fin θ) :
         exact Or.inl ⟨rfl, pathGraph_adj.mp hStep⟩
       · rw [Sym2.map_mk, ha, hb]
 
+/-- Explicit tangle order threshold for obtaining a wall minor with no small-side row,
+from Robertson, Seymour and Thomas (1994), (2.3). -/
+@[expose] def wallMinorBound (θ : ℕ) : ℕ :=
+  20 ^ ((2 * θ + 1) ^ 4 * (2 * (2 * θ + 1) - 1))
+
+/-- Explicit version of `exists_wall_minor_no_small_row` with threshold `wallMinorBound θ`. -/
+theorem exists_wall_minor_no_small_row_explicit (θ : ℕ) (hθ : 1 ≤ θ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_G : ℕ)
+      (T : Set (Hypergraph α β × Hypergraph α β)),
+      IsGraphTangle G θ_G T → wallMinorBound θ ≤ θ_G →
+      ∃ (ηv : Fin (2 * θ + 1) × Fin θ → Set α)
+        (ηe : Sym2 (Fin (2 * θ + 1) × Fin θ) → β),
+        IsMinorModel (sphereWallGraph θ) G ηv ηe ∧
+        ∀ A B : Hypergraph α β, (A,B) ∈ T → separationOrder A B ≤ 2 * θ →
+          ∀ j : Fin θ, ¬ ηe '' E(sphereWallRow θ j) ⊆ A.edgeSet := by
+  intro α β G θ_G T hT hθG
+  obtain ⟨W, hW⟩ := RST94.theorem_5_7 (isGraph_ofGraph G hT.finite_V hT.finite_E)
+    hT.isTangle (g := 2 * θ + 1) (by omega) hθG
+  obtain ⟨ηe, hModel, hp⟩ := RST94.grid_model hW (by omega)
+  refine ⟨(fun u => W u.1 u.2) ∘ sphereWallGridVertex θ, ηe ∘ Sym2.map (sphereWallGridVertex θ), ?_, ?_⟩
+  · exact IsMinorModel.restrict_simpleGraph_copy hModel (sphereWallGridVertex θ)
+      (sphereWallGridVertex_injective θ) (fun _ _ h => sphereWallGridVertex_adj h)
+  · intro A B hAB hOrd j hRow
+    apply RST94.no_row hT.isTangle hW (by omega) hp hAB (by omega) (Fin.castLE (by omega) j)
+    rw [← sphereWallGridVertex_row_edges θ j, image_image]
+    exact hRow
+
 /-- Graph Minors XVI, (4.2), Step (2) and the following paragraph,
 page 53: a sufficiently large tangle has the specified wall minor,
 and its small sides of order at most `2θ` contain no complete wall row.
@@ -80,17 +107,8 @@ theorem exists_wall_minor_no_small_row (θ : ℕ) (hθ : 1 ≤ θ) :
           (ηe : Sym2 (Fin (2 * θ + 1) × Fin θ) → β),
           IsMinorModel (sphereWallGraph θ) G ηv ηe ∧
           ∀ A B : Hypergraph α β, (A,B) ∈ T → separationOrder A B ≤ 2 * θ →
-            ∀ j : Fin θ, ¬ ηe '' E(sphereWallRow θ j) ⊆ A.edgeSet := by
-  obtain ⟨θ_star, hθ_star, hGrid⟩ := RST94.rst94_theorem_2_3 θ hθ
-  refine ⟨θ_star, hθ_star, ?_⟩
-  intro α β G θ_G T hT hθG
-  obtain ⟨ηv, ηe, hModel, hNoRow⟩ := hGrid G θ_G T hT hθG
-  refine ⟨ηv ∘ sphereWallGridVertex θ, ηe ∘ Sym2.map (sphereWallGridVertex θ), ?_, ?_⟩
-  · exact IsMinorModel.restrict_simpleGraph_copy hModel (sphereWallGridVertex θ)
-      (sphereWallGridVertex_injective θ) (fun _ _ h => sphereWallGridVertex_adj h)
-  · intro A B hAB hOrd j hRow
-    apply hNoRow A B hAB hOrd (Fin.castLE (by omega) j)
-    rw [← sphereWallGridVertex_row_edges θ j, image_image]
-    exact hRow
+            ∀ j : Fin θ, ¬ ηe '' E(sphereWallRow θ j) ⊆ A.edgeSet :=
+  ⟨wallMinorBound θ, Nat.one_le_pow _ _ (by decide),
+    exists_wall_minor_no_small_row_explicit.{u, v} θ hθ⟩
 
 end GraphMinor.GM16

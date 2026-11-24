@@ -32,6 +32,7 @@ private theorem augment_vertices
     {S : Type*} [TopologicalSpace S] [T2Space S] (hS : IsClosedSurface S)
     (Γ : Drawing S) {V : Set S} (hV : V.Finite) (hsub : V ⊆ Γ.V) :
     ∃ H : Drawing S, Γ.IsSubdrawing H ∧
+      H.V.ncard ≤ Γ.V.ncard + V.ncard ∧ H.E.ncard ≤ Γ.E.ncard + V.ncard ∧
       (∀ v ∈ V, ∃ e, H.toGraph.Inc e v) ∧
       ∀ v ∈ H.V, v ∈ Γ.V ∨ ∃ e, H.toGraph.Inc e v := by
   classical
@@ -39,20 +40,27 @@ private theorem augment_vertices
   induction V, hV using Set.Finite.induction_on with
   | empty =>
     intro _
-    exact ⟨Γ, Drawing.IsSubdrawing.refl Γ, by simp, fun v hv => Or.inl hv⟩
+    exact ⟨Γ, Drawing.IsSubdrawing.refl Γ, by simp, by simp, by simp, fun v hv => Or.inl hv⟩
   | @insert v V hv hV ih =>
     intro hsub
-    obtain ⟨K, hΓK, hdone, hnew⟩ := ih (fun x hx => hsub (Or.inr hx))
+    obtain ⟨K, hΓK, hKV, hKE, hdone, hnew⟩ := ih (fun x hx => hsub (Or.inr hx))
+    have hVcard : (insert v V).ncard = V.ncard + 1 := Set.ncard_insert_of_notMem hv hV
     have hvK : v ∈ K.V := hΓK.1 (hsub (Or.inl rfl))
     by_cases hvinc : ∃ e, K.toGraph.Inc e v
-    · refine ⟨K, hΓK, ?_, hnew⟩
+    · refine ⟨K, hΓK, by omega, by omega, ?_, hnew⟩
       intro x hx
       rcases hx with hx | hx
       · exact hx ▸ hvinc
       · exact hdone x hx
-    · obtain ⟨H, w, e, hKH, hHV, _, hl⟩ := exists_pendant_augmentation hS K hvK
+    · obtain ⟨H, w, e, hKH, hHV, hHE, _, hl⟩ := exists_pendant_augmentation_edges hS K hvK
         (fun e he => hvinc ⟨e, he⟩)
-      refine ⟨H, hΓK.trans hKH, ?_, ?_⟩
+      have hHVcard : H.V.ncard ≤ K.V.ncard + 1 := by
+        rw [hHV]
+        exact Set.ncard_insert_le w K.V
+      have hHEcard : H.E.ncard ≤ K.E.ncard + 1 := by
+        rw [hHE]
+        exact Set.ncard_insert_le e K.E
+      refine ⟨H, hΓK.trans hKH, by omega, by omega, ?_, ?_⟩
       · intro x hx
         rcases hx with hx | hx
         · exact hx ▸ ⟨e, hl.inc_left⟩
@@ -66,6 +74,20 @@ private theorem augment_vertices
           · exact Or.inl hxΓ
           · exact Or.inr ⟨f, inc_of_subdrawing hKH hf⟩
 
+/-- The isolated-vertex augmentation in XII (4.3), page 249, with vertex and edge bounds. -/
+theorem exists_augmentation_without_isolated_vertices_bounded
+    {S : Type*} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (Γ : Drawing S) :
+    ∃ H : Drawing S, Γ.IsSubdrawing H ∧
+      H.V.ncard ≤ 2 * Γ.V.ncard ∧ H.E.ncard ≤ Γ.E.ncard + Γ.V.ncard ∧
+      ∀ v ∈ H.V, ∃ e, H.toGraph.Inc e v := by
+  obtain ⟨H, hΓH, hHV, hHE, hdone, hnew⟩ := augment_vertices hS Γ Γ.finite_V subset_rfl
+  refine ⟨H, hΓH, by omega, hHE, ?_⟩
+  intro v hv
+  rcases hnew v hv with hvΓ | hinc
+  · exact hdone v hvΓ
+  · exact hinc
+
 /-- The isolated-vertex augmentation in XII (4.3), page 249.
 Every original vertex remains, and every resulting vertex is incident
 with an edge. -/
@@ -73,12 +95,23 @@ theorem exists_augmentation_without_isolated_vertices
     {S : Type*} [TopologicalSpace S] [T2Space S]
     (hS : IsClosedSurface S) (Γ : Drawing S) :
     ∃ H : Drawing S, Γ.IsSubdrawing H ∧ ∀ v ∈ H.V, ∃ e, H.toGraph.Inc e v := by
-  obtain ⟨H, hΓH, hdone, hnew⟩ := augment_vertices hS Γ Γ.finite_V subset_rfl
-  refine ⟨H, hΓH, ?_⟩
-  intro v hv
-  rcases hnew v hv with hvΓ | hinc
-  · exact hdone v hvΓ
-  · exact hinc
+  obtain ⟨H, hΓH, _, _, hinc⟩ := exists_augmentation_without_isolated_vertices_bounded hS Γ
+  exact ⟨H, hΓH, hinc⟩
+
+/-- The geometric construction of the loopless minimum-degree-two replacement in XII (4.3),
+with explicit vertex and edge bounds in terms of `Γ`. -/
+theorem exists_loopless_minimum_degree_two_replacement_bounded
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (Γ : Drawing S) :
+    ∃ (Γ₀ K H : Drawing S) (A B : Set S → Set S) (m x y : Set S → S),
+      Γ.IsSubdrawing Γ₀ ∧ SplitData Γ₀ K A B m x y ∧ K.IsSubdrawing H ∧
+        H.V.ncard ≤ 3 * Γ.V.ncard + Γ.E.ncard ∧ H.E.ncard ≤ 4 * Γ.V.ncard + 4 * Γ.E.ncard ∧
+        (∀ e z, ¬ H.toGraph.IsLink e z z) ∧
+        ∀ z ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e z ∧ H.toGraph.Inc f z := by
+  obtain ⟨Γ₀, hΓ₀, hV₀, hE₀, hinc⟩ := exists_augmentation_without_isolated_vertices_bounded hS Γ
+  obtain ⟨K, H, A, B, m, x, y, hd, hKH, _, hHV, hHE, hloop, htwo⟩ :=
+    exists_subdivision_in_minimum_degree_two_drawing_bounded hS Γ₀ hinc
+  exact ⟨Γ₀, K, H, A, B, m, x, y, hΓ₀, hd, hKH, by omega, by omega, hloop, htwo⟩
 
 /-- The geometric construction of the loopless minimum-degree-two
 replacement in XII (4.3), page 249. Pendant augmentation retains
@@ -91,9 +124,8 @@ theorem exists_loopless_minimum_degree_two_replacement
       Γ.IsSubdrawing Γ₀ ∧ SplitData Γ₀ K A B m x y ∧ K.IsSubdrawing H ∧
         (∀ e z, ¬ H.toGraph.IsLink e z z) ∧
         ∀ z ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e z ∧ H.toGraph.Inc f z := by
-  obtain ⟨Γ₀, hΓ₀, hinc⟩ := exists_augmentation_without_isolated_vertices hS Γ
-  obtain ⟨K, H, A, B, m, x, y, hd, hKH, _, hloop, htwo⟩ :=
-    exists_subdivision_in_minimum_degree_two_drawing hS Γ₀ hinc
+  obtain ⟨Γ₀, K, H, A, B, m, x, y, hΓ₀, hd, hKH, _, _, hloop, htwo⟩ :=
+    exists_loopless_minimum_degree_two_replacement_bounded hS Γ
   exact ⟨Γ₀, K, H, A, B, m, x, y, hΓ₀, hd, hKH, hloop, htwo⟩
 
 end GraphMinor.GM12

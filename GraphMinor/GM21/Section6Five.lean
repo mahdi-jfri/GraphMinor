@@ -476,25 +476,29 @@ universe u v w
 
 open Set GraphMinor.Surface GraphMinor.GM21.Cuts
 
-/-- **Graph Minors XXI, (6.5)** (page 25 of the preprint): "*For all integers $p \ge 0$ and
-$q \ge 1$ there exists $\lambda \ge 0$ such that, if $G$ has a presentation in a disc $\Sigma$ of
-depth $\le q$ and defect 2, and there is an exhaustive vital $p$-linkage in $G$, then there are at
-most $\lambda$ $\Sigma$-jumps.*"
+/-- Explicit jump bound for Graph Minors XXI, (6.5). -/
+def theorem_6_5_bound (p q : ℕ) : ℕ :=
+  theorem_2_6_bound p (2 * q) * (2 * theorem_6_4_bound (p + 2 * q) q + 1)
 
-Follows the paper's proof: choose $n$ from (2.6) for $(p, 2q)$ and $\lambda'$ from (6.4) for
-$(p + 2q, q)$, and set $\lambda = n(2\lambda' + 1)$. -/
-theorem theorem_6_5_proof (p q : ℕ) (hq : 1 ≤ q) :
-    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
+theorem theorem_6_5_bound_mono {p₁ p₂ q₁ q₂ : ℕ} (hp : p₁ ≤ p₂) (hq : q₁ ≤ q₂) :
+    theorem_6_5_bound p₁ q₁ ≤ theorem_6_5_bound p₂ q₂ := by
+  dsimp only [theorem_6_5_bound]
+  refine Nat.mul_le_mul (theorem_2_6_bound_mono hp (by omega)) ?_
+  have h4 := theorem_6_4_bound_mono (p₁ := p₁ + 2 * q₁) (p₂ := p₂ + 2 * q₂) (by omega) hq
+  omega
+
+/-- Explicit version of **Graph Minors XXI, (6.5)** with bound `theorem_6_5_bound p q`. -/
+theorem theorem_6_5_explicit (p q : ℕ) (hq : 1 ≤ q) :
+    ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
       (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
       (ιE : Set S → β) (F_star : Fin 2 → Set S) (H : Fin 2 → Hypergraph α β)
       (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
       GM06.IsClosedDiscSpace S → G.IsGraph →
       PresentationHasDepthLe G Γ Γ_sub ιV ιE 2 F_star H μ q →
       IsExhaustiveLinkage G Γ_sub 2 H L → IsPLinkage G L p →
-      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam := by
-  obtain ⟨n, hn2, hn⟩ := theorem_2_6_proof.{u, v} p (2 * q)
-  obtain ⟨lam', hlam'⟩ := theorem_6_4_proof.{u, v, w} (p + 2 * q) q hq
-  refine ⟨n * (2 * lam' + 1), ?_⟩
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ theorem_6_5_bound p q := by
+  let n := theorem_2_6_bound p (2 * q)
+  have hn2 : 2 ≤ n := two_le_theorem_2_6_bound p (2 * q)
   intro S _ α β G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL
   obtain ⟨qf, h_pres, hqf, -⟩ := hdepth
   have hC := DiscCut.bd_mem_cuffs hD
@@ -506,24 +510,56 @@ theorem theorem_6_5_proof (p q : ℕ) (hq : 1 ≤ q) :
   obtain ⟨f, w₀, w₁, a, b, hW, -⟩ := DiscCut.exists_window h_pres hD (0 : Fin 2)
   rcases hW.lt_or_lt h_pres (by decide : (0 : Fin 2) ≠ 1) with h01 | h10
   · exact DiscCut.ncard_jumpSet_le_two_supports h_pres hC hW hK hdeg hD hG hL hpL
-      (fun j => hqf j) le_rfl (by omega) (hn G L)
+      (fun j => hqf j) le_rfl (by omega) (theorem_2_6_explicit.{u, v} p (2 * q) G L)
       (fun G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L' =>
-        hlam' G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L')
+        theorem_6_4_explicit.{u, v, w} (p + 2 * q) q hq G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L')
       h01 (fun j => by fin_cases j <;> simp)
   · exact DiscCut.ncard_jumpSet_le_two_supports h_pres hC hW hK hdeg hD hG hL hpL
-      (fun j => hqf j) le_rfl (by omega) (hn G L)
+      (fun j => hqf j) le_rfl (by omega) (theorem_2_6_explicit.{u, v} p (2 * q) G L)
       (fun G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L' =>
-        hlam' G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L')
+        theorem_6_4_explicit.{u, v, w} (p + 2 * q) q hq G' Γ' Γ_sub' ιV' ιE' F_star' H' μ' L')
       h10 (fun j => by fin_cases j <;> simp)
 
-/-- **Graph Minors XXI, (6.6)** (page 27 of the preprint): "*For all integers $p \ge 0$ and
-$q \ge 1$ there exists $\lambda \ge 0$ such that, if $G$ has a presentation in a disc $\Sigma$ of
-depth $\le q$ and defect $3$, and there is an exhaustive vital $p$-linkage $G$, then there are at
-most $\lambda$ $\Sigma$-jumps.*"
+/-- **Graph Minors XXI, (6.5)** (page 25 of the preprint). -/
+theorem theorem_6_5_proof (p q : ℕ) (hq : 1 ≤ q) :
+    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
+      (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
+      (ιE : Set S → β) (F_star : Fin 2 → Set S) (H : Fin 2 → Hypergraph α β)
+      (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
+      GM06.IsClosedDiscSpace S → G.IsGraph →
+      PresentationHasDepthLe G Γ Γ_sub ιV ιE 2 F_star H μ q →
+      IsExhaustiveLinkage G Γ_sub 2 H L → IsPLinkage G L p →
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam :=
+  ⟨theorem_6_5_bound p q, theorem_6_5_explicit.{u, v, w} p q hq⟩
 
-Follows the paper's proof: choose $\lambda'$ from (6.5) for $(p + 2q, q)$, set $\lambda = 3\lambda'$,
-and cut $\Sigma$ into three closed discs $\Delta_1, \Delta_2, \Delta_3$ through a region $r_0$
-incident with vertices in all three supports (`ThreeSupports.encard_sigmaJumps_le_three_of_region`). -/
+/-- Explicit jump bound for Graph Minors XXI, (6.6). -/
+def theorem_6_6_bound (p q : ℕ) : ℕ :=
+  3 * theorem_6_5_bound (p + 2 * q) q
+
+theorem theorem_6_6_bound_mono {p₁ p₂ q₁ q₂ : ℕ} (hp : p₁ ≤ p₂) (hq : q₁ ≤ q₂) :
+    theorem_6_6_bound p₁ q₁ ≤ theorem_6_6_bound p₂ q₂ :=
+  Nat.mul_le_mul_left 3 (theorem_6_5_bound_mono (by omega) hq)
+
+/-- Explicit version of **Graph Minors XXI, (6.6)** with bound `theorem_6_6_bound p q`. -/
+theorem theorem_6_6_explicit (p q : ℕ) (hq : 1 ≤ q) :
+    ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
+      (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
+      (ιE : Set S → β) (F_star : Fin 3 → Set S) (H : Fin 3 → Hypergraph α β)
+      (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
+      GM06.IsClosedDiscSpace S → G.IsGraph →
+      PresentationHasDepthLe G Γ Γ_sub ιV ιE 3 F_star H μ q →
+      IsExhaustiveLinkage G Γ_sub 3 H L → IsPLinkage G L p →
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ theorem_6_6_bound p q := by
+  intro S _ α β G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL
+  obtain ⟨qf, h_pres, hqf, -⟩ := hdepth
+  have : T2Space S := h_pres.is_surface.2.1
+  obtain ⟨f, w₀, w₁, a, b, hW, -⟩ := DiscCut.exists_window h_pres hD (0 : Fin 3)
+  have h := ThreeSupports.encard_sigmaJumps_le_three_of_region hD h_pres hG (fun j => hqf j)
+    hL hpL hW (fun G' Γ' Γ_sub' ιV' ιE' F' H' μ' L' =>
+      theorem_6_5_explicit.{u, v, w} (p + 2 * q) q hq G' Γ' Γ_sub' ιV' ιE' F' H' μ' L')
+  exact h.trans_eq (Nat.cast_mul 3 _).symm
+
+/-- **Graph Minors XXI, (6.6)** (page 27 of the preprint). -/
 theorem theorem_6_6_proof (p q : ℕ) (hq : 1 ≤ q) :
     ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v}
       (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
@@ -532,39 +568,44 @@ theorem theorem_6_6_proof (p q : ℕ) (hq : 1 ≤ q) :
       GM06.IsClosedDiscSpace S → G.IsGraph →
       PresentationHasDepthLe G Γ Γ_sub ιV ιE 3 F_star H μ q →
       IsExhaustiveLinkage G Γ_sub 3 H L → IsPLinkage G L p →
-      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam := by
-  obtain ⟨lam', hlam'⟩ := theorem_6_5_proof.{u, v, w} (p + 2 * q) q hq
-  refine ⟨3 * lam', ?_⟩
-  intro S _ α β G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL
-  obtain ⟨qf, h_pres, hqf, -⟩ := hdepth
-  have : T2Space S := h_pres.is_surface.2.1
-  obtain ⟨f, w₀, w₁, a, b, hW, -⟩ := DiscCut.exists_window h_pres hD (0 : Fin 3)
-  have h := ThreeSupports.encard_sigmaJumps_le_three_of_region hD h_pres hG (fun j => hqf j)
-    hL hpL hW (fun G' Γ' Γ_sub' ιV' ιE' F' H' μ' L' =>
-      hlam' G' Γ' Γ_sub' ιV' ιE' F' H' μ' L')
-  exact h.trans_eq (Nat.cast_mul 3 lam').symm
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam :=
+  ⟨theorem_6_6_bound p q, theorem_6_6_explicit.{u, v, w} p q hq⟩
 
-/-- **Graph Minors XXI, (6.7)** (page 27 of the preprint): "*For all integers $p, r \ge 0$
-and $q \ge 1$ there exists $\lambda \ge 0$ such that, if $G$ has a presentation in a disc
-$\Sigma$ of depth $\le q$ and defect $\le r$, and there is an exhaustive vital $p$-linkage in
-$G$, then there are at most $\lambda$ $\Sigma$-jumps.*"
+/-- Base bound for discs of defect `≤ 3`. -/
+def discBaseBound (p q : ℕ) : ℕ :=
+  max (theorem_6_4_bound p q) (max (theorem_6_5_bound p q) (theorem_6_6_bound p q))
 
-Follows the paper's proof by induction on $r$: for $r \le 3$ the result follows from (6.4), (6.5)
-and (6.6); for $r \ge 4$, set $\lambda = 2\lambda'$ where $\lambda'$ is from the induction
-hypothesis for $(p + 2q, r - 1, q)$, and cut $\Sigma$ along a proper line in a region incident with
-three supports (`ThreeSupports.encard_sigmaJumps_le_two_of_region_three`). -/
-theorem theorem_6_7_proof (p r q : ℕ) (hq : 1 ≤ q) :
-    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v} {r' : ℕ}
+theorem discBaseBound_mono {p₁ p₂ q₁ q₂ : ℕ} (hp : p₁ ≤ p₂) (hq : q₁ ≤ q₂) :
+    discBaseBound p₁ q₁ ≤ discBaseBound p₂ q₂ :=
+  max_le_max (theorem_6_4_bound_mono hp hq)
+    (max_le_max (theorem_6_5_bound_mono hp hq) (theorem_6_6_bound_mono hp hq))
+
+/-- Explicit closed-form jump bound for Graph Minors XXI, (6.7):
+`2 ^ (r - 3) * discBaseBound (p + 2 * q * (r - 3)) q`. -/
+def theorem_6_7_bound (p r q : ℕ) : ℕ :=
+  2 ^ (r - 3) * discBaseBound (p + 2 * q * (r - 3)) q
+
+theorem theorem_6_7_bound_mono {p₁ p₂ r₁ r₂ q₁ q₂ : ℕ} (hp : p₁ ≤ p₂) (hr : r₁ ≤ r₂) (hq : q₁ ≤ q₂) :
+    theorem_6_7_bound p₁ r₁ q₁ ≤ theorem_6_7_bound p₂ r₂ q₂ := by
+  dsimp only [theorem_6_7_bound]
+  refine Nat.mul_le_mul (Nat.pow_le_pow_right (by decide) (Nat.sub_le_sub_right hr 3)) ?_
+  refine discBaseBound_mono ?_ hq
+  have hmul : 2 * q₁ * (r₁ - 3) ≤ 2 * q₂ * (r₂ - 3) :=
+    Nat.mul_le_mul (by omega) (Nat.sub_le_sub_right hr 3)
+  omega
+
+/-- Explicit version of **Graph Minors XXI, (6.7)** with bound `theorem_6_7_bound p r q`. -/
+theorem theorem_6_7_explicit (p r q : ℕ) (hq : 1 ≤ q) :
+    ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v} {r' : ℕ}
       (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
       (ιE : Set S → β) (F_star : Fin r' → Set S) (H : Fin r' → Hypergraph α β)
       (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
       r' ≤ r → GM06.IsClosedDiscSpace S → G.IsGraph →
       PresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star H μ q →
       IsExhaustiveLinkage G Γ_sub r' H L → IsPLinkage G L p →
-      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam := by
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ theorem_6_7_bound p r q := by
   induction r generalizing p with
   | zero =>
-    refine ⟨0, ?_⟩
     intro S _ α β r' G Γ Γ_sub ιV ιE F_star H μ L hr hD _ hdepth _ _
     obtain ⟨qf, h_pres, -⟩ := hdepth
     have hC := DiscCut.bd_mem_cuffs hD
@@ -577,11 +618,10 @@ theorem theorem_6_7_proof (p r q : ℕ) (hq : 1 ≤ q) :
     omega
   | succ r_prev ih =>
     rcases le_or_gt (r_prev + 1) 3 with hr3 | hr4
-    · -- Base cases `r ≤ 3`: use (6.4), (6.5) and (6.6).
-      obtain ⟨lam₁, hlam₁⟩ := theorem_6_4_proof.{u, v, w} p q hq
-      obtain ⟨lam₂, hlam₂⟩ := theorem_6_5_proof.{u, v, w} p q hq
-      obtain ⟨lam₃, hlam₃⟩ := theorem_6_6_proof.{u, v, w} p q hq
-      refine ⟨max lam₁ (max lam₂ lam₃), ?_⟩
+    · have hsub0 : r_prev + 1 - 3 = 0 := by omega
+      have hbd_eq : theorem_6_7_bound p (r_prev + 1) q = discBaseBound p q := by
+        simp [theorem_6_7_bound, hsub0]
+      rw [hbd_eq]
       intro S _ α β r' G Γ Γ_sub ιV ιE F_star H μ L hr hD hG hdepth hL hpL
       have hr0 : 0 < r' := by
         obtain ⟨qf, h_pres, -⟩ := hdepth
@@ -593,20 +633,25 @@ theorem theorem_6_7_proof (p r q : ℕ) (hq : 1 ≤ q) :
         obtain ⟨j, -⟩ := h
         exact Nat.lt_of_le_of_lt (Nat.zero_le _) j.2
       rcases (by omega : r' = 1 ∨ r' = 2 ∨ r' = 3) with rfl | rfl | rfl
-      · exact (hlam₁ G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
+      · exact (theorem_6_4_explicit.{u, v, w} p q hq G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
           (Nat.cast_le.mpr (le_max_left _ _))
-      · exact (hlam₂ G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
+      · exact (theorem_6_5_explicit.{u, v, w} p q hq G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
           (Nat.cast_le.mpr ((le_max_left _ _).trans (le_max_right _ _)))
-      · exact (hlam₃ G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
+      · exact (theorem_6_6_explicit.{u, v, w} p q hq G Γ Γ_sub ιV ιE F_star H μ L hD hG hdepth hL hpL).trans
           (Nat.cast_le.mpr ((le_max_right _ _).trans (le_max_right _ _)))
-    · -- Inductive step `4 ≤ r_prev + 1`: set `lam = 2 * lam'`.
-      obtain ⟨lam', hlam'⟩ := ih (p + 2 * q)
-      refine ⟨2 * lam', ?_⟩
+    · have hstep_eq : theorem_6_7_bound p (r_prev + 1) q = 2 * theorem_6_7_bound (p + 2 * q) r_prev q := by
+        dsimp only [theorem_6_7_bound]
+        have hsub : r_prev + 1 - 3 = (r_prev - 3) + 1 := by omega
+        rw [hsub, Nat.pow_succ, show 2 ^ (r_prev - 3) * 2 * discBaseBound (p + 2 * q * (r_prev - 3 + 1)) q =
+          2 * (2 ^ (r_prev - 3) * discBaseBound (p + 2 * q * (r_prev - 3 + 1)) q) by ring]
+        have harg : p + 2 * q * (r_prev - 3 + 1) = p + 2 * q + 2 * q * (r_prev - 3) := by ring
+        rw [harg]
+      rw [hstep_eq]
       intro S _ α β r' G Γ Γ_sub ιV ιE F_star H μ L hr hD hG hdepth hL hpL
       rcases (by omega : r' ≤ r_prev ∨ r' = r_prev + 1) with hr' | rfl
       · have hpL' : IsPLinkage G L (p + 2 * q) :=
           ⟨hpL.1, hpL.2.trans (Nat.le_add_right p (2 * q))⟩
-        exact (hlam' G Γ Γ_sub ιV ιE F_star H μ L hr' hD hG hdepth hL hpL').trans
+        exact (ih (p + 2 * q) G Γ Γ_sub ιV ιE F_star H μ L hr' hD hG hdepth hL hpL').trans
           (Nat.cast_le.mpr (by omega))
       · obtain ⟨qf, h_pres, hqf, -⟩ := hdepth
         have : T2Space S := h_pres.is_surface.2.1
@@ -614,8 +659,20 @@ theorem theorem_6_7_proof (p r q : ℕ) (hq : 1 ≤ q) :
         have h := ThreeSupports.encard_sigmaJumps_le_two_of_region_three hD h_pres hG
           (fun j => hqf j) hL hpL hW (by omega : 4 ≤ r_prev + 1)
           (fun G' Γ' Γ_sub' ιV' ιE' F' H' μ' L' hlt =>
-            hlam' G' Γ' Γ_sub' ιV' ιE' F' H' μ' L' (Nat.lt_succ_iff.mp hlt))
-        exact h.trans_eq (by rw [← two_mul]; exact (Nat.cast_mul 2 lam').symm)
+            ih (p + 2 * q) G' Γ' Γ_sub' ιV' ιE' F' H' μ' L' (Nat.lt_succ_iff.mp hlt))
+        exact h.trans_eq (by rw [← two_mul]; exact (Nat.cast_mul 2 _).symm)
+
+/-- **Graph Minors XXI, (6.7)** (page 27 of the preprint). -/
+theorem theorem_6_7_proof (p r q : ℕ) (hq : 1 ≤ q) :
+    ∃ lam : ℕ, ∀ {S : Type w} [TopologicalSpace S] {α : Type u} {β : Type v} {r' : ℕ}
+      (G : Hypergraph α β) (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α)
+      (ιE : Set S → β) (F_star : Fin r' → Set S) (H : Fin r' → Hypergraph α β)
+      (μ : BoundaryUnit S → Hypergraph α β) (L : Hypergraph α β),
+      r' ≤ r → GM06.IsClosedDiscSpace S → G.IsGraph →
+      PresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star H μ q →
+      IsExhaustiveLinkage G Γ_sub r' H L → IsPLinkage G L p →
+      (sigmaJumps Γ Γ_sub ιV).encard ≤ lam :=
+  ⟨theorem_6_7_bound p r q, theorem_6_7_explicit.{u, v, w} p r q hq⟩
 
 end GM21
 end GraphMinor

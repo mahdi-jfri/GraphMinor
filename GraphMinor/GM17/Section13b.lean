@@ -183,34 +183,130 @@ theorem le_sigmaBound {σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ 
     omega
   exact Finset.le_sup (f := fun t : ℕ × ℕ × ℕ × ℕ => σ (SurfaceModel t.1 t.2.1 t.2.2.1) p t.2.2.2) hm
 
-/-- **Graph Minors XVII, (13.3)** (page 205): "For any standard $\sigma$ and all $p \ge 1$ and $h$, $z_0 \ge 0$, there exist $\theta$, $z$ with $\theta > z \ge z_0$ and with the following property. Let $\mathcal{T}$ be a tangle of order $\ge \theta$ in a graph $G$, let $Z_0 \subseteq V(G)$ with $|Z_0| \le z_0$, and let $\pi_0$ be a $(\mathcal{T} \setminus Z_0)$-central portrayal of $G \setminus Z_0$ with warp $\le p$ and with $h_p(\pi_0) \le h$. Then there exist $Z \subseteq V(G)$ with $Z_0 \subseteq Z$ such that $|Z| \le z$, and a $(\mathcal{T} \setminus Z)$-central portrayal $\pi = (\Sigma, \Gamma, \alpha, \beta, \gamma)$ of $G \setminus Z$, such that $\pi$ is simpler than or resembles $\pi_0$, and $\pi$ is $\sigma(\Sigma, p, |Z|)$-redundant."
+/-- Maximum of `f i` for `i < n` (or `0` when `n = 0`), via primitive recursion. -/
+@[expose] def maxRange (n : ℕ) (f : ℕ → ℕ) : ℕ :=
+  Nat.rec 0 (fun i acc => max acc (f i)) n
 
-We read a bound on all `σ` from `sigmaBound`, so the paper's reduction to its condition (1) is not needed. -/
-theorem theorem_13_3_proof (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ) (hσ : IsStandard σ) {p : ℕ} (hp : 1 ≤ p) (h z₀ : ℕ) :
-    ∃ θ z : ℕ, z < θ ∧ z₀ ≤ z ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
-      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → θ ≤ θ' → ∀ Z₀ ⊆ G.vertexSet, Z₀.ncard ≤ z₀ →
-      ∀ π₀ : Portrayal (G.deleteVertices Z₀), π₀.IsCentral (deleteVerticesTangle G Z₀ 𝒯 θ') → π₀.warp ≤ p → π₀.hp p ≤ h →
-      ∃ Z, Z₀ ⊆ Z ∧ Z ⊆ G.vertexSet ∧ Z.ncard ≤ z ∧ ∃ π : Portrayal (G.deleteVertices Z),
-        π.IsCentral (deleteVerticesTangle G Z 𝒯 θ') ∧ (π.IsSimpler π₀ ∨ π.Resembles π₀) ∧
-        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) := by
-  induction h generalizing z₀ with
+theorem le_maxRange {n i : ℕ} (f : ℕ → ℕ) (hi : i < n) : f i ≤ maxRange n f := by
+  induction n with
+  | zero => omega
+  | succ n ih =>
+    rcases Nat.lt_succ_iff_lt_or_eq.mp hi with h | rfl
+    · exact (ih h).trans (le_max_left _ _)
+    · exact le_max_right _ _
+
+/-- Computable upper bound on `σM a b c p z'` over `a, b, c ≤ h` and `z' ≤ z`. -/
+@[expose] def sigmaBoundExplicit (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h z : ℕ) : ℕ :=
+  maxRange (h + 1) fun a =>
+    maxRange (h + 1) fun b =>
+      maxRange (h + 1) fun c =>
+        maxRange (z + 1) fun z' => σM a b c p z'
+
+theorem le_sigmaBoundExplicit {σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ}
+    (hσ : IsStandard σ) (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hσM : ∀ a b c p z, σ (SurfaceModel a b c) p z ≤ σM a b c p z)
+    {p h z z' : ℕ} (hp : 1 ≤ p)
+    {G : Hypergraph α β} (π : Portrayal G) (hh : π.hp p ≤ h) (hz : z' ≤ z) :
+    σ π.S p z' ≤ sigmaBoundExplicit σM p h z := by
+  obtain ⟨a, b, c, ⟨e⟩⟩ := classification π.S π.isSurface π.connected
+  rw [π.hp_eq p e] at hh
+  set g := 4 * a + 2 * b + c
+  have h1 : g ≤ g ^ 2 * p := by nlinarith [Nat.le_self_pow (n := 2) (by norm_num) g, Nat.zero_le (g ^ 2)]
+  have hg : g ≤ h := by omega
+  have hs : IsSurface (SurfaceModel a b c) := isSurface_of_homeo e π.isSurface
+  have hco : ConnectedSpace (SurfaceModel a b c) := by
+    haveI := π.connected
+    exact e.surjective.connectedSpace e.continuous
+  rw [hσ π.S (SurfaceModel a b c) p z' π.isSurface π.connected hs hco ⟨e⟩]
+  refine (hσM a b c p z').trans ?_
+  refine (le_maxRange (n := z + 1) (i := z') (fun z'' => σM a b c p z'') (by omega)).trans ?_
+  refine (le_maxRange (n := h + 1) (i := c) (fun c' => maxRange (z + 1) fun z'' => σM a b c' p z'') (by omega)).trans ?_
+  refine (le_maxRange (n := h + 1) (i := b) (fun b' => maxRange (h + 1) fun c' => maxRange (z + 1) fun z'' => σM a b' c' p z'') (by omega)).trans ?_
+  exact le_maxRange (n := h + 1) (i := a) (fun a' => maxRange (h + 1) fun b' => maxRange (h + 1) fun c' => maxRange (z + 1) fun z'' => σM a' b' c' p z'') (by omega)
+
+/-- One iteration step for the explicit bound of Graph Minors XVII, (13.3). -/
+@[expose] def theorem_13_3_step (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h_cap : ℕ) (acc : ℕ × ℕ) : ℕ × ℕ :=
+  let M := sigmaBoundExplicit σM p h_cap acc.2
+  (max acc.1 (acc.2 + M + max 3 (2 * p + 2) + 1), acc.2 + M)
+
+/-- Iterated `(θ, z)` bound for Graph Minors XVII, (13.3) with surface cap `h_cap` and `m` descent steps. -/
+@[expose] def theorem_13_3_iter (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h_cap m z₀ : ℕ) : ℕ × ℕ :=
+  let res := Nat.iterate (theorem_13_3_step σM p h_cap) m (0, z₀)
+  let M := sigmaBoundExplicit σM p h_cap res.2
+  (max res.1 (res.2 + M + max 3 (2 * p + 2) + 1), res.2)
+
+/-- Explicit `(θ, z)` bounds for Graph Minors XVII, (13.3), parameterized by `σM`. -/
+@[expose] def theorem_13_3_bound (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h z₀ : ℕ) : ℕ × ℕ :=
+  theorem_13_3_iter σM p h h z₀
+
+private lemma iterate_theorem_13_3_step_fst (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h_cap : ℕ) :
+    ∀ (m a z₀ : ℕ),
+      Nat.iterate (theorem_13_3_step σM p h_cap) m (a, z₀) =
+        (max a (Nat.iterate (theorem_13_3_step σM p h_cap) m (0, z₀)).1,
+         (Nat.iterate (theorem_13_3_step σM p h_cap) m (0, z₀)).2) := by
+  intro m
+  induction m with
   | zero =>
-    set M := sigmaBound σ p 0 z₀
-    refine ⟨z₀ + M + max 3 (2 * p + 2) + 1, z₀, by omega, le_rfl, ?_⟩
+    intro a z₀
+    simp
+  | succ m ih =>
+    intro a z₀
+    rw [Function.iterate_succ_apply, Function.iterate_succ_apply]
+    dsimp only [theorem_13_3_step]
+    rw [ih (max a _) _, ih (max 0 _) _]
+    simp only [Nat.zero_max, Prod.mk.injEq, and_true]
+    exact Nat.max_assoc _ _ _
+
+private lemma theorem_13_3_iter_succ (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ) (p h_cap m z₀ : ℕ) :
+    let M := sigmaBoundExplicit σM p h_cap z₀
+    let res := theorem_13_3_iter σM p h_cap m (z₀ + M)
+    theorem_13_3_iter σM p h_cap (m + 1) z₀ =
+      (max res.1 (z₀ + M + max 3 (2 * p + 2) + 1), res.2) := by
+  dsimp only [theorem_13_3_iter]
+  rw [Function.iterate_succ_apply]
+  dsimp only [theorem_13_3_step]
+  rw [Nat.zero_max, iterate_theorem_13_3_step_fst]
+  simp only [Prod.mk.injEq, and_true]
+  omega
+
+/-- Auxiliary explicit version of Graph Minors XVII, (13.3) with fixed cap `h_cap` and `m ≤ h_cap`. -/
+private theorem theorem_13_3_explicit_aux (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ)
+    (hσ : IsStandard σ) (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hσM : ∀ a b c p z, σ (SurfaceModel a b c) p z ≤ σM a b c p z)
+    {p : ℕ} (hp : 1 ≤ p) (h_cap : ℕ) :
+    ∀ (m z₀ : ℕ), m ≤ h_cap →
+      let res := theorem_13_3_iter σM p h_cap m z₀
+      res.2 < res.1 ∧ z₀ ≤ res.2 ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+        (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → res.1 ≤ θ' → ∀ Z₀ ⊆ G.vertexSet, Z₀.ncard ≤ z₀ →
+        ∀ π₀ : Portrayal (G.deleteVertices Z₀), π₀.IsCentral (deleteVerticesTangle G Z₀ 𝒯 θ') → π₀.warp ≤ p → π₀.hp p ≤ m →
+        ∃ Z, Z₀ ⊆ Z ∧ Z ⊆ G.vertexSet ∧ Z.ncard ≤ res.2 ∧ ∃ π : Portrayal (G.deleteVertices Z),
+          π.IsCentral (deleteVerticesTangle G Z 𝒯 θ') ∧ (π.IsSimpler π₀ ∨ π.Resembles π₀) ∧
+          π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) := by
+  intro m
+  induction m with
+  | zero =>
+    intro z₀ _
+    dsimp only [theorem_13_3_iter]
+    simp only [Function.iterate_zero, id_eq, Nat.zero_max]
+    set M := sigmaBoundExplicit σM p h_cap z₀
+    refine ⟨by omega, le_rfl, ?_⟩
     intro α β G hG θ' 𝒯 h𝒯 hθ Z₀ hZ₀ hcard π₀ hc hw hh
-    have hs : σ π₀.S p Z₀.ncard ≤ M := le_sigmaBound hσ hp π₀ hh hcard
+    have hs : σ π₀.S p Z₀.ncard ≤ M := le_sigmaBoundExplicit hσ σM hσM hp π₀ (by omega) hcard
     by_cases hred : π₀.IsRedundant (deleteVerticesTangle G Z₀ 𝒯 θ') (θ' - Z₀.ncard) (σ π₀.S p Z₀.ncard)
     · exact ⟨Z₀, subset_rfl, hZ₀, hcard, π₀, hc, .inr (Portrayal.Resembles.refl π₀), hred⟩
     · exfalso
       obtain ⟨Z, -, -, -, π, -, hsimp⟩ := descent_step hG h𝒯 hZ₀ (by omega) π₀ hw hred
       have := theorem_13_2_proof hp π₀ π hw hsimp
       omega
-  | succ h ih =>
-    set M := sigmaBound σ p (h + 1) z₀
-    obtain ⟨θ₁, z, hz, hz₀, hmain⟩ := ih (z₀ + M)
-    refine ⟨max θ₁ (z₀ + M + max 3 (2 * p + 2) + 1), z, by omega, by omega, ?_⟩
+  | succ m ih =>
+    intro z₀ hm
+    let M := sigmaBoundExplicit σM p h_cap z₀
+    obtain ⟨hz, hz₀, hmain⟩ := ih (z₀ + sigmaBoundExplicit σM p h_cap z₀) (by omega)
+    rw [theorem_13_3_iter_succ]
+    refine ⟨by omega, by omega, ?_⟩
     intro α β G hG θ' 𝒯 h𝒯 hθ Z₀ hZ₀ hcard π₀ hc hw hh
-    have hs : σ π₀.S p Z₀.ncard ≤ M := le_sigmaBound hσ hp π₀ hh hcard
+    have hs : σ π₀.S p Z₀.ncard ≤ sigmaBoundExplicit σM p h_cap z₀ :=
+      le_sigmaBoundExplicit hσ σM hσM hp π₀ (by omega) hcard
     by_cases hred : π₀.IsRedundant (deleteVerticesTangle G Z₀ 𝒯 θ') (θ' - Z₀.ncard) (σ π₀.S p Z₀.ncard)
     · exact ⟨Z₀, subset_rfl, hZ₀, by omega, π₀, hc, .inr (Portrayal.Resembles.refl π₀), hred⟩
     · obtain ⟨Z₁, h01, hZ₁, hc₁, π₁, hcen₁, hsimp⟩ := descent_step hG h𝒯 hZ₀ (by omega) π₀ hw hred
@@ -221,5 +317,33 @@ theorem theorem_13_3_proof (σ : (S : Type) → [TopologicalSpace S] → ℕ →
       rcases hrel with hr | hr
       · exact isSimpler_trans hr hsimp
       · exact hr.warpLE.trans_isSimpler hsimp
+
+/-- **Graph Minors XVII, (13.3)** (page 205), with explicit bounds `theorem_13_3_bound σM p h z₀`. -/
+theorem theorem_13_3_explicit (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ)
+    (hσ : IsStandard σ) (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hσM : ∀ a b c p z, σ (SurfaceModel a b c) p z ≤ σM a b c p z)
+    {p : ℕ} (hp : 1 ≤ p) (h z₀ : ℕ) :
+    let res := theorem_13_3_bound σM p h z₀
+    res.2 < res.1 ∧ z₀ ≤ res.2 ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → res.1 ≤ θ' → ∀ Z₀ ⊆ G.vertexSet, Z₀.ncard ≤ z₀ →
+      ∀ π₀ : Portrayal (G.deleteVertices Z₀), π₀.IsCentral (deleteVerticesTangle G Z₀ 𝒯 θ') → π₀.warp ≤ p → π₀.hp p ≤ h →
+      ∃ Z, Z₀ ⊆ Z ∧ Z ⊆ G.vertexSet ∧ Z.ncard ≤ res.2 ∧ ∃ π : Portrayal (G.deleteVertices Z),
+        π.IsCentral (deleteVerticesTangle G Z 𝒯 θ') ∧ (π.IsSimpler π₀ ∨ π.Resembles π₀) ∧
+        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) :=
+  theorem_13_3_explicit_aux.{u, v} σ hσ σM hσM hp h h z₀ le_rfl
+
+/-- **Graph Minors XVII, (13.3)** (page 205): "For any standard $\sigma$ and all $p \ge 1$ and $h$, $z_0 \ge 0$, there exist $\theta$, $z$ with $\theta > z \ge z_0$ and with the following property. Let $\mathcal{T}$ be a tangle of order $\ge \theta$ in a graph $G$, let $Z_0 \subseteq V(G)$ with $|Z_0| \le z_0$, and let $\pi_0$ be a $(\mathcal{T} \setminus Z_0)$-central portrayal of $G \setminus Z_0$ with warp $\le p$ and with $h_p(\pi_0) \le h$. Then there exist $Z \subseteq V(G)$ with $Z_0 \subseteq Z$ such that $|Z| \le z$, and a $(\mathcal{T} \setminus Z)$-central portrayal $\pi = (\Sigma, \Gamma, \alpha, \beta, \gamma)$ of $G \setminus Z$, such that $\pi$ is simpler than or resembles $\pi_0$, and $\pi$ is $\sigma(\Sigma, p, |Z|)$-redundant."
+
+We read a bound on all `σ` from `sigmaBoundExplicit`, so the paper's reduction to its condition (1) is not needed. -/
+theorem theorem_13_3_proof (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ) (hσ : IsStandard σ) {p : ℕ} (hp : 1 ≤ p) (h z₀ : ℕ) :
+    ∃ θ z : ℕ, z < θ ∧ z₀ ≤ z ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → θ ≤ θ' → ∀ Z₀ ⊆ G.vertexSet, Z₀.ncard ≤ z₀ →
+      ∀ π₀ : Portrayal (G.deleteVertices Z₀), π₀.IsCentral (deleteVerticesTangle G Z₀ 𝒯 θ') → π₀.warp ≤ p → π₀.hp p ≤ h →
+      ∃ Z, Z₀ ⊆ Z ∧ Z ⊆ G.vertexSet ∧ Z.ncard ≤ z ∧ ∃ π : Portrayal (G.deleteVertices Z),
+        π.IsCentral (deleteVerticesTangle G Z 𝒯 θ') ∧ (π.IsSimpler π₀ ∨ π.Resembles π₀) ∧
+        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) := by
+  let σM := fun a b c p z => σ (SurfaceModel a b c) p z
+  let res := theorem_13_3_bound σM p h z₀
+  exact ⟨res.1, res.2, theorem_13_3_explicit.{u, v} σ hσ σM (fun _ _ _ _ _ => le_rfl) hp h z₀⟩
 
 end GraphMinor.GM17

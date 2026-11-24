@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM17.Section13d
 public import GraphMinor.Surface.DrawCarry
+public import GraphMinor.GM20.Draw8
 
 import GraphMinor.GM17.Section8Proved
 
@@ -25,72 +26,71 @@ universe u v
 
 variable {α : Type u} {β : Type v}
 
-/-- **Graph Minors XVII, (13.4)** (page 206): "For any graph $H$ and standard $\sigma$, there are numbers $p, q, z$ and $\theta > z$, such that for every graph $G$ and every tangle $\mathscr{T}$ in $G$ of order $\ge \theta$, either (i) $\mathscr{T}$ controls an $H$-minor of $G$, or (ii) there exists $Z \subseteq V(G)$ with $|Z| \le z$, and a $(\mathscr{T} \setminus Z)$-central portrayal $\pi = (\Sigma, \Gamma, \alpha, \beta, \gamma)$ of $G \setminus Z$ with warp $\le p$, such that $\Sigma$ has $\le q$ cuffs, $H$ cannot be drawn in $\Sigma$, and $\pi$ is $\sigma(\Sigma, p, |Z|)$-redundant and true." -/
-theorem theorem_13_4_proof  {α' β' : Type} (H : Hypergraph α' β') (hH : H.IsGraph)
-    (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ) (hσ : IsStandard σ) :
-    ∃ p q z θ : ℕ, z < θ ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
-      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → θ ≤ θ' →
-      ControlsMinor G 𝒯 H ∨ ∃ Z ⊆ G.vertexSet, Z.ncard ≤ z ∧ ∃ π : Portrayal (G.deleteVertices Z),
-        π.warp ≤ p ∧ (cuffs π.S).encard ≤ q ∧ ¬ CanBeDrawn π.S H ∧ π.IsTrue (deleteVerticesTangle G Z 𝒯 θ') ∧
-        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) := by
+/-- Explicit `(p, q, z, θ)` bounds for Graph Minors XVII, (13.4), parameterized by `V` and `σM`. -/
+@[expose] def theorem_13_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ)
+    (vB eB : ℕ) : ℕ × ℕ × ℕ × ℕ :=
+  let res1 := theorem_13_1_bound V vB eB
+  let p₀ := res1.1
+  let q₀ := res1.2.1
+  let z₀ := res1.2.2.1
+  let θ₀ := res1.2.2.2
+  let p := max p₀ 1
+  let L := GM20.Draw.drawBound eB
+  let q := 6 * L + q₀
+  let res3 := theorem_13_3_bound σM p (q ^ 2 * p + q₀ * p) z₀
+  (p, q, res3.2, max θ₀ res3.1)
+
+/-- **Graph Minors XVII, (13.4)** (page 206), with explicit bounds `theorem_13_4_bound V σM vB eB`. -/
+theorem theorem_13_4_explicit (V : ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {α' β' : Type} (H : Hypergraph α' β') (hH : H.IsGraph)
+    {vB eB : ℕ} (hvB : H.vertexSet.ncard ≤ vB) (heB : H.edgeSet.ncard ≤ eB)
+    (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ) (hσ : IsStandard σ)
+    (σM : ℕ → ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hσM : ∀ a b c p z, σ (SurfaceModel a b c) p z ≤ σM a b c p z) :
+    let res := theorem_13_4_bound V σM vB eB
+    res.2.2.1 < res.2.2.2 ∧
+    ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → res.2.2.2 ≤ θ' →
+      ControlsMinor G 𝒯 H ∨ ∃ Z ⊆ G.vertexSet, Z.ncard ≤ res.2.2.1 ∧ ∃ π : Portrayal (G.deleteVertices Z),
+        π.warp ≤ res.1 ∧ (cuffs π.S).encard ≤ res.2.1 ∧ ¬ CanBeDrawn π.S H ∧ π.IsTrue (deleteVerticesTangle G Z 𝒯 θ') ∧
+        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S res.1 Z.ncard) := by
   classical
-  obtain ⟨p₀, q₀, z₀, θ₀, hz₀, h1⟩ := GraphMinor.GM17.theorem_13_1_proof.{u, v} H hH
-  -- "If $H$ is planar, let $p, q, z, \theta$ be as in (13.1); then the theorem is satisfied (for
-  -- (13.1)(ii) cannot hold since $H$ is planar)."
-  by_cases hplanar : CanBeDrawn (SurfaceModel 0 0 0) H
-  · refine ⟨p₀, q₀, z₀, θ₀, hz₀, ?_⟩
-    intro α β G hG θ' 𝒯 h𝒯 hθ
-    rcases h1 G hG θ' 𝒯 h𝒯 hθ with hctrl | ⟨Z₀, -, -, π₀, -, -, -, hdr₀⟩
-    · exact .inl hctrl
-    · exfalso
-      obtain ⟨a₀, b₀, c₀, ⟨e₀⟩⟩ := classification π₀.S π₀.isSurface π₀.connected
-      have : T2Space π₀.S := π₀.isSurface.2.1
-      have : T2Space (SurfaceModel a₀ b₀ c₀) := e₀.symm.isEmbedding.t2Space
-      exact hdr₀ (GM20.Draw.CanBeDrawn.map e₀.symm
-        (canBeDrawn_of_le hH (Nat.zero_le a₀) (Nat.zero_le b₀) hplanar))
-  -- "Choose $a^*, b^* \ge 0$ with $2a^* + b^*$ maximum so that $H$ cannot be drawn in
-  -- $\Sigma(a^*, b^*, 0)$." The maximum exists, since `H` can be drawn when `a` or `b` is large.
-  obtain ⟨L, hL⟩ := GM20.Draw.exists_canBeDrawn H hH
-  have hsmall : ∀ a b : ℕ, ¬ CanBeDrawn (SurfaceModel a b 0) H → 2 * a + b < 3 * L + 1 := by
-    intro a b hn
-    have : T2Space (SurfaceModel a b 0) := (isSurface_model a b 0).1.2.1
-    by_contra hlt
-    exact hn (hL a b 0 (by omega))
-  let Pm : ℕ → Prop := fun n => ∃ a b : ℕ, 2 * a + b = n ∧ ¬ CanBeDrawn (SurfaceModel a b 0) H
-  have hP0 : Pm 0 := ⟨0, 0, rfl, hplanar⟩
-  let m := Nat.findGreatest Pm (3 * L)
-  obtain ⟨aS, bS, hmS, -⟩ : Pm m := Nat.findGreatest_spec (P := Pm) (Nat.zero_le _) hP0
-  have hmax : ∀ a b : ℕ, ¬ CanBeDrawn (SurfaceModel a b 0) H → 2 * a + b ≤ 2 * aS + bS := by
-    intro a b hn
-    have hle : 2 * a + b ≤ m :=
-      Nat.le_findGreatest (P := Pm) (by have := hsmall a b hn; omega) ⟨a, b, rfl, hn⟩
-    omega
-  set p := max p₀ 1 with hpdef
+  dsimp only [theorem_13_4_bound]
+  obtain ⟨hz₀, h1⟩ := theorem_13_1_explicit.{u, v} V hV H hH hvB heB
+  set res1 := theorem_13_1_bound V vB eB
+  set p₀ := res1.1
+  set q₀ := res1.2.1
+  set z₀ := res1.2.2.1
+  set θ₀ := res1.2.2.2
+  set p := max p₀ 1
   have hp : 1 ≤ p := le_max_right _ _
-  -- "Let $q = 4a^* + 2b^* + q_0$, and let $h = p(q^2 + q_0)$."
-  set q := 4 * aS + 2 * bS + q₀ with hq
-  obtain ⟨θ₁, z, hz, hzz, h3⟩ := theorem_13_3_proof.{u, v} σ hσ hp (q ^ 2 * p + q₀ * p) z₀
-  refine ⟨p, q, z, max θ₀ θ₁, lt_max_of_lt_right hz, ?_⟩
+  set L := GM20.Draw.drawBound eB
+  set q := 6 * L + q₀
+  obtain ⟨hz, hzz, h3⟩ := theorem_13_3_explicit.{u, v} σ hσ σM hσM hp (q ^ 2 * p + q₀ * p) z₀
+  set res3 := theorem_13_3_bound σM p (q ^ 2 * p + q₀ * p) z₀
+  refine ⟨lt_max_of_lt_right hz, ?_⟩
   intro α β G hG θ' 𝒯 h𝒯 hθ
   rcases h1 G hG θ' 𝒯 h𝒯 ((le_max_left _ _).trans hθ) with hctrl | ⟨Z₀, hZ₀, hc₀, π₀, hcen₀, hw₀, hcu₀, hdr₀⟩
   · exact .inl hctrl
   refine .inr ?_
-  have hθ₁ : θ₁ ≤ θ' := (le_max_right _ _).trans hθ
+  have hθ₁ : res3.1 ≤ θ' := (le_max_right _ _).trans hθ
   obtain ⟨a₀, b₀, c₀, ⟨e₀⟩⟩ := classification π₀.S π₀.isSurface π₀.connected
   have hc₀c : c₀ ≤ q₀ := by
     have h₁ := ncard_cuffs_of_homeo e₀
     have h₂ : ((cuffs π₀.S).ncard : ℕ∞) = (cuffs π₀.S).encard := π₀.finite_cuffs.cast_ncard_eq
     rw [← h₂, h₁] at hcu₀
     exact_mod_cast hcu₀
-  -- $H$ cannot be drawn in $\Sigma(a_0, b_0, 0)$, since it cannot be drawn in $\Sigma_0$, and so
-  -- $2a_0 + b_0 \le 2a^* + b^*$ by the choice of $a^*, b^*$.
-  have hab : 2 * a₀ + b₀ ≤ 2 * aS + bS := by
-    refine hmax a₀ b₀ fun hd => ?_
+  have hnd₀ : ¬ CanBeDrawn (SurfaceModel a₀ b₀ 0) H := by
+    intro hd
     have : T2Space π₀.S := π₀.isSurface.2.1
     have : T2Space (SurfaceModel a₀ b₀ c₀) := e₀.symm.isEmbedding.t2Space
     exact hdr₀ (GM20.Draw.CanBeDrawn.map e₀.symm (canBeDrawn_of_le hH le_rfl le_rfl hd))
-  -- "$4a_0 + 2b_0 + c_0 \le 4a^* + 2b^* + q_0 = q$"
-  have hrank₀ : 4 * a₀ + 2 * b₀ + c₀ ≤ q := by omega
+  have hab : a₀ < L ∧ b₀ < L := by
+    have : T2Space (SurfaceModel a₀ b₀ 0) := (isSurface_model a₀ b₀ 0).1.2.1
+    by_contra h
+    exact hnd₀ (GM20.Draw.canBeDrawn_of_drawBound H hH heB a₀ b₀ 0 (by omega))
+  have hrank₀ : 4 * a₀ + 2 * b₀ + c₀ ≤ q := by dsimp [q]; omega
   have hh : π₀.hp p ≤ q ^ 2 * p + q₀ * p := by
     rw [π₀.hp_eq p e₀]
     have h₁ := π₀.totalCuffWarp_le (p := p) (hw₀.trans (le_max_left _ _)) (ncard_cuffs_of_homeo e₀)
@@ -127,5 +127,19 @@ theorem theorem_13_4_proof  {α' β' : Type} (H : Hypergraph α' β') (hH : H.Is
     exact_mod_cast this
   · rw [hσ π'.S π.S p Z.ncard π'.isSurface π'.connected π.isSurface π.connected ⟨ψ'⟩]
     exact hred'
+
+/-- **Graph Minors XVII, (13.4)** (page 206): "For any graph $H$ and standard $\sigma$, there are numbers $p, q, z$ and $\theta > z$, such that for every graph $G$ and every tangle $\mathscr{T}$ in $G$ of order $\ge \theta$, either (i) $\mathscr{T}$ controls an $H$-minor of $G$, or (ii) there exists $Z \subseteq V(G)$ with $|Z| \le z$, and a $(\mathscr{T} \setminus Z)$-central portrayal $\pi = (\Sigma, \Gamma, \alpha, \beta, \gamma)$ of $G \setminus Z$ with warp $\le p$, such that $\Sigma$ has $\le q$ cuffs, $H$ cannot be drawn in $\Sigma$, and $\pi$ is $\sigma(\Sigma, p, |Z|)$-redundant and true." -/
+theorem theorem_13_4_proof  {α' β' : Type} (H : Hypergraph α' β') (hH : H.IsGraph)
+    (σ : (S : Type) → [TopologicalSpace S] → ℕ → ℕ → ℕ) (hσ : IsStandard σ) :
+    ∃ p q z θ : ℕ, z < θ ∧ ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → θ ≤ θ' →
+      ControlsMinor G 𝒯 H ∨ ∃ Z ⊆ G.vertexSet, Z.ncard ≤ z ∧ ∃ π : Portrayal (G.deleteVertices Z),
+        π.warp ≤ p ∧ (cuffs π.S).encard ≤ q ∧ ¬ CanBeDrawn π.S H ∧ π.IsTrue (deleteVerticesTangle G Z 𝒯 θ') ∧
+        π.IsRedundant (deleteVerticesTangle G Z 𝒯 θ') (θ' - Z.ncard) (σ π.S p Z.ncard) := by
+  let σM := fun a b c p z => σ (SurfaceModel a b c) p z
+  let res := theorem_13_4_bound GM07.vModel σM H.vertexSet.ncard H.edgeSet.ncard
+  exact ⟨res.1, res.2.1, res.2.2.1, res.2.2.2,
+    theorem_13_4_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) H hH le_rfl le_rfl σ hσ σM
+      (fun _ _ _ _ _ => le_rfl)⟩
 
 end GraphMinor.GM17

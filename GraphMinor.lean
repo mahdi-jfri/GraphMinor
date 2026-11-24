@@ -4050,6 +4050,8 @@ public import GraphMinor.GM07.DiscChain
 public import GraphMinor.GM07.DiscPlace
 public import GraphMinor.GM07.DiscPrune
 public import GraphMinor.GM07.DiscPush
+public import GraphMinor.GM07.ExplicitV
+public import GraphMinor.GM07.ExplicitW
 public import GraphMinor.GM07.FiniteCross
 public import GraphMinor.GM07.FlatEdges
 public import GraphMinor.GM07.FlatMinimal
@@ -6608,6 +6610,7 @@ public import GraphMinor.GM21.CellDrawing
 public import GraphMinor.GM21.Cited
 public import GraphMinor.GM21.CuffSpaces
 public import GraphMinor.GM21.Defs
+public import GraphMinor.GM21.Explicit
 public import GraphMinor.GM21.Final
 public import GraphMinor.GM21.HypergraphMap
 public import GraphMinor.GM21.InfVert
@@ -6745,6 +6748,7 @@ public import GraphMinor.GM21.SeparationGluing
 public import GraphMinor.GM21.VertexSplitting
 public import GraphMinor.GM22.Cited
 public import GraphMinor.GM22.Defs
+public import GraphMinor.GM22.Explicit
 public import GraphMinor.GM22.Free
 public import GraphMinor.GM22.GM21Proved
 public import GraphMinor.GM22.Join21

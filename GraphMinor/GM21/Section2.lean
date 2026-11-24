@@ -197,6 +197,30 @@ theorem theorem_2_5_proof {α : Type u} {β : Type v} (p k : ℕ)
       L ∩ B r.castSucc ∩ A r.succ = M r :=
   vital_linkage_constant_order_nested_separations hL hsep hmono hM
 
+/-- Explicit version of Graph Minors XXI, (2.6) with `n = theorem_2_6_bound p k`. -/
+theorem theorem_2_6_explicit (p k : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G L : Hypergraph α β)
+      (A B : Fin (theorem_2_6_bound p k) → Hypergraph α β)
+      (M : Fin (theorem_2_6_bound p k) → Fin (theorem_2_6_bound p k) → Hypergraph α β),
+      IsVitalPLinkage G L p →
+      (∀ i : Fin (theorem_2_6_bound p k), G.IsSeparation (A i) (B i) ∧ separationOrder (A i) (B i) ≤ k) →
+      (∀ i j : Fin (theorem_2_6_bound p k), i < j → A i ≤ A j ∧ B j ≤ B i) →
+      (∀ i i' : Fin (theorem_2_6_bound p k), i < i' →
+        separationOrder (A i) (B i) = separationOrder (A i') (B i') →
+        (∀ j : Fin (theorem_2_6_bound p k), i < j → j < i' →
+          separationOrder (A i) (B i) < separationOrder (A j) (B j)) →
+        IsLinkage (B i ∩ A i') (M i i') ∧
+        (linkagePattern (M i i')).ncard = separationOrder (A i) (B i) ∧
+        ∀ P ∈ linkagePattern (M i i'),
+          ∃ u ∈ (A i ∩ B i).vertexSet,
+            ∃ w ∈ (A i' ∩ B i').vertexSet, P = {u, w}) →
+      ∃ i i' : Fin (theorem_2_6_bound p k), i < i' ∧
+        separationOrder (A i) (B i) = separationOrder (A i') (B i') ∧
+        (∀ j : Fin (theorem_2_6_bound p k), i < j → j < i' →
+          separationOrder (A i) (B i) < separationOrder (A j) (B j)) ∧
+        L ∩ B i ∩ A i' = M i i' :=
+  vital_linkage_bounded_order_nested_separations_explicit p k
+
 /-- **Graph Minors XXI, (2.6)** (pages 6–7 of the preprint):
 "For all integers $p, k \ge 0$ there exists $n \ge 0$ with the following property. Let $L$ be a
 vital $p$-linkage in a graph $G$, and for $1 \le i \le n$ let $(A_i, B_i)$ be a separation of $G$

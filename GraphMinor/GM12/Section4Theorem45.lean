@@ -4,7 +4,7 @@ public import GraphMinor.GM12.Cited
 public import GraphMinor.GM12.Defs
 public import GraphMinor.GM15.Defs
 public import GraphMinor.GM16.Defs
-import GraphMinor.GM12.Section4Theorem45Large
+public import GraphMinor.GM12.Section4Theorem45Large
 import GraphMinor.GM12.Section3GeometricReduction
 import GraphMinor.GM12.Section4CliqueControlMonotone
 import GraphMinor.GM12.Section4InducedEmbedding
@@ -31,6 +31,44 @@ open Set Surface Graph Hypergraph GM14 GM15
 
 universe u
 
+/-- Explicit eye count for Graph Minors XII, (4.5), for all `p`. -/
+@[expose] def theorem_4_5_kBound (p : ℕ) : ℕ :=
+  theorem_4_5_large_kBound (max p 4)
+
+/-- Explicit distance/order threshold for Graph Minors XII, (4.5), for all `p`. -/
+@[expose] def theorem_4_5_NBound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p : ℕ) : ℕ :=
+  theorem_4_5_large_NBound V a b (max p 4)
+
+theorem one_le_theorem_4_5_NBound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p : ℕ) :
+    1 ≤ theorem_4_5_NBound V a b p := by
+  unfold theorem_4_5_NBound theorem_4_5_large_NBound
+  exact (by omega : 1 ≤ 2 * (max p 4 + 2 * theorem_4_5_large_kBound (max p 4)) + 3).trans
+    (le_max_right _ _)
+
+/-- XII (4.5), pages 252--253, in the span formulation, with explicit parameters
+`theorem_4_5_kBound p` and `theorem_4_5_NBound V a b p`. -/
+theorem theorem_4_5_span_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type u} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (p : ℕ) :
+    ∀ {α β : Type*} (G : Graph α β) (θstar θ : ℕ)
+      (Tstar : Set (Hypergraph α β × Hypergraph α β)) (Γ : Drawing S)
+      (η : SpanEmbedding Γ G) (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ) (hCtrl : IsControllingTangle G Γ η θstar θ Tstar T),
+      HasTangleMetric Γ θ T d → theorem_4_5_NBound V a b p ≤ θ →
+      ∀ (r : Fin (theorem_4_5_kBound p) → Set S)
+        (P Q : Fin (theorem_4_5_kBound p) → Graph α β),
+      Function.Injective r → (∀ i, IsEyeWithPaths G Γ η θ T (r i) (P i) (Q i)) →
+      (∀ i j, i ≠ j → theorem_4_5_NBound V a b p ≤ d (r i) (r j)) →
+      (∀ i j, i ≠ j → Disjoint ((P i).vertexSet ∪ (Q i).vertexSet)
+        ((P j).vertexSet ∪ (Q j).vertexSet)) →
+      ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
+        hCtrl.isTangle_star.finite_E) θstar Tstar (GM16.completeGraph p) := by
+  intro α β G θstar θ Tstar Γ η T d hCtrl hm hθ r P Q hri heye hfar hdisj
+  exact controlsMinor_completeGraph_mono (le_max_left p 4)
+    (theorem_4_5_span_large_explicit V hV hS he (max p 4) (le_max_right _ _)
+      G θstar θ Tstar Γ η T d hCtrl hm hθ r P Q hri heye hfar hdisj)
+
 /-- XII (4.5), pages 252--253, in the span formulation, with
 region distances only bounded below by the chosen threshold.
 The only statement hypotheses are VII (7.5), (5.1), and (5.5).
@@ -51,11 +89,10 @@ theorem theorem_4_5_span
         ((P j).vertexSet ∪ (Q j).vertexSet)) →
       ControlsMinor (Hypergraph.ofGraph G hCtrl.isTangle_star.finite_V
         hCtrl.isTangle_star.finite_E) θstar Tstar (GM16.completeGraph p) := by
-  obtain ⟨k, N, hN, hmain⟩ := theorem_4_5_span_large hS (max p 4) (le_max_right _ _)
-  refine ⟨k, N, hN, ?_⟩
-  intro α β G θstar θ Tstar Γ η T d hCtrl hm hθ r P Q hri heye hfar hdisj
-  exact controlsMinor_completeGraph_mono (le_max_left p 4)
-    (hmain G θstar θ Tstar Γ η T d hCtrl hm hθ r P Q hri heye hfar hdisj)
+  obtain ⟨a, b, he⟩ := exists_closed_surface_model hS
+  exact ⟨theorem_4_5_kBound p, theorem_4_5_NBound GM07.vModel a b p,
+    one_le_theorem_4_5_NBound _ a b p,
+    theorem_4_5_span_explicit GM07.vModel (fun _ _ _ _ => le_rfl) hS he p⟩
 
 /-- Graph Minors XII (4.5), pages 252--253, for a literal drawn
 subgraph of the ambient graph and its induced tangle, as in the

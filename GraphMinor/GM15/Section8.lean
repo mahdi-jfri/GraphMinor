@@ -1,14 +1,13 @@
 module
 
 public import GraphMinor.GM15.Section7
+public import GraphMinor.GM12.Bridge
 import GraphMinor.GM09.Basic
 import GraphMinor.GM10.TangleLemmas
 import GraphMinor.GM11.RadialExists
 import GraphMinor.GM11.Section5b
 
 import GraphMinor.GM09.Bridge
-
-import GraphMinor.GM12.Bridge
 
 import GraphMinor.GM12.Section5Final
 
@@ -544,6 +543,32 @@ def GM15Theorem81Statement : Prop :=
         p ≤ θ_star → φ ≤ θ →
         HasIndependentEyes G H η θ T d κ →
         ControlsCliqueMinor G p T_star
+
+/-- **Graph Minors XV, (8.1)** (page 145), with explicit eye count `GM12.theorem_4_5_kBound p`
+and explicit order threshold `GM12.theorem_4_5_NBound V a b p`. -/
+theorem theorem_8_1_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (S : Type w) [TopologicalSpace S] [T2Space S]
+    (hSurf : IsSurface S) (hConn : ConnectedSpace S) (hBd : bd S = ∅)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0)) (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β))
+      (H : Drawing S) (η : SpanEmbedding H G) (θ : ℕ)
+      (T : Set (Hypergraph S (Set S) × Hypergraph S (Set S)))
+      (d : Set S → Set S → ℕ),
+      IsSigmaSpan G H η θ_star θ T_star T →
+      HasTangleMetric H θ T d →
+      p ≤ θ_star → GM12.theorem_4_5_NBound V a b p ≤ θ →
+      HasIndependentEyes G H η θ T d (GM12.theorem_4_5_kBound p) →
+      ControlsCliqueMinor G p T_star := by
+  have hClosed : IsClosedSurface S :=
+    ⟨hSurf.1, hSurf.2.1, fun x => by
+      by_contra hx
+      exact Set.eq_empty_iff_forall_notMem.mp hBd x hx⟩
+  intro α β G θ_star T_star H η θ T d hSpan hMetric hp hφ hEyes
+  exact controlsCliqueMinor_of_gm12
+    (GraphMinor.GM12.gm15_theorem45_explicit.{u, v, w} V hV S hClosed hConn he p
+      G θ_star T_star H η θ T d hSpan hMetric hp hφ hEyes)
 
 /-- **Graph Minors XV, (8.1)** (page 145):
 For any connected surface `Σ` with `bd(Σ) = ∅` and any `p ≥ 0`, there exist `κ, φ ≥ 0` such that if

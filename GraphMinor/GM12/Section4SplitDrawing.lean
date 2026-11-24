@@ -86,6 +86,38 @@ theorem exists_loopless_split_without_isolated
   exact ⟨H, A, B, m, x, y, hd, splitData_loopless_and_no_isolated hd hincident⟩
 
 /-- Subdivision followed by parallel copies gives the loopless
+minimum-degree-two drawing used in XII (4.3), page 249, with explicit vertex and edge bounds. -/
+theorem exists_subdivision_in_minimum_degree_two_drawing_bounded
+    {S : Type*} [TopologicalSpace S] [T2Space S] [ConnectedSpace S]
+    (hS : IsClosedSurface S) (Γ : Drawing S)
+    (hincident : ∀ z ∈ Γ.V, ∃ e, Γ.toGraph.Inc e z) :
+    ∃ (K H : Drawing S) (A B : Set S → Set S) (m x y : Set S → S),
+      SplitData Γ K A B m x y ∧ K.IsSubdrawing H ∧ H.V = K.V ∧
+        H.V.ncard ≤ Γ.V.ncard + Γ.E.ncard ∧ H.E.ncard ≤ 4 * Γ.E.ncard ∧
+        (∀ e z, ¬ H.toGraph.IsLink e z z) ∧
+        ∀ z ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e z ∧ H.toGraph.Inc f z := by
+  obtain ⟨K, A, B, m, x, y, hd, hloop, hinc⟩ := exists_loopless_split_without_isolated Γ hincident
+  obtain ⟨H, hKH, hHV, hHE, hHloop, hHinc⟩ :=
+    exists_minimum_degree_two_augmentation_bounded hS K hloop hinc
+  have hKVcard : K.V.ncard ≤ Γ.V.ncard + Γ.E.ncard := by
+    rw [hd.V_eq]
+    exact (Set.ncard_union_le _ _).trans (Nat.add_le_add_left (Set.ncard_image_le Γ.finite_edges) _)
+  have hKEsub : K.E ⊆ A '' Γ.E ∪ B '' Γ.E := by
+    intro g hg
+    obtain ⟨e, he, rfl | rfl⟩ := hd.all g hg
+    · exact Or.inl ⟨e, he, rfl⟩
+    · exact Or.inr ⟨e, he, rfl⟩
+  have hKEcard : K.E.ncard ≤ 2 * Γ.E.ncard := by
+    have hfin : (A '' Γ.E ∪ B '' Γ.E).Finite :=
+      (Γ.finite_edges.image A).union (Γ.finite_edges.image B)
+    have h1 := Set.ncard_le_ncard hKEsub hfin
+    have h2 := Set.ncard_union_le (A '' Γ.E) (B '' Γ.E)
+    have h3 : (A '' Γ.E).ncard ≤ Γ.E.ncard := Set.ncard_image_le Γ.finite_edges
+    have h4 : (B '' Γ.E).ncard ≤ Γ.E.ncard := Set.ncard_image_le Γ.finite_edges
+    omega
+  exact ⟨K, H, A, B, m, x, y, hd, hKH, hHV, hHV ▸ hKVcard, by omega, hHloop, hHinc⟩
+
+/-- Subdivision followed by parallel copies gives the loopless
 minimum-degree-two drawing used in XII (4.3), page 249, when the
 original drawing has no isolated vertices. The subdivision data
 records how to recover the original edges. -/
@@ -97,8 +129,8 @@ theorem exists_subdivision_in_minimum_degree_two_drawing
       SplitData Γ K A B m x y ∧ K.IsSubdrawing H ∧ H.V = K.V ∧
         (∀ e z, ¬ H.toGraph.IsLink e z z) ∧
         ∀ z ∈ H.V, ∃ e f, e ≠ f ∧ H.toGraph.Inc e z ∧ H.toGraph.Inc f z := by
-  obtain ⟨K, A, B, m, x, y, hd, hloop, hinc⟩ := exists_loopless_split_without_isolated Γ hincident
-  obtain ⟨H, hKH, hHV, hHloop, hHinc⟩ := exists_minimum_degree_two_augmentation hS K hloop hinc
+  obtain ⟨K, H, A, B, m, x, y, hd, hKH, hHV, _, _, hHloop, hHinc⟩ :=
+    exists_subdivision_in_minimum_degree_two_drawing_bounded hS Γ hincident
   exact ⟨K, H, A, B, m, x, y, hd, hKH, hHV, hHloop, hHinc⟩
 
 end GraphMinor.GM12

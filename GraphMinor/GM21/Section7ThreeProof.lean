@@ -4,9 +4,9 @@ public import GraphMinor.GM21.Parallel
 public import GraphMinor.GM21.Section7Three
 public import GraphMinor.GM21.Section7Plus
 public import GraphMinor.GM21.HypergraphMap
-import GraphMinor.GM21.Section5
+public import GraphMinor.GM21.Section5
 import GraphMinor.GM21.Section7JumpUnion
-import GraphMinor.GM21.Section6Three
+public import GraphMinor.GM21.Section6Three
 import GraphMinor.GM21.Section7
 import GraphMinor.GM21.Section2
 import GraphMinor.GM19.CapExists
@@ -165,22 +165,61 @@ end separation
 
 /-! ## (7.3) -/
 
-/-- **Graph Minors XXI, (7.3)** (page 31 of the preprint):
-"**7.3** *For every surface $\Sigma$ and all integers $p, r \ge 0$ and $q \ge 1$, there exists
-$\theta \ge 1$ such that, if a graph $G$ has a presentation in $\Sigma$ of depth $\le q$, and
-defect $\le r$ which surrounds a tangle of order $\ge \theta$, then $G$ has no vital
-$p$-linkage.*" -/
-theorem theorem_7_3_proof :
-    GM21Theorem73Statement.{u, v, 0} := by
-  intro S _ hconn hS p r q hq
+/-- Explicit tangle-order bound for **Graph Minors XXI, (7.3)** over a surface model `(a, b, c)`,
+parameterized by an upper bound `V` on `GM07.vModel`. -/
+def theorem_7_3_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p r q : ℕ) : ℕ :=
+  let lam := Induction.theorem_6_3_bound (2 * a + b) c p r q
+  let θ₁ := theorem_5_2_bound V (4 * a + 2 * b) (2 * (p + lam))
+  let θ₂ := theorem_4_6_bound (4 * a + 2 * b) c θ₁
+  q * θ₂
+
+lemma one_le_theorem_7_3_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p r q : ℕ) (hq : 1 ≤ q) :
+    1 ≤ theorem_7_3_bound V a b c p r q := by
+  dsimp only [theorem_7_3_bound]
+  have h1 := one_le_theorem_5_2_bound V (4 * a + 2 * b) (2 * (p + Induction.theorem_6_3_bound (2 * a + b) c p r q))
+  have h2 := one_le_theorem_4_6_bound (4 * a + 2 * b) c h1
+  exact Nat.one_le_iff_ne_zero.2 (Nat.mul_ne_zero (by omega) (by omega))
+
+/-- Explicit version of **Graph Minors XXI, (7.3)** (page 31 of the preprint) with threshold
+`theorem_7_3_bound V a b c p r q`. -/
+theorem theorem_7_3_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (S : Type) [TopologicalSpace S] [hconn : ConnectedSpace S]
+    (hS : IsSurface S) {a b c : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b c))
+    (p r q : ℕ) (hq : 1 ≤ q) :
+    ∀ {α : Type u} {β : Type v} (G : Hypergraph α β) (Γ : Surface.Drawing S)
+      (Γ_sub : Hypergraph α β) (ιV : S → α) (ιE : Set S → β)
+      (r' : ℕ) (F_star : Fin r' → Set S) (H : Fin r' → Hypergraph α β)
+      (μ : BoundaryUnit S → Hypergraph α β) (θ_G : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+      G.IsGraph →
+      r' ≤ r →
+      PresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star H μ q →
+      theorem_7_3_bound V a b c p r q ≤ θ_G →
+      IsTangle G θ_G 𝒯 →
+      PresentationSurroundsTangle Γ r' F_star μ 𝒯 →
+      ¬ HasVitalPLinkage G p := by
+  dsimp only [theorem_7_3_bound]
+  set lam := Induction.theorem_6_3_bound (2 * a + b) c p r q
+  set θ₁ := theorem_5_2_bound V (4 * a + 2 * b) (2 * (p + lam))
+  set θ₂ := theorem_4_6_bound (4 * a + 2 * b) c θ₁
   have : T2Space S := hS.2.1
-  -- The constants of the proof.
-  obtain ⟨lam, hlam⟩ := theorem_6_3_parallel_proof.{u, v} S hS p r q hq
+  have hT : Induction.HasType S (2 * a + b) c := ⟨a, b, rfl, he⟩
   obtain ⟨Shat, _, ⟨cap⟩⟩ := exists_cappedSurface _ S hS hconn rfl
   have : ConnectedSpace Shat := cap.connected
-  obtain ⟨θ₁, hθ₁, h52'⟩ := theorem_5_2_parallel Shat cap.isSurface cap.bd_empty (2 * (p + lam))
-  obtain ⟨θ₂, hθ₂, h46⟩ := exists_tangle_capDrawing_deleteVertices hS cap hθ₁
-  refine ⟨q * θ₂, Nat.one_le_iff_ne_zero.2 (Nat.mul_ne_zero (by omega) (by omega)), ?_⟩
+  rcases he with ⟨eS⟩
+  have hcap_model : Nonempty (Shat ≃ₜ SurfaceModel a b 0) :=
+    GM19.capModel a b c Shat (GM19.IsCappedSurface.ofHomeo eS.symm cap)
+  have hcuffs_eq : (cuffs S).ncard = c := by
+    have h := GM19.numCuffs_eq eS
+    rw [numCuffs_model] at h
+    exact h
+  have hθ₁ : 1 ≤ θ₁ := one_le_theorem_5_2_bound V (4 * a + 2 * b) (2 * (p + lam))
+  have h52' := theorem_5_2_explicit V hV cap.isSurface cap.bd_empty
+    (k := 4 * a + 2 * b) ⟨a, b, 0, by omega, hcap_model⟩ (2 * (p + lam))
+  have hθ₂ : 1 ≤ θ₂ := one_le_theorem_4_6_bound (4 * a + 2 * b) c hθ₁
+  have h46 := exists_tangle_capDrawing_deleteVertices_explicit hS cap
+    (k := 4 * a + 2 * b) ⟨a, b, 0, by omega, hcap_model⟩ hcuffs_eq hθ₁
   intro α β G Γ Γ_sub ιV ιE r' F_star H μ θ_G 𝒯 hG hr' hdepth hθ h𝒯 hsurr ⟨L, hLv, hLp⟩
   obtain ⟨qv, hP, -, -⟩ := id hdepth
   have hiso := hP.drawing_iso
@@ -238,8 +277,8 @@ theorem theorem_7_3_proof :
     exact (ncard_terminals_deleteVertices_tailSet_le hsep hLv.1).trans hLp.2
   -- By (6.3), `Γ'` has at most `λ` `Σ`-jumps.
   have hjumps : (sigmaJumps Γ' C' ιV).encard ≤ lam :=
-    hlam (C' ∪ A) Γ' C' ιV ιE r' F_star H μ (L ∩ (C' ∪ A)) (isGraph_of_le hG'G hG) hr'
-      hdepth' hexh hpl
+    theorem_6_3_explicit.{u, v} S hS hT p r q hq (C' ∪ A) Γ' C' ιV ιE r' F_star H μ (L ∩ (C' ∪ A))
+      (isGraph_of_le hG'G hG) hr' hdepth' hexh hpl
   have hVbd : Γ'.V ∩ bd S = Γ.V ∩ bd S := restrictDrawing_V_inter_bd hiso hC'le hBC'
   have hJ : jumpSet C' B ⊆ sigmaJumps Γ' C' ιV := by
     rintro Q ⟨hQ, hQpath, a, haB, b, hbB, hab, hterm, hin⟩
@@ -296,6 +335,19 @@ theorem theorem_7_3_proof :
   obtain ⟨θ₃, 𝒯₃, hθ₃, h𝒯₃⟩ :=
     h46 Γ hP.is_proper_drawing hP.cuff_vertices_ge_two X (fun x hx => hx.1.2) hplus
   exact h52' _ θ₃ 𝒯₃ hθ₃ h𝒯₃ hvp'
+
+/-- **Graph Minors XXI, (7.3)** (page 31 of the preprint):
+"**7.3** *For every surface $\Sigma$ and all integers $p, r \ge 0$ and $q \ge 1$, there exists
+$\theta \ge 1$ such that, if a graph $G$ has a presentation in $\Sigma$ of depth $\le q$, and
+defect $\le r$ which surrounds a tangle of order $\ge \theta$, then $G$ has no vital
+$p$-linkage.*" -/
+theorem theorem_7_3_proof :
+    GM21Theorem73Statement.{u, v, 0} := by
+  intro S _ hconn hS p r q hq
+  obtain ⟨a, b, c, he⟩ := classification S hS hconn
+  exact ⟨theorem_7_3_bound GM07.vModel a b c p r q,
+    one_le_theorem_7_3_bound _ a b c p r q hq,
+    theorem_7_3_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) S hS he p r q hq⟩
 
 end GM21
 end GraphMinor

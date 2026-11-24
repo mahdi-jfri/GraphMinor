@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.GM16.Section6
+public import GraphMinor.GM12.Bridge
 import GraphMinor.GM16.Section6ClusterProof
 import GraphMinor.GM16.Section6ClearedHairGraph
 import GraphMinor.GM16.Section6Clearing
@@ -48,28 +49,47 @@ open Set Graph GraphMinor.Surface GraphMinor.GM06 GraphMinor.GM09 GraphMinor.GM1
   GraphMinor.GM14 GraphMinor.GM15
 universe u v w
 
-/-- **Graph Minors XVI, (6.3)** (pages 59–61), by the two applications
-of (5.3), the maximal separated hair family, and clearing the far-end
-cluster. The page-60 typo concerning the vertices of `H₂` is corrected
-by joining the far ends inside the smaller closed zone. -/
-theorem theorem_6_3_proof
-     : GM16Theorem63Statement.{u, v, w} := by
+/-- Explicit hair count `δ` for Graph Minors XVI, (6.3). -/
+@[expose] def theorem_6_3_delta (p τ : ℕ) : ℕ :=
+  2 * (p * (p - 1) / 2) ^ 2 * (max τ 2) ^ 2
+
+/-- Explicit threshold `θ` for Graph Minors XVI, (6.3). -/
+@[expose] def theorem_6_3_theta (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b p ψ : ℕ) : ℕ :=
+  5 * max ψ (max 3 (GM12.theorem_4_4_bound V a b p)) + 34
+
+/-- **Graph Minors XVI, (6.3)** (pages 59–61), with explicit parameters
+`theorem_6_3_delta p τ` and `theorem_6_3_theta V a b p ψ`. -/
+theorem theorem_6_3_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {S : Type w} [TopologicalSpace S] [T2Space S]
+    (hS : IsClosedSurface S) (hConn : ConnectedSpace S)
+    {a b : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b 0))
+    (p τ χ ψ : ℕ) (hψ : 1 ≤ ψ) :
+    1 ≤ theorem_6_3_theta V a b p ψ ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_star : ℕ)
+      (T_star : Set (Hypergraph α β × Hypergraph α β)),
+      IsGraphTangle G θ_star T_star →
+      HasAnimal S G T_star θ_star χ (theorem_6_3_delta p τ)
+        (theorem_6_3_theta V a b p ψ) (τ + 1) →
+      HasHairlessAnimal S G T_star θ_star (χ + 1) ψ τ ∨
+      ControlsMinor G (completeGraph p) T_star := by
   classical
-  intro S _ _ hS hConn p τ χ ψ hψ
   let : ConnectedSpace S := hConn
   let μ := p * (p - 1) / 2
   let τ' := max τ 2
-  let r := max ψ (max 3 (cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p))
-  let θ := 5 * r + 34
-  let δ := 2 * μ ^ 2 * τ' ^ 2
+  let r₀ := GM12.theorem_4_4_bound V a b p
+  have hr₀_spec : IsMarkedPathThreshold.{u, v, w} S p r₀ :=
+    clique_threshold_for_marked_paths_explicit.{u, v, w} V hV hS hConn he p
+  let r := max ψ (max 3 r₀)
+  let θ := theorem_6_3_theta V a b p ψ
+  let δ := theorem_6_3_delta p τ
   have hψr : ψ ≤ r := le_max_left _ _
   have h3r : 3 ≤ r := (le_max_left _ _).trans (le_max_right _ _)
-  have hr₀ : cliquePathThreshold GraphMinor.GM12.gm16_theorem44.{u, v, w} hS hConn p ≤ r :=
-    (le_max_right _ _).trans (le_max_right _ _)
+  have hr₀ : r₀ ≤ r := (le_max_right _ _).trans (le_max_right _ _)
   have hττ' : τ ≤ τ' := le_max_left _ _
   have hτ' : 2 ≤ τ' := le_max_right _ _
-  have hrθ : r ≤ θ := by dsimp only [θ]; omega
-  refine ⟨δ, θ, by dsimp only [θ]; omega, ?_⟩
+  have hrθ : r ≤ θ := by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega
+  refine ⟨by dsimp only [θ, theorem_6_3_theta]; omega, ?_⟩
   intro α β G θ_star T_star hT hAnimal
   by_cases hClique : ControlsMinor G (completeGraph p) T_star
   · exact Or.inr hClique
@@ -84,7 +104,7 @@ theorem theorem_6_3_proof
   have hSaved := hAnim
   obtain ⟨_, _, hSpan, hMet, hXsub, hXcard, hYsub, _, hHorns, _, hSep⟩ := hAnim
   by_cases hμzero : μ = 0
-  · exact hClique (controlsMinor_of_zero_pairs hS hConn p hSpan hMet (hr₀.trans hrθ) hμzero)
+  · exact hClique (controlsMinor_of_zero_pairs_of hr₀_spec hSpan hMet (hr₀.trans hrθ) hμzero)
   have hμ : 1 ≤ μ := by omega
   obtain ⟨F⟩ := hSaved.exists_hairFamily
   obtain ⟨_, hself, _, hsymm, htri, _⟩ := GraphMinor.GM11.gm15_theorem_9_1.{w} H θ T d hS hConn hMet
@@ -96,14 +116,14 @@ theorem theorem_6_3_proof
       d {a} {c} ≤ d {a} {b} + d {b} {c} := fun a ha b hb c hc =>
     htri {a} (singleton_mem_A_of_mem_V ha) {b} (singleton_mem_A_of_mem_V hb)
       {c} (singleton_mem_A_of_mem_V hc)
-  obtain ⟨w, hw, Y₄, hY₄, hY₄card, hnearFar⟩ := theorem_6_3_far_end_cluster hS hConn
-    hSaved F hμ rfl hr₀ (by omega) (by dsimp only [θ]; omega)
+  obtain ⟨w, hw, Y₄, hY₄, hY₄card, hnearFar⟩ := theorem_6_3_far_end_cluster_of hr₀_spec
+    hSaved F hμ rfl hr₀ (by omega) (by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega)
     hψ (hψr.trans hrθ) (Nat.le_succ τ) hττ' hτ' hselfV hsymV htriV hClique hNew
   have hwA := singleton_mem_A_of_mem_V hw
   obtain ⟨Λ₁, hZone₁, hcontain₁⟩ := GraphMinor.GM14.theorem_9_2_proof.{w} H θ r T d {w} hS hConn hMet hwA
-    (by omega) (by dsimp only [θ]; omega)
+    (by omega) (by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega)
   obtain ⟨Λ, hZone, hRigid, hcontain⟩ := GraphMinor.GM14.theorem_9_3_proof.{w} H θ (r + 3) T d {w} hS hConn hSpan.isRigid hMet hwA
-    (by omega) (by dsimp only [θ]; omega)
+    (by omega) (by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega)
   change IsLambdaZoneAround H d (r + 8) {w} Λ at hZone
   have hnest : closure Λ₁ ⊆ Λ := zone_closure_subset_of_atom_neighborhood hZone₁
     (by intro a ha hd; exact hcontain a ha hd)
@@ -129,8 +149,8 @@ theorem theorem_6_3_proof
   let H' := clearedSubdrawing H Λ
   let η' := restrictCleared η Λ
   obtain ⟨T', d', hClear, _⟩ := GraphMinor.GM14.theorem_3_2_proof hS hConn
-    (by dsimp only [θ]; omega : 4 * (r + 8) + 3 ≤ θ) hMet hZone
-  have horder : θ - 4 * (r + 8) - 2 = r := by dsimp only [θ]; omega
+    (by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega : 4 * (r + 8) + 3 ≤ θ) hMet hZone
+  have horder : θ - 4 * (r + 8) - 2 = r := by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega
   have hSpan' : IsSigmaSpan G H' η' θ_star r T_star T' := by
     simpa only [horder] using IsSigmaSpan.clear hSpan hClear hRigid
   have hMet' : HasTangleMetric H' r T' d' := by
@@ -155,7 +175,7 @@ theorem theorem_6_3_proof
     intro x hx
     obtain ⟨P, ends, hHorn⟩ := hHorns x hx
     have h62 := theorem_6_2_proof hS hConn G θ_star θ (r + 8) τ T_star H η T T' d d' Λ x P ends
-      hSpan hMet (by omega) (by dsimp only [θ]; omega)
+      hSpan hMet (by omega) (by dsimp only [θ, theorem_6_3_theta, r, r₀]; omega)
       ⟨{w}, hwA, hZone⟩ hRigid hClear hHorn
     simpa only [horder] using h62
   have hBase : IsAnimal G T_star θ_star H' η' r T' d' X ∅ χ 0 r τ :=
@@ -194,7 +214,7 @@ theorem theorem_6_3_proof
   rcases theorem_5_3_proof K A μ τ' hKV hKE hAK hcompA hcountA with
     ⟨P, a, b, hPP, hP⟩ | ⟨x, P, b, hxK, hinter, hP⟩
   · apply hClique
-    apply (cliquePathThreshold_spec hS hConn p).2 G K θ_star r T_star H' η' T' d' Y₄
+    apply hr₀_spec G K θ_star r T_star H' η' T' d' Y₄
       P a b hSpan' hMet' hr₀ hY₄new
       (fun y hy z hz hyz => hr₀.trans (hSep' y hy z hz hyz)) hKG hKH hInter.subset
     · intro i
@@ -215,5 +235,17 @@ theorem theorem_6_3_proof
       (fun i => ⟨hAH (hP i).1, (hP i).2.2.1⟩) hinter
     have hxX : x ∉ X := fun hxX => (Set.disjoint_left.mp hXK) hxX hxK
     exact hNew (hBase.add_horn hψ hψr le_rfl hxX ⟨_, _, hHorn.mono le_rfl hττ'⟩)
+
+/-- **Graph Minors XVI, (6.3)** (pages 59–61), by the two applications
+of (5.3), the maximal separated hair family, and clearing the far-end
+cluster. The page-60 typo concerning the vertices of `H₂` is corrected
+by joining the far ends inside the smaller closed zone. -/
+theorem theorem_6_3_proof
+     : GM16Theorem63Statement.{u, v, w} := by
+  intro S _ _ hS hConn p τ χ ψ hψ
+  let : ConnectedSpace S := hConn
+  obtain ⟨a, b, he⟩ := GM12.exists_closed_surface_model hS
+  exact ⟨theorem_6_3_delta p τ, theorem_6_3_theta GM07.vModel a b p ψ,
+    theorem_6_3_explicit.{u, v, w} GM07.vModel (fun _ _ _ _ => le_rfl) hS hConn he p τ χ ψ hψ⟩
 
 end GraphMinor.GM16

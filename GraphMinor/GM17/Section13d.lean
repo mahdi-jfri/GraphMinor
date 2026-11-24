@@ -4,8 +4,7 @@ public import GraphMinor.GM17.Section13c
 public import GraphMinor.GM17.SubdivideDraw
 public import GraphMinor.GM17.VortexPortrayal
 public import GraphMinor.GM16.Section7
-
-import GraphMinor.GM16.MainProof
+public import GraphMinor.GM16.MainProof
 
 import GraphMinor.GM17.Section8Proved
 
@@ -43,10 +42,30 @@ theorem nonempty_of_isTangle {α : Type u} {β : Type v} {G : Hypergraph α β} 
   · exact ht.axiom3 h (hsub _ _)
   · exact ht.axiom3 h (hsub _ _)
 
-/-- **Graph Minors XVII, (13.1)** (page 202), from XVI (3.1). -/
-theorem theorem_13_1_proof  : Theorem131Statement.{u, v} := by
+/-- Explicit `(p, q, z, θ)` bounds for Graph Minors XVII, (13.1), parameterized by `V`. -/
+@[expose] def theorem_13_1_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (vB eB : ℕ) : ℕ × ℕ × ℕ × ℕ :=
+  let res := GraphMinor.GM16.theorem_3_1_bound V (vB + 2 * eB) (3 * eB)
+  let κ := res.1
+  let ρ := res.2.1
+  let ζ := res.2.2.1
+  let θ₀ := res.2.2.2
+  (ρ + 1, κ, ζ, max θ₀ (ζ + max 3 (2 * (ρ + 1) + 2) + 1))
+
+/-- **Graph Minors XVII, (13.1)** (page 202), with explicit bounds `theorem_13_1_bound V vB eB`. -/
+theorem theorem_13_1_explicit (V : ℕ → ℕ → ℕ → ℕ → ℕ)
+    (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    {α' β' : Type} (H : Hypergraph α' β') (hH : H.IsGraph)
+    {vB eB : ℕ} (hvB : H.vertexSet.ncard ≤ vB) (heB : H.edgeSet.ncard ≤ eB) :
+    let res := theorem_13_1_bound V vB eB
+    res.2.2.1 < res.2.2.2 ∧
+    ∀ {α : Type u} {β : Type v} (G : Hypergraph α β), G.IsGraph → ∀ (θ' : ℕ)
+      (𝒯 : Set (Hypergraph α β × Hypergraph α β)), IsTangle G θ' 𝒯 → res.2.2.2 ≤ θ' →
+      ControlsMinor G 𝒯 H ∨
+      ∃ Z ⊆ G.vertexSet, Z.ncard ≤ res.2.2.1 ∧
+        ∃ π : Portrayal (G.deleteVertices Z),
+          π.IsCentral (deleteVerticesTangle G Z 𝒯 θ') ∧
+          π.warp ≤ res.1 ∧ (cuffs π.S).encard ≤ res.2.1 ∧ ¬ CanBeDrawn π.S H := by
   classical
-  intro α' β' H hH
   have hex : ∀ e : ↥H.edgeSet, ∃ x y, H.ends e.1 = {x, y} := fun e => exists_ends hH e.2
   choose a b hab using hex
   have ha : ∀ e, a e ∈ H.vertexSet := fun e => H.vertex_mem_of_inc (e := e.1) (by
@@ -60,37 +79,55 @@ theorem theorem_13_1_proof  : Theorem131Statement.{u, v} := by
   haveI : Finite ↥H.edgeSet := H.edgeSet_finite.to_subtype
   have hVL : (subdiv H a b ha hb).vertexSet.Finite := (H.vertexSet_finite.image _).union (Set.finite_range _)
   have hEL : (subdiv H a b ha hb).edgeSet.Finite := Set.toFinite _
-  obtain ⟨κ, ρ, ζ, θ₀, -, hL⟩ := GraphMinor.GM16.theorem_3_1_proof.{u, v, 0, 0, 0} (subdiv H a b ha hb) hVL hEL
-  refine ⟨ρ + 1, κ, ζ, max θ₀ (ζ + max 3 (2 * (ρ + 1) + 2) + 1), by omega, ?_⟩
+  have hvL : (subdiv H a b ha hb).vertexSet.ncard ≤ vB + 2 * eB :=
+    (subdiv_vertexSet_ncard_le H a b ha hb).trans (by omega)
+  have heL : (subdiv H a b ha hb).edgeSet.ncard ≤ 3 * eB :=
+    (subdiv_edgeSet_ncard_le H a b ha hb).trans (by omega)
+  obtain ⟨-, hL⟩ := GraphMinor.GM16.theorem_3_1_explicit.{u, v, 0, 0, 0} V hV
+    (subdiv H a b ha hb) hVL hEL hvL heL
+  let res3 := GraphMinor.GM16.theorem_3_1_bound V (vB + 2 * eB) (3 * eB)
+  let κ := res3.1
+  let ρ := res3.2.1
+  let ζ := res3.2.2.1
+  let θ₀ := res3.2.2.2
+  refine ⟨by dsimp [theorem_13_1_bound]; omega, ?_⟩
   intro α β G hG θ' 𝒯 ht hθ
   have hθ₁ : θ₀ ≤ θ' := (le_max_left _ _).trans hθ
   have hθ₂ : ζ + max 3 (2 * (ρ + 1) + 2) + 1 ≤ θ' := (le_max_right _ _).trans hθ
   haveI := nonempty_of_isTangle ht
-  obtain ⟨Gr, hV, hE, rfl⟩ : ∃ (Gr : Graph α β) (hV : Gr.vertexSet.Finite) (hE : Gr.edgeSet.Finite), Hypergraph.ofGraph Gr hV hE = G :=
+  obtain ⟨Gr, hV', hE', rfl⟩ : ∃ (Gr : Graph α β) (hV : Gr.vertexSet.Finite) (hE : Gr.edgeSet.Finite), Hypergraph.ofGraph Gr hV hE = G :=
     ⟨toGraph G hG, G.vertexSet_finite, G.edgeSet_finite, ofGraph_toGraph G hG _ _⟩
   by_cases hc : GM16.ControlsMinor Gr (subdiv H a b ha hb) 𝒯
-  · exact .inl (controlsMinor_of_subdiv hH hab ha hb hV hE hc)
+  · exact .inl (controlsMinor_of_subdiv hH hab ha hb hV' hE' hc)
   right
-  obtain ⟨Z, Seg, Sp, _, _, D, ν, hZ, hZ₁, hZ₂, hS, hcon, hnd, hcent, hty, harr⟩ := hL Gr θ' 𝒯 ⟨hV, hE, ht⟩ hθ₁ hc
-  have hV' : (GM09.deleteVertices Gr Z).vertexSet.Finite := hV.subset (by simp [GM09.deleteVertices])
-  have hE' : (GM09.deleteVertices Gr Z).edgeSet.Finite := hE.subset (Gr.induce_le sdiff_subset).edgeSet_mono
-  have hπ := exists_portrayal_of_arrangement hS hV' hE' hty harr
-  rw [GM16.ofGraph_deleteVertices_eq Gr hV hE Z hV' hE'] at hπ
+  obtain ⟨Z, Seg, Sp, _, _, D, ν, hZ, hZ₁, hZ₂, hS, hcon, hnd, hcent, hty, harr⟩ := hL Gr θ' 𝒯 ⟨hV', hE', ht⟩ hθ₁ hc
+  have hV'' : (GM09.deleteVertices Gr Z).vertexSet.Finite := hV'.subset (by simp [GM09.deleteVertices])
+  have hE'' : (GM09.deleteVertices Gr Z).edgeSet.Finite := hE'.subset (Gr.induce_le sdiff_subset).edgeSet_mono
+  have hπ := exists_portrayal_of_arrangement hS hV'' hE'' hty harr
+  rw [GM16.ofGraph_deleteVertices_eq Gr hV' hE' Z hV'' hE''] at hπ
   obtain ⟨π, ⟨j, hj⟩, hw, hq, hcell⟩ := hπ
   refine ⟨Z, hZ, hZ₁, π, ?_, hw, hq, fun hd => hnd (canBeDrawnIn_subdiv hab ha hb (CanBeDrawn.of_isEmbedding hj hd))⟩
   intro c hcC
   have ht' := GM10.theorem_8_5_proof hG ht hZ hZ₂
   have hle := π.cellGraph_le c hcC
   have hsep := isSeparation_complSubhypergraph hle
-  have hord : separationOrder (π.cellGraph c) (complSubhypergraph ((ofGraph Gr hV hE).deleteVertices Z) (π.cellGraph c)) < θ' - Z.ncard := by
+  have hord : separationOrder (π.cellGraph c) (complSubhypergraph ((ofGraph Gr hV' hE').deleteVertices Z) (π.cellGraph c)) < θ' - Z.ncard := by
     rw [separationOrder_complSubhypergraph]
     have hsub := π.attachments_cellGraph_subset_otherVertices hcC
     have h1 := Set.ncard_le_ncard hsub ((π.cellGraph c).vertexSet_finite.inter_of_left _)
     have h2 := π.ncard_cell_inter_other_le hw hcC
+    dsimp only [res3, ζ, ρ] at hθ₂
     omega
   rcases ht'.axiom1 hsep hord with h | h
   · exact ⟨_, h⟩
   · obtain ⟨s, hs, hsub⟩ := hcell c hcC
     exact absurd hsub (hcent.2 hs h)
+
+/-- **Graph Minors XVII, (13.1)** (page 202), from XVI (3.1). -/
+theorem theorem_13_1_proof  : Theorem131Statement.{u, v} := by
+  intro α' β' H hH
+  let res := theorem_13_1_bound GM07.vModel H.vertexSet.ncard H.edgeSet.ncard
+  exact ⟨res.1, res.2.1, res.2.2.1, res.2.2.2,
+    theorem_13_1_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) H hH le_rfl le_rfl⟩
 
 end GraphMinor.GM17

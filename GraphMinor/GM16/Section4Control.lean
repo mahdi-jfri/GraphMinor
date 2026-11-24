@@ -2,7 +2,7 @@ module
 
 public import GraphMinor.GM16.Section4Claim1
 public import GraphMinor.GM16.ModelInducedTangle
-import GraphMinor.GM16.Section4GridMinor
+public import GraphMinor.GM16.Section4GridMinor
 import GraphMinor.GM10.TangleLemmas
 
 /-!
@@ -65,6 +65,38 @@ private theorem induced_wall_subset {θ : ℕ} {α : Type u} {β : Type v}
       omega
     exact (hNoRow B A hm hOrdSwap j hBig).elim
 
+/-- Explicit threshold for `exists_conformal_wall_minor`. -/
+@[expose] def conformalWallBound (θ : ℕ) : ℕ :=
+  wallMinorBound θ + θ
+
+/-- Explicit version of `exists_conformal_wall_minor` with threshold `conformalWallBound θ`. -/
+theorem exists_conformal_wall_minor_explicit (θ : ℕ) (hθ : 2 ≤ θ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θG : ℕ)
+      (Tstar : Set (Hypergraph α β × Hypergraph α β)) (hT : IsGraphTangle G θG Tstar),
+      conformalWallBound θ ≤ θG →
+      ∃ (ηv : Fin (2 * θ + 1) × Fin θ → Set α)
+        (ηe : Sym2 (Fin (2 * θ + 1) × Fin θ) → β),
+        IsMinorModel (sphereWallGraph θ) G ηv ηe ∧
+        ∃ (K : Graph (Set α) β) (hVK : V(K).Finite) (hEK : E(K).Finite),
+          IsMinor K G ∧
+          Hypergraph.ofGraph K hVK hEK = imageHypergraph ηv ηe
+            (Hypergraph.ofGraph (sphereWallGraph θ) (Set.toFinite _) (Set.toFinite _)) ∧
+          IsTangle (Hypergraph.ofGraph K hVK hEK) θ (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) ∧
+          IsTangle (Hypergraph.ofGraph G hT.finite_V hT.finite_E) θ
+            (inducedTangle (Hypergraph.ofGraph G hT.finite_V hT.finite_E)
+              (Hypergraph.ofGraph K hVK hEK) (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) θ) ∧
+          inducedTangle (Hypergraph.ofGraph G hT.finite_V hT.finite_E)
+            (Hypergraph.ofGraph K hVK hEK) (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) θ ⊆ Tstar := by
+  intro α β G θG Tstar hT hOrd
+  have hOrd' : wallMinorBound θ ≤ θG := (Nat.le_add_right _ _).trans hOrd
+  have hθG : θ ≤ θG := (Nat.le_add_left _ _).trans hOrd
+  obtain ⟨ηv, ηe, hModel, hNoRow⟩ :=
+    exists_wall_minor_no_small_row_explicit.{u, v} θ (by omega) G θG Tstar hT hOrd'
+  obtain ⟨K, hVK, hEK, hMinor, hImage, hTK, hTG⟩ := exists_model_induced_tangle
+    (Set.toFinite _) (Set.toFinite _) hT.finite_V hT.finite_E hModel hθ (theorem_4_2_claim_1 hθ)
+  exact ⟨ηv, ηe, hModel, K, hVK, hEK, hMinor, hImage, hTK, hTG,
+    induced_wall_subset hT hθG hModel hNoRow hVK hEK hImage⟩
+
 /-- The wall minor and its conformal induced tangle in XVI (4.2),
 page 53. All graph and tangle steps are proved, with no statement
 hypotheses. -/
@@ -85,14 +117,8 @@ theorem exists_conformal_wall_minor (θ : ℕ) (hθ : 2 ≤ θ) :
               (inducedTangle (Hypergraph.ofGraph G hT.finite_V hT.finite_E)
                 (Hypergraph.ofGraph K hVK hEK) (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) θ) ∧
             inducedTangle (Hypergraph.ofGraph G hT.finite_V hT.finite_E)
-              (Hypergraph.ofGraph K hVK hEK) (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) θ ⊆ Tstar := by
-  obtain ⟨θ₀, hθ₀, hWall⟩ := exists_wall_minor_no_small_row θ (by omega)
-  refine ⟨θ₀ + θ, by omega, ?_⟩
-  intro α β G θG Tstar hT hOrd
-  obtain ⟨ηv, ηe, hModel, hNoRow⟩ := hWall G θG Tstar hT (by omega)
-  obtain ⟨K, hVK, hEK, hMinor, hImage, hTK, hTG⟩ := exists_model_induced_tangle
-    (Set.toFinite _) (Set.toFinite _) hT.finite_V hT.finite_E hModel hθ (theorem_4_2_claim_1 hθ)
-  exact ⟨ηv, ηe, hModel, K, hVK, hEK, hMinor, hImage, hTK, hTG,
-    induced_wall_subset hT (by omega) hModel hNoRow hVK hEK hImage⟩
+              (Hypergraph.ofGraph K hVK hEK) (imageHypergraphTangle ηv ηe (sphereWallTangle θ)) θ ⊆ Tstar :=
+  ⟨conformalWallBound θ, (by unfold conformalWallBound; omega),
+    exists_conformal_wall_minor_explicit.{u, v} θ hθ⟩
 
 end GraphMinor.GM16

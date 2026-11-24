@@ -3,7 +3,7 @@ module
 public import GraphMinor.GM21.Defs
 public import GraphMinor.GM21.CuffSpaces
 public import GraphMinor.GM21.Parallel
-import GraphMinor.GM21.Section7ThreeProof
+public import GraphMinor.GM21.Section7ThreeProof
 public import GraphMinor.GM21.Section3
 public import GraphMinor.GM17.Section4
 import GraphMinor.GM21.Section2
@@ -2518,33 +2518,41 @@ theorem uncoveredSharedSum_lt_of_pseudoSplit {G : Hypergraph α β} {Γ : Drawin
     dsimp only [μ'] at hle
     omega
 
-/-- **Graph Minors XXI, (8.4)** (page 36 of the preprint), for an infinite type `α` of
-vertices. The paper's induction splits a vertex `v ∈ V(μ(u₁) ∩ μ(u₂))` by (8.2) and (8.3), and
-each split needs two new vertices `v₁, v₂ ∉ V(G)`. Here they are taken from `α`, which is why `α`
-must be infinite. `theorem_8_4_proof` in `GraphMinor.GM21.Section8Free` removes this hypothesis
-by moving the graph into `α ⊕ ULift ℕ`. -/
-theorem theorem_8_4_of_infinite
+/-- Explicit tangle-order bound for **Graph Minors XXI, (8.4)** over a surface model `(a, b, c)`,
+parameterized by an upper bound `V` on `GM07.vModel`. -/
+def theorem_8_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p r q : ℕ) : ℕ :=
+  max (theorem_7_3_bound V a b c (p + 2 * q * r) r q) (2 * q + 3) + q * r
+
+lemma one_le_theorem_8_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (a b c p r q : ℕ) :
+    1 ≤ theorem_8_4_bound V a b c p r q := by
+  dsimp only [theorem_8_4_bound]
+  have : 2 * q + 3 ≤ max (theorem_7_3_bound V a b c (p + 2 * q * r) r q) (2 * q + 3) :=
+    le_max_right _ _
+  omega
+
+/-- Explicit version of **Graph Minors XXI, (8.4)** (page 36 of the preprint), for an infinite
+type `α` of vertices, with threshold `theorem_8_4_bound V a b c p r q`. -/
+theorem theorem_8_4_of_infinite_explicit
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     (S : Type) [TopologicalSpace S] [ConnectedSpace S]
-    (hS : IsSurface S) (p r q : ℕ) (hq : 1 ≤ q) :
-    ∃ θ : ℕ, 1 ≤ θ ∧
-      ∀ {α : Type u} {β : Type v} [Infinite α] (G : Hypergraph α β), G.IsGraph →
-        ∀ (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α) (ιE : Set S → β)
-          (r' : ℕ) (F_star : Fin r' → Set S)
-          (μ : BoundaryUnit S → Hypergraph α β)
-          (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
-          r' ≤ r →
-          PseudoPresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star μ q →
-          θ ≤ θ_G →
-          IsTangle G θ_G 𝒯 →
-          PseudoPresentationSurroundsTangle Γ r' F_star μ 𝒯 →
-          ¬ HasVitalPLinkage G p := by
-  obtain ⟨θ', hθ'_pos, hθ'_spec⟩ := theorem_7_3_proof S hS (p + 2 * q * r) r q hq
+    (hS : IsSurface S) {a b c : ℕ} (he : Nonempty (S ≃ₜ SurfaceModel a b c))
+    (p r q : ℕ) (hq : 1 ≤ q) :
+    ∀ {α : Type u} {β : Type v} [Infinite α] (G : Hypergraph α β), G.IsGraph →
+      ∀ (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α) (ιE : Set S → β)
+        (r' : ℕ) (F_star : Fin r' → Set S)
+        (μ : BoundaryUnit S → Hypergraph α β)
+        (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+        r' ≤ r →
+        PseudoPresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star μ q →
+        theorem_8_4_bound V a b c p r q ≤ θ_G →
+        IsTangle G θ_G 𝒯 →
+        PseudoPresentationSurroundsTangle Γ r' F_star μ 𝒯 →
+        ¬ HasVitalPLinkage G p := by
+  dsimp only [theorem_8_4_bound]
+  set θ' := theorem_7_3_bound V a b c (p + 2 * q * r) r q
   let θ := max θ' (2 * q + 3) + q * r
-  have hθ_pos : 1 ≤ θ := by
-    have : θ' ≤ max θ' (2 * q + 3) := le_max_left _ _
-    omega
-  refine ⟨θ, hθ_pos, ?_⟩
   intro α β _
+  have hθ'_spec := theorem_7_3_explicit.{u, v} V hV S hS he (p + 2 * q * r) r q hq (α := α) (β := β)
   -- Strong induction on the uncovered shared vertex count k
   have h_ind : ∀ k : ℕ, k ≤ q * r →
       ∀ (G : Hypergraph α β), G.IsGraph →
@@ -2638,6 +2646,28 @@ theorem theorem_8_4_of_infinite
     hvital.mono (by omega)
   exact h_ind k hk_le G hG Γ Γ_sub ιV ιE r' F_star μ q_vec θ_G 𝒯 hpp
     hr' hq_vec hr'0 rfl (by omega) h𝒯 hsurr hvital_k
+
+/-- **Graph Minors XXI, (8.4)** (page 36 of the preprint), for an infinite type `α` of
+vertices. -/
+theorem theorem_8_4_of_infinite
+    (S : Type) [TopologicalSpace S] [ConnectedSpace S]
+    (hS : IsSurface S) (p r q : ℕ) (hq : 1 ≤ q) :
+    ∃ θ : ℕ, 1 ≤ θ ∧
+      ∀ {α : Type u} {β : Type v} [Infinite α] (G : Hypergraph α β), G.IsGraph →
+        ∀ (Γ : Drawing S) (Γ_sub : Hypergraph α β) (ιV : S → α) (ιE : Set S → β)
+          (r' : ℕ) (F_star : Fin r' → Set S)
+          (μ : BoundaryUnit S → Hypergraph α β)
+          (θ_G : ℕ) (𝒯 : Set (Hypergraph α β × Hypergraph α β)),
+          r' ≤ r →
+          PseudoPresentationHasDepthLe G Γ Γ_sub ιV ιE r' F_star μ q →
+          θ ≤ θ_G →
+          IsTangle G θ_G 𝒯 →
+          PseudoPresentationSurroundsTangle Γ r' F_star μ 𝒯 →
+          ¬ HasVitalPLinkage G p := by
+  obtain ⟨a, b, c, he⟩ := classification S hS inferInstance
+  exact ⟨theorem_8_4_bound GM07.vModel a b c p r q,
+    one_le_theorem_8_4_bound _ a b c p r q,
+    theorem_8_4_of_infinite_explicit.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) S hS he p r q hq⟩
 
 end IteratedSplit
 

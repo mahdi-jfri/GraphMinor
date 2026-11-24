@@ -1,7 +1,7 @@
 module
 
 public import GraphMinor.GM21.Section6Induction
-import GraphMinor.GM21.Section6Five
+public import GraphMinor.GM21.Section6Five
 import GraphMinor.Surface.CutIArc
 
 /-!
