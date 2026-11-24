@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Case3StepsOrderedLoopOwner
 public import GraphMinor.Compute.Case3StepsFirstSeen
 public import GraphMinor.Compute.Case3StepsRecordOwnerProg
+import Mathlib.Data.List.GetD
 
 /-!
 # The loop-owner table during the member scan

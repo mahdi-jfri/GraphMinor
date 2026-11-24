@@ -4,6 +4,7 @@ public import GraphMinor.Compute.Specs9
 public import GraphMinor.Compute.Case3Block
 public import GraphMinor.Compute.Array
 import GraphMinor.Compute.Neighborhood
+import Mathlib.Data.List.GetD
 
 /-!
 # Algorithm (9.9) for `p ≤ 1`

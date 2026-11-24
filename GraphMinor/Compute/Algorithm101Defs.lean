@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3Block
+import Mathlib.Data.List.GetD
 
 /-!
 # Supporting Combinators, Pure Folio/Model Decoders, and Bridges for GM XIII Algorithm (10.1)

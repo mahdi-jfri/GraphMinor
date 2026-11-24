@@ -5,6 +5,7 @@ public import GraphMinor.GM06.Alg57DeletionCurrentMasks
 public import GraphMinor.Compute.GM06Reduction1Scan
 public import GraphMinor.Compute.GM06PruneRotations
 import GraphMinor.GM06.Section5NoReduction1
+import Mathlib.Data.List.GetD
 
 /-!
 # The current-state clockwise deletion branch

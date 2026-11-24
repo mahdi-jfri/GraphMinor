@@ -6,6 +6,7 @@ import GraphMinor.Compute.TwoPathsChild
 import GraphMinor.Compute.TwoPathsChord
 import GraphMinor.Compute.TwoPathsRotate
 import GraphMinor.HP25.Lemma43Fan
+import Mathlib.Data.List.GetD
 
 /-!
 # One collapse record on the successor array: the proof

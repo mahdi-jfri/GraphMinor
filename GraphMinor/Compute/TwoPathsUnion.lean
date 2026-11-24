@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.TwoPathsSep
+import Mathlib.Data.List.GetD
 
 /-!
 # The adjacency lists of `H + F`

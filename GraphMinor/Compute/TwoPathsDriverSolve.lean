@@ -181,7 +181,7 @@ theorem exists_support_eq {V : Type*} {G : SimpleGraph V} {a b : V} (P : G.Walk 
     ∃ m, P.support = a :: m ++ [b] := by
   have hne : P.support.tail ≠ [] := by
     intro h
-    have hs := P.support_eq_cons
+    have hs := P.cons_tail_support.symm
     rw [h] at hs
     have hl := P.getLast_support
     simp only [hs, List.getLast_singleton] at hl
@@ -189,7 +189,7 @@ theorem exists_support_eq {V : Type*} {G : SimpleGraph V} {a b : V} (P : G.Walk 
   have h2 : P.support.tail.getLast hne = b := by
     rw [List.getLast_tail]; exact P.getLast_support
   refine ⟨P.support.tail.dropLast, ?_⟩
-  calc P.support = a :: P.support.tail := P.support_eq_cons
+  calc P.support = a :: P.support.tail := P.cons_tail_support.symm
     _ = a :: (P.support.tail.dropLast ++ [P.support.tail.getLast hne]) := by
         rw [List.dropLast_append_getLast]
     _ = a :: P.support.tail.dropLast ++ [b] := by rw [h2]; rfl

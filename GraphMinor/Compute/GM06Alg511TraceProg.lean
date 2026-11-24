@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511SuccTrace
 public import GraphMinor.Compute.Algorithm77Prog
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # RAM traversal of an initial linkage path

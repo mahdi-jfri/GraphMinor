@@ -5,6 +5,7 @@ public import Mathlib.Algebra.Group.Nat.Even
 public import Mathlib.Algebra.BigOperators.Ring.Finset
 public import Mathlib.Data.Finset.Card
 public import Mathlib.Algebra.BigOperators.Ring.Nat
+import Mathlib.Algebra.BigOperators.Group.Finset.Lemmas
 
 /-!
 # Counting for the graph `δ(I)`

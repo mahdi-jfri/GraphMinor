@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsAttachmentBitBody
+import Mathlib.Data.List.GetD
 
 /-!
 # Writing the attachment bitset

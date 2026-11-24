@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm101Interior
+import Mathlib.Data.List.GetD
 
 /-!
 # Shifted Menger Wrapper, Compass CSR Builder, and Clockwise Corner Test for Algorithm (10.1)

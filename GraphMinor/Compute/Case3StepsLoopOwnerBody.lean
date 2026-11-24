@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsMemberLoopOwnerProg
+import Mathlib.Data.List.GetD
 
 /-!
 # Advancing the loop-owner scan by one candidate

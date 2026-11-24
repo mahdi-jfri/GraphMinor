@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Case3StepsPushEncoding
 public import GraphMinor.Compute.Case3StepsParallelCopies
 import GraphMinor.Compute.TwoPathsRotate
+import Mathlib.Data.List.GetD
 
 /-!
 # Writing one pair in original ambient labels

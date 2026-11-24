@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.GM06Alg34PairWrites
 public import GraphMinor.Compute.GM06Alg34InducedData
 public import GraphMinor.Compute.GM06Alg34Layout
+import Mathlib.Data.List.GetD
 
 /-!
 # The endpoint emission fold equals the induced endpoint section

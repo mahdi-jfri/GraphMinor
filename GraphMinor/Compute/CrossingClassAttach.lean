@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.CrossingClassAttachCount
+import Mathlib.Data.List.GetD
 
 /-!
 # Filling bridge attachment lists

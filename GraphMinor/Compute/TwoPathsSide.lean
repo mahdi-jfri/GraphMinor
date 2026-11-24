@@ -4,6 +4,7 @@ public import GraphMinor.Compute.TwoPathsUnion
 public import GraphMinor.Compute.BitSet
 public import GraphMinor.Compute.Restrict
 public import GraphMinor.Compute.TwoPathsSplit
+import Mathlib.Data.List.GetD
 
 /-!
 # The two sides of a split

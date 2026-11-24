@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Join13Defs
 public import GraphMinor.Compute.Algorithm101Defs
+import Mathlib.Data.List.GetD
 
 /-!
 # Supporting lemmas for the (4.1) output adapter

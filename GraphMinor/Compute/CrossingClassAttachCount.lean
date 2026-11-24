@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.CrossingClassBridges
+import Mathlib.Data.List.GetD
 
 /-!
 # Counting bridge attachments and computing their offsets

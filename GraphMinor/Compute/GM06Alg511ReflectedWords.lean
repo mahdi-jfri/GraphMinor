@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.GM06Alg511ReflectedInput
 public import GraphMinor.Compute.GM06Alg511TurnWords
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Unsigned arithmetic for reflected integer edge turns

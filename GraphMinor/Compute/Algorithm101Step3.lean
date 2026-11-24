@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Algorithm101Step2
 public import GraphMinor.Compute.Algorithm105Step2
+import Mathlib.Data.List.GetD
 
 /-!
 # $\tilde{A}$ Encoding and Leaf Map `f_tau0` of Algorithm (10.1)

@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.GM13SocietyOwnerTable
 public import GraphMinor.Compute.Case3StepsCompassLift
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading a multigraph rural division from records and loop owners

@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm92Search
+import Mathlib.Data.List.GetD
 
 /-!
 # Graph Minors XIII, (9.2): the key of the compressed input as a list (`Algorithm92Key.lean`)

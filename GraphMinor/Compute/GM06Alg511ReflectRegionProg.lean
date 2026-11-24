@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.GM06Alg511ReflectDartProg
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Executing reflection of a region-boundary row

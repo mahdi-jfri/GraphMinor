@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Case3Block
 public import GraphMinor.Compute.Algorithm101Defs
 public import GraphMinor.GM13.Section10
+import Mathlib.Data.List.GetD
 
 /-!
 # Vision Output Representation and Pure Reading Decoder for Algorithm (10.1)

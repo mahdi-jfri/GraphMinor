@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511FindDart
 public import GraphMinor.Compute.GM06Alg511Flow
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Selecting one edge of the full initial linkage

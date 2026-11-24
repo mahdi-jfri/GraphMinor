@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57CurrentCutMarks
 public import GraphMinor.GM06.Alg57InputCutFits
 import GraphMinor.GM06.Section5LinkageEnds
 import GraphMinor.GM06.Section5Red
+import Mathlib.Data.List.GetD
 
 /-!
 # The current computed cut fits the permanent linkage and cuffs

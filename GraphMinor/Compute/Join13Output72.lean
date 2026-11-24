@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13TableBounds72
+import Mathlib.Data.List.GetD
 
 /-!
 # The model-output wrapper for the (7.2) call

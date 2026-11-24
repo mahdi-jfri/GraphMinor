@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57CurrentCuffAdjacency
 public import GraphMinor.GM06.Alg57CurrentRows
 public import GraphMinor.Compute.GM06CutPairedEnds
 import GraphMinor.GM06.Alg511CuffEnumeration
+import Mathlib.Data.List.GetD
 
 /-!
 # Projection of the face orbit in the actual current cut

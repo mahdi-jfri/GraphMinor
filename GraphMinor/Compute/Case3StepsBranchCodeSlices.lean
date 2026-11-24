@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsBranchRecord
+import Mathlib.Data.List.GetD
 
 /-!
 # Locating the two lists in a branch code

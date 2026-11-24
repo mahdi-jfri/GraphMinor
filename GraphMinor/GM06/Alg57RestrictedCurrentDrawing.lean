@@ -7,6 +7,7 @@ public import GraphMinor.Compute.GM06UndoDrawing
 import GraphMinor.GM06.Alg57CurrentEndClassification
 import GraphMinor.GM06.Alg511AdjoinCuffs
 import GraphMinor.GM06.Alg511CuffEnumeration
+import Mathlib.Data.List.GetD
 
 /-!
 # The current drawing relation after either deletion reduction

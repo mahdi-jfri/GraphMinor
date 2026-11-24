@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsBranchRecordWords
+import Mathlib.Data.List.GetD
 
 /-!
 # Word bounds for completed case (iii) blocks

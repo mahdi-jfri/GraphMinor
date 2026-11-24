@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsCoreEdgeBody
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing all core-edge group labels

@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Surface.DiscsInSurface
 public import GraphMinor.Surface.SphereDisc
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Tools for gluing surfaces

@@ -6,6 +6,7 @@ public import GraphMinor.Compute.CrossingLiftReverse
 import GraphMinor.Compute.CrossingOpsCycleTest
 import GraphMinor.Compute.CrossingOpsReplLists
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Executing the reflected directed-label permutation

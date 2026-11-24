@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM06.Alg57SourceSplice
 public import GraphMinor.GM06.Alg57ContractedCuffData
 public import GraphMinor.Compute.GM06ContractRotationData
+import Mathlib.Data.List.GetD
 
 /-!
 # The complete rotation table after the selected contraction

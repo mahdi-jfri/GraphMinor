@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Algorithm101Vision
 public import GraphMinor.Compute.Algorithm105
 public import GraphMinor.Compute.Menger
+import Mathlib.Data.List.GetD
 
 /-!
 # Step Invariants and Word RAM Gadgets for Graph Minors XIII, Algorithm (10.1)

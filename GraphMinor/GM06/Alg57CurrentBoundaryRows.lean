@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57CurrentCuffWords
 public import GraphMinor.GM06.Alg57CurrentLinkageEdges
+import Mathlib.Data.List.GetD
 
 /-!
 # The exact retained ends of a linkage row

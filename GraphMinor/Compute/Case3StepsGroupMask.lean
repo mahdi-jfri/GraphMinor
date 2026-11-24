@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Case3StepsGroups
 public import Mathlib.Logic.Equiv.Fin.Basic
+import Mathlib.Data.List.GetD
 
 /-!
 # The bitset of selected member labels

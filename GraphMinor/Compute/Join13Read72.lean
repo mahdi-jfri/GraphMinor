@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13Adapter72Defs
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the raw certificates used by (7.2)

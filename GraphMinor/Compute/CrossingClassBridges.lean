@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.TwoPathsSweepLoop
 public import GraphMinor.Compute.CrossingClassBridgeMath
 import GraphMinor.HP25.Prop34Tools
+import Mathlib.Data.List.GetD
 
 /-!
 # The Bridges of `BridgeCross` on the Word RAM: Off-Cycle Components and Chords

@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Join13CoreBounds72
 import GraphMinor.Compute.Algorithm94Init
 import GraphMinor.Compute.Algorithm74Scan
+import Mathlib.Data.List.GetD
 
 /-!
 # Bounds for the caller's encoded inputs

@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57PersistentRowRotation
 public import GraphMinor.Compute.GM06RotationPredecessors
+import Mathlib.Data.List.GetD
 
 /-!
 # Drawing rotations from rows in a permanent vertex space

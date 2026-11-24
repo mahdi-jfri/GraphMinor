@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsCoreBitsBody
+import Mathlib.Data.List.GetD
 
 /-!
 # Recovering the core bitset on the Word RAM

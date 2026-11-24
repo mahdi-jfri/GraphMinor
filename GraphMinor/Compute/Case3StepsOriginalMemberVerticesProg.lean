@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Case3StepsMemberVertexOrder
 public import GraphMinor.Compute.TwoPathsRotate
+import Mathlib.Data.List.GetD
 
 /-!
 # Writing the member vertex list in original labels

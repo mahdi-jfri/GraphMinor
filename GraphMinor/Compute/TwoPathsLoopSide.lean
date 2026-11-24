@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.TwoPathsChild
 public import GraphMinor.Compute.TwoPathsLoopMath
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing the sides of the vertices of the current path

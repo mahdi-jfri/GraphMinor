@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.GM06DartMate
 public import GraphMinor.Compute.GM06Alg511Input
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Summing signed turns along a supplied path

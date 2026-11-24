@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsRepresentativeBody
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing all component representatives

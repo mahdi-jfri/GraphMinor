@@ -6,6 +6,7 @@ public import GraphMinor.Compute.GM06Alg511FinishIndex
 public import GraphMinor.Compute.GM06Alg511PathTurn
 import Mathlib.Data.List.Chain
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing turns directly from the maximum-flow successor output

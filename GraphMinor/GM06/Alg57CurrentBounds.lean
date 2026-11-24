@@ -8,6 +8,7 @@ import GraphMinor.GM06.Alg57CurrentRows
 import GraphMinor.GM06.Alg57RowBounds
 import GraphMinor.Compute.GM06ActiveEdgeLabels
 import Mathlib.Data.Set.Card
+import Mathlib.Data.List.GetD
 
 /-!
 # Uniform bounds for each reached current state

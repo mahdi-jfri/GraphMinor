@@ -120,8 +120,8 @@ Graph Minors XIII assumes no algorithm from outside the library.
 
 ## Building
 
-The library uses Lean `v4.35.0-rc3` (see [`lean-toolchain`](lean-toolchain)) and a fixed commit of
-Mathlib (see [`lakefile.lean`](lakefile.lean)). To build it:
+The library uses Lean `v4.35.0` (see [`lean-toolchain`](lean-toolchain)) and Mathlib's `v4.35.0`
+release (see [`lakefile.lean`](lakefile.lean)). To build it:
 
 ```sh
 lake exe cache get   # download the compiled Mathlib

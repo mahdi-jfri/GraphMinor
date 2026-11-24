@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Surface.CutSimilar
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Parallel arcs

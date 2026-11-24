@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM06.Alg57CurrentBlockSideLabels
 public import GraphMinor.GM06.Alg57CopiedCornerLabels
 import GraphMinor.Compute.GM06FaceRowsProgram
+import Mathlib.Data.List.GetD
 
 /-!
 # Side labels of the actual selected cut orbit

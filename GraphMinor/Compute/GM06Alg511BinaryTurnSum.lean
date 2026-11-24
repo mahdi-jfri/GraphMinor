@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511BinaryTurnColumn
 public import GraphMinor.Compute.GM06Alg511TurnWords
 import GraphMinor.Compute.GM06RefreshContractedMasks
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # The complete binary turn sum along a stored path

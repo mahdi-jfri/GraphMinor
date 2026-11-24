@@ -7,6 +7,7 @@ public import GraphMinor.GM06.Alg57CurrentCutOrbit
 public import GraphMinor.GM06.Alg57CutCopiedSlots
 import GraphMinor.Compute.GM06RotationPredecessors
 import all GraphMinor.GM06.Alg57CutFaceLink
+import Mathlib.Data.List.GetD
 
 /-!
 # The lifted incidence for `k = 1` read from the cut face orbit

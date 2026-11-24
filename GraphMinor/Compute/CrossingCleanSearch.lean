@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.CrossingCleanAux
 public import GraphMinor.Compute.CrossingOpsEmit
 public import GraphMinor.Compute.CrossingOpsReplLists
+import Mathlib.Data.List.GetD
 
 /-!
 # Breadth-first reachability and boundary filtering for the crossing extractor

@@ -8,6 +8,7 @@ import GraphMinor.GM06.Alg57CurrentEndClassification
 import GraphMinor.GM06.Alg57CurrentCuffEnds
 import GraphMinor.GM06.Alg57TargetBlockData
 import GraphMinor.GM06.Alg57InputCutFits
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the clockwise test from the actual current rotations

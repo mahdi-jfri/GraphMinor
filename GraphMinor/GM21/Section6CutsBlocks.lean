@@ -6,6 +6,7 @@ import Mathlib.Data.Finset.Max
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Push
 import Mathlib.Data.Set.Card.Arithmetic
+import Mathlib.Data.Set.Finite.Lattice
 import Mathlib.Algebra.Order.BigOperators.Group.Finset
 
 /-!

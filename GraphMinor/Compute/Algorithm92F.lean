@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm92Input
+import Mathlib.Data.List.GetD
 
 /-!
 # Graph Minors XIII, (9.2): the subgraph `F` (`Algorithm92F.lean`)

@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511ReflectedWords
 public import GraphMinor.Compute.GM06Alg511OffsetProg
 public import GraphMinor.Compute.GM06Alg511BuildKeys
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing the signed edge words after orientation reversal

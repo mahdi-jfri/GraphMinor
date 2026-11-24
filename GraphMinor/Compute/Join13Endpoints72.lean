@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Join13Write72
 public import GraphMinor.Compute.Join13Read72
+import Mathlib.Data.List.GetD
 
 /-!
 # Writing the mapped edge endpoints for (7.2)

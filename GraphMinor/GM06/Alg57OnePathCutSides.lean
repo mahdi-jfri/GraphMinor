@@ -6,6 +6,7 @@ public import GraphMinor.GM06.Alg57OnePathStartSides
 public import GraphMinor.GM06.Alg57OnePathEndSides
 public import GraphMinor.GM06.Alg57OnePathRed2
 import all GraphMinor.GM06.Alg57CutFaceLink
+import Mathlib.Data.List.GetD
 
 /-!
 # The sides of the rays read from the cut tables

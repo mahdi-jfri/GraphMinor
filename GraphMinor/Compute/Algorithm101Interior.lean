@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm101Step3
+import Mathlib.Data.List.GetD
 
 /-!
 # Step 3 Interior Folio Computation and Vision Record Serializer for Algorithm (10.1)

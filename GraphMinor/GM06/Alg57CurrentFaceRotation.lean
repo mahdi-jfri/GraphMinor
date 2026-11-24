@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57CurrentRows
 public import GraphMinor.GM06.Alg57PersistentRowRotation
 public import GraphMinor.GM06.Alg57CutEquations
 import GraphMinor.GM06.Alg57RegionIncidence
+import Mathlib.Data.List.GetD
 
 /-!
 # Face successors in current permanent rows

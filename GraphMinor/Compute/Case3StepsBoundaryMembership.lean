@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsBoundaryKeys
+import Mathlib.Data.List.GetD
 
 /-!
 # Membership tests in a small boundary key

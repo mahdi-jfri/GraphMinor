@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsComponentRows
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the component table

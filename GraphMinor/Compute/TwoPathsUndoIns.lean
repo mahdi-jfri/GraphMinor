@@ -6,6 +6,7 @@ import GraphMinor.Compute.TwoPathsSweepLoop
 import GraphMinor.Compute.TwoPathsSweep
 import GraphMinor.Compute.TwoPathsChild
 import GraphMinor.Compute.TwoPathsRotate
+import Mathlib.Data.List.GetD
 
 /-!
 # Splicing a list into a successor array

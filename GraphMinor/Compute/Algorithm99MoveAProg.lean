@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Algorithm99MoveBlock
 public import GraphMinor.Compute.Algorithm101Steps
 public import GraphMinor.Compute.BitSet
+import Mathlib.Data.List.GetD
 
 /-!
 # The program that moves output (a) of steps (5) to (7) of (9.9) to `G`

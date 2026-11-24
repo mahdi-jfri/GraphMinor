@@ -6,6 +6,7 @@ public import GraphMinor.Compute.Case3StepsPrepareMember72
 public import GraphMinor.Compute.Case3StepsMemberResultStore
 public import GraphMinor.Compute.Case3StepsStoreMemberRecord
 public import GraphMinor.Compute.Case3StepsGroupMask
+import Mathlib.Data.List.GetD
 
 /-!
 # The body of the member scan

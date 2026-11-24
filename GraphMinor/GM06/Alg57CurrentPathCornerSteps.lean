@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57CurrentPathPositions
 public import GraphMinor.GM06.Alg57CurrentBoundaryRotation
+import Mathlib.Data.List.GetD
 
 /-!
 # Corner labels along consecutive linkage words

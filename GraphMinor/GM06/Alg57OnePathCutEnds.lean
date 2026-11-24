@@ -10,6 +10,7 @@ import GraphMinor.Compute.GM06CutRowEncoding
 import GraphMinor.Compute.GM06CutPathMembership
 import GraphMinor.GM06.Section5OpenCutSheet
 import GraphMinor.GM06.Section5CutRegionCoordinates
+import Mathlib.Data.List.GetD
 
 /-!
 # The copy of a vertex that holds an edge off the one path

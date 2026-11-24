@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Algorithm101TildeA
 public import GraphMinor.Compute.Algorithm105Step2
+import Mathlib.Data.List.GetD
 
 /-!
 # Graph Minors XIII, Algorithm (10.1): Step 2 & Step 3 Word RAM Subprograms

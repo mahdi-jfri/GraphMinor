@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Logic
 public import GraphMinor.Compute.Case3Block
+import Mathlib.Data.List.GetD
 
 /-!
 # Renaming words of an array in place

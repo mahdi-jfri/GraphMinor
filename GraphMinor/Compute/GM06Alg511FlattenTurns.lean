@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511TurnLayout
 public import GraphMinor.Compute.GM06Alg511MapValues
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the supplied integer edge turns

@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm92Key
+import Mathlib.Data.List.GetD
 
 /-!
 # Graph Minors XIII, (9.2): the paths of `H ∪ F` in one array (`Algorithm92Layout.lean`)

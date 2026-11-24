@@ -5,6 +5,7 @@ public import GraphMinor.Compute.GM06Alg511FinishIndex
 public import GraphMinor.Compute.GM06Alg511ChosenTurn
 import GraphMinor.Compute.GM06Alg511TurnBounds
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing a stored linkage path's turn from raw flow

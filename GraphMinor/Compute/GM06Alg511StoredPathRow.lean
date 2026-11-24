@@ -6,6 +6,7 @@ public import GraphMinor.Compute.GM06Alg511CopyRow
 public import GraphMinor.Compute.GM06RestorePathWord
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Materializing an initial linkage path in successor format

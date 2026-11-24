@@ -8,6 +8,7 @@ import GraphMinor.GM06.Section5CoverRegion
 import GraphMinor.GM06.Alg57CurrentCutCopyUnique
 import GraphMinor.Compute.GM06CutRowEncoding
 import GraphMinor.GM06.Alg57SubdrawingRegions
+import Mathlib.Data.List.GetD
 
 /-!
 # The one-path incidence when only Reduction 2 is excluded

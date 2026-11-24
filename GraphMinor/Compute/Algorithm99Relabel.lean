@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm105
+import Mathlib.Data.List.GetD
 
 /-!
 # Deleting a Vertex Set and Renumbering the Rest, on the Word RAM

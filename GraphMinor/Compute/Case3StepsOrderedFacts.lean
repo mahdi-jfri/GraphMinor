@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Case3StepsCoreGroupingOrdered
 public import GraphMinor.Compute.Case3StepsScanInputs
+import Mathlib.Data.List.GetD
 
 /-!
 # Facts about the ordered compass data

@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511BinaryComplement
 public import GraphMinor.Compute.GM06Alg511CopyRow
 import GraphMinor.Compute.CrossingOpsReplLists
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Binary subtraction and unsigned comparison on the Word RAM

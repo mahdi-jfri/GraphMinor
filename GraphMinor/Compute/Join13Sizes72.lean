@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Join13BDSlice72
 public import GraphMinor.Compute.TwoPathsRotate
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the graph and decomposition sizes

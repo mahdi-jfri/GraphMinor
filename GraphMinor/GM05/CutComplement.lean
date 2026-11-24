@@ -3,6 +3,7 @@ module
 public import GraphMinor.Surface.TopologyStatements
 import GraphMinor.Surface.CutComp
 import Mathlib.Topology.Homeomorph.Lemmas
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Complements in the circle-cutting argument

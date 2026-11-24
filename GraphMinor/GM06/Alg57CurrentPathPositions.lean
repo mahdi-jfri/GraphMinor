@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57CurrentPathChains
 public import GraphMinor.GM06.Alg57CurrentCutOrbit
+import Mathlib.Data.List.GetD
 
 /-!
 # Exact cut positions along current path rows

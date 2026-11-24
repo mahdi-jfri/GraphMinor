@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13ExpandList72
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the graph triple stream for (7.2)

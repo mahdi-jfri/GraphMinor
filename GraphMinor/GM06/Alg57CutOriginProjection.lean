@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.GM06CutAdjacencyMath
 import GraphMinor.Compute.GM06CutRowsFacts
+import Mathlib.Data.List.GetD
 
 /-!
 # Projecting computed copied origins

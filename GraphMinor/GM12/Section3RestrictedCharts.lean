@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Surface.Gluing
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Restricting a chart to the punctured surface

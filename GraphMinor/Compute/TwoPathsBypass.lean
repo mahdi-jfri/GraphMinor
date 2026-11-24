@@ -6,6 +6,7 @@ import GraphMinor.Compute.TwoPathsSweepLoop
 import GraphMinor.Compute.TwoPathsChord
 import GraphMinor.Compute.TwoPathsRotate
 import GraphMinor.Compute.TwoPathsChild
+import Mathlib.Data.List.GetD
 
 /-!
 # The bypass of a vertex list, as a program

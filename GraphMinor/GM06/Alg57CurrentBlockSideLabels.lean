@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM06.Alg57CurrentStripCornerLabels
 public import GraphMinor.GM06.Alg57CutBlockCornerLabels
 import GraphMinor.GM06.Section4PathTools
+import Mathlib.Data.List.GetD
 
 /-!
 # Strip labels of the first ends of current cut blocks

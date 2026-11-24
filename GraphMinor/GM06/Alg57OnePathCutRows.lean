@@ -5,6 +5,7 @@ public import GraphMinor.GM06.Alg57OnePathRed2
 import all GraphMinor.GM06.Alg57CutFaceLink
 import GraphMinor.GM06.Alg57CutCopiedSlots
 import GraphMinor.Compute.GM06CutPathMembership
+import Mathlib.Data.List.GetD
 
 /-!
 # Incidence of the cut slots with the region, for one path

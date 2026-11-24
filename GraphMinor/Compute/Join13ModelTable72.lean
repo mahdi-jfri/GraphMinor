@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13ModelRecord72
+import Mathlib.Data.List.GetD
 
 /-!
 # Converting the model table for (7.2)

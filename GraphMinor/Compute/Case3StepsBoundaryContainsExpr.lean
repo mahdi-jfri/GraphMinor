@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.Case3StepsBoundaryMembership
 public import GraphMinor.Compute.Case3StepsBoolExpr
+import Mathlib.Data.List.GetD
 
 /-!
 # A constant-size RAM test for boundary membership

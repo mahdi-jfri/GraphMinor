@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Algorithm101MemberInd
+import Mathlib.Data.List.GetD
 
 /-!
 # Member Boundary, Interior Check, and Walk Tracing Gadgets for Algorithm (10.1)

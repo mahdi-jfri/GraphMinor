@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsCoreDecode
+import Mathlib.Data.List.GetD
 
 /-!
 # One word of the core bitset

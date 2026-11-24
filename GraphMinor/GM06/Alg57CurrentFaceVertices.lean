@@ -6,6 +6,7 @@ import GraphMinor.Compute.GM06CutOriginFacts
 import GraphMinor.GM11.Section87
 import GraphMinor.GM06.Section5RegionGraphPath
 import GraphMinor.GM06.Alg57CuffRotation
+import Mathlib.Data.List.GetD
 
 /-!
 # Vertex labels read from the actual selected face row

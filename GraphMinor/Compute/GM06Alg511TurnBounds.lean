@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.Compute.GM06Alg511TurnWords
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Word bounds for computed path turn sums

@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57ComputedPathRows
 import GraphMinor.Compute.GM06CutOriginFacts
 import GraphMinor.Compute.GM06CutPathMembership
 import GraphMinor.Compute.GM06FaceRowsProgram
+import Mathlib.Data.List.GetD
 
 /-!
 # Ordinary and path edge ends in the current cut

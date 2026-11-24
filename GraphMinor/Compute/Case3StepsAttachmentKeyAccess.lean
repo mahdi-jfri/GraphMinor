@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsAttachmentKeys
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading and comparing attachment keys

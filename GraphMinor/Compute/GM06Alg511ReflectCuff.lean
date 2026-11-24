@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.TwoPathsRotate
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Reordering prescribed cuffs after orientation reversal

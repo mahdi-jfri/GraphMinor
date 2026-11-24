@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.TwoPathsSide
+import Mathlib.Data.List.GetD
 
 /-!
 # The subinstances of a split

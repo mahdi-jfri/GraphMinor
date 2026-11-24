@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsMemberVertexExpr
+import Mathlib.Data.List.GetD
 
 /-!
 # Writing the vertices of one selected member

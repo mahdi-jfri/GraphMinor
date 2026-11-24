@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM06.Alg57InputCutMarks
 import GraphMinor.GM06.Section5Red
 import GraphMinor.GM06.Section5LinkageEnds
+import Mathlib.Data.List.GetD
 
 /-!
 # The computed cut fits the input linkage and cuffs

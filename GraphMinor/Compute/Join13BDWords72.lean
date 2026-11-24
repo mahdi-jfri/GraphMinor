@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13Core72
+import Mathlib.Data.List.GetD
 
 /-!
 # Decomposition-code slices for the (7.2) core input

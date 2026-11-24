@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.GM06Alg34CrossExpr
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading a cuff vertex's block tag

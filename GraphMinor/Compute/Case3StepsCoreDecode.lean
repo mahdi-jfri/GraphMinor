@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsDivision
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading the core vertex set from the (8.6) output

@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Surface.CutGlue
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Components after cutting

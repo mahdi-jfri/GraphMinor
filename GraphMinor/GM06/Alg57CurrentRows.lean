@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57CurrentDrawingRep
 public import GraphMinor.Compute.GM06DartMate
 import GraphMinor.GM06.Alg57RowBounds
 import GraphMinor.GM06.Alg511CuffEnumeration
+import Mathlib.Data.List.GetD
 
 /-!
 # Global row facts for the current drawing

@@ -9,7 +9,7 @@ package «GraphMinor» where
   ]
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4.git" @ "b63f6e8a68d220e3b3bc4f3792bb53650d375f24"
+  "https://github.com/leanprover-community/mathlib4.git" @ "56a005855ea17e0b0958f73ec801ae140b0a1679"
 
 /-- The formalization. `GraphMinor.lean` imports every file under `GraphMinor/`. -/
 @[default_target]

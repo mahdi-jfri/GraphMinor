@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57ContractedCurrentDrawing
 public import GraphMinor.Compute.GM06ApplyReduction3Drawing
+import Mathlib.Data.List.GetD
 
 /-!
 # The RAM contraction preserves the whole current drawing

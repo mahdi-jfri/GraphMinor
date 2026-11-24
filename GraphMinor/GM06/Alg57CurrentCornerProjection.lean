@@ -5,6 +5,7 @@ public import GraphMinor.GM06.Alg57NumericCornerProjection
 public import GraphMinor.GM06.Alg57CurrentRegionOrbit
 import GraphMinor.GM06.Alg57LinkageCuffSubdrawing
 import GraphMinor.GM06.Alg57InnerCuffCorner
+import Mathlib.Data.List.GetD
 
 /-!
 # Actual corner labels for the computed comparison rows

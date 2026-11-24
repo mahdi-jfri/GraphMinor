@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Join13Adapter101Defs
+import Mathlib.Data.List.GetD
 
 /-!
 # Converting branch-set bit vectors to model lists

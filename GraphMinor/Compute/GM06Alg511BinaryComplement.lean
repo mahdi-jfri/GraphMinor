@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.GM06Alg511BinaryAdd
 public import GraphMinor.Compute.TwoPathsRotate
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Fixed-width complement for binary subtraction

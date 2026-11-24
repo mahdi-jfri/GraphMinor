@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.GM06Alg511FlowGraph
 public import GraphMinor.Compute.GM06DartMate
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Ordinary edge keys for selecting a returned path's darts

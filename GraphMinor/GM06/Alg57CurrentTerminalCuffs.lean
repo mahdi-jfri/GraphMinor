@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57CurrentTerminalInputs
 import GraphMinor.GM06.Section5NextContact
+import Mathlib.Data.List.GetD
 
 /-!
 # The cuff ends of the actual terminal face

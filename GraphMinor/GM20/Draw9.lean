@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM20.Draw8
 public import GraphMinor.Surface.InvarianceOfDomain
+import Mathlib.Topology.LocalAtTarget
 
 /-!
 # Counting the cuffs of a model surface

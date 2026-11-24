@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM06.Alg57CurrentRegionOrbit
 public import GraphMinor.GM06.Alg57FiniteFaceOrbit
 import GraphMinor.Compute.GM06CutRowsFacts
+import Mathlib.Data.List.GetD
 
 /-!
 # The selected face row of the current computed cut

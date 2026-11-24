@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.Case3StepsAttachmentKeyAccess
+import Mathlib.Data.List.GetD
 
 /-!
 # Comparing a boundary-key word on the RAM

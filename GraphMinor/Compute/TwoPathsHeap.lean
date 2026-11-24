@@ -1,6 +1,7 @@
 module
 
 public import GraphMinor.Compute.TwoPathsNorm
+import Mathlib.Data.List.GetD
 
 /-!
 # Saving arrays on a heap

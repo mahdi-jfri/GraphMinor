@@ -5,6 +5,7 @@ public import GraphMinor.Compute.CrossingOpsBasic
 public import GraphMinor.Compute.TwoPathsCyc
 import GraphMinor.Compute.CrossingOpsReplLists
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Word RAM addition of binary digit rows

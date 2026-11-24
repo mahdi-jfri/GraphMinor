@@ -4,6 +4,7 @@ public import GraphMinor.GM06.Alg57CutBlockCornerLabels
 public import GraphMinor.GM06.Alg57CutCopiedSlots
 public import GraphMinor.GM06.Alg57CutOrbitAvoidLast
 import all GraphMinor.GM06.Alg57CutFaceLink
+import Mathlib.Data.List.GetD
 
 /-!
 # Reading a corner label in a copied row slot

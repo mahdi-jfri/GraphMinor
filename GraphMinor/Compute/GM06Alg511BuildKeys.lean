@@ -4,6 +4,7 @@ public import GraphMinor.Compute.GM06Alg511DartKeys
 public import GraphMinor.Compute.GM06Alg511MapValues
 import GraphMinor.Compute.CrossingOpsBasic
 import Mathlib.Tactic
+import Mathlib.Data.List.GetD
 
 /-!
 # Computing the directed edge key array

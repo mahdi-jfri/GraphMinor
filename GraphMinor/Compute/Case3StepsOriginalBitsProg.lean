@@ -3,6 +3,7 @@ module
 public import GraphMinor.Compute.Case3StepsScatterVertexListProg
 public import GraphMinor.Compute.Case3StepsMemberVertexOrder
 public import GraphMinor.Compute.Case3StepsBoundaryMembership
+import Mathlib.Data.List.GetD
 
 /-!
 # Original member and boundary bitsets for the wall output

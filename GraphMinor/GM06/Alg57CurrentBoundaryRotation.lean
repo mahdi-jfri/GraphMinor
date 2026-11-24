@@ -2,6 +2,7 @@ module
 
 public import GraphMinor.GM06.Alg57BoundaryRowRotation
 public import GraphMinor.GM06.Alg57FilterCornerLabels
+import Mathlib.Data.List.GetD
 
 /-!
 # Comparison predecessors in actual current rows

@@ -4,6 +4,7 @@ public import GraphMinor.Compute.Algorithm99Step8Filter
 public import GraphMinor.Compute.Algorithm99Tab
 public import GraphMinor.Compute.Algorithm99MoveBlock
 import GraphMinor.Compute.Algorithm99Step4Scan
+import Mathlib.Data.List.GetD
 
 /-!
 # Step (8) of Algorithm (9.9): the program
