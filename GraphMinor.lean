@@ -4846,6 +4846,7 @@ public import GraphMinor.GM12.Cited
 public import GraphMinor.GM12.Defs
 public import GraphMinor.GM12.Induced
 public import GraphMinor.GM12.MetricRadial
+public import GraphMinor.GM12.Primrec
 public import GraphMinor.GM12.Results
 public import GraphMinor.GM12.Section1
 public import GraphMinor.GM12.Section1b
@@ -5627,6 +5628,7 @@ public import GraphMinor.GM12.SurfaceDualStar
 public import GraphMinor.GM13.Cited
 public import GraphMinor.GM13.ComputeBridge
 public import GraphMinor.GM13.Defs
+public import GraphMinor.GM13.Explicit
 public import GraphMinor.GM13.GraphModel
 public import GraphMinor.GM13.Parallel
 public import GraphMinor.GM13.Results

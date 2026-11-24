@@ -82,34 +82,37 @@ theorem IsCrossOverWall.mono {G' G : Graph α β} {W : Wall α β} {P Q : Graph 
 
 /-! ## (9.6) and Algorithm (9.7): Finding Flat Dividing Subwalls (page 103) -/
 
-/-- **Graph Minors XIII, Algorithm (9.7)** (page 103):
-"(9.7) Algorithm.
-*Input:* A graph $G$, and a wall $H$ in $G$ of height $h'$.
-*Output:* Either
-(i) a model of $K_p$ in $G$, or
-(ii) a subset $X \subseteq V(G)$ with $|X| < \binom{p}{2}$ and $s$ subwalls $H_1, \dots, H_s$ of $H$
-of height $h$, mutually vertex-disjoint, and each flat and dividing in $(G \setminus X) \cup H$, and
-each disjoint from $X$."
-
-Given `(k₁, r₁)` from (9.3) (`theorem_9_3_proof p`) and `(k₂, r₂)` from (9.1) (`theorem_9_1_proof p`), for any
-wall `H` in `G` of height
-`h' = 2 * ((s + k₁ + k₂ + p.choose 2 + 1) * (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2)`, we construct
-a Fig. 1 plane drawing `H_drawn` of `H` (`H.exists_drawnWall_isFigure1`) and
-`t = s + k₁ + k₂ + p.choose 2` proper subwalls `H_sub` of `H` of height `h` at pairwise distance
-`≥ max r₁ (max r₂ 1)` (`DrawnWall.IsFigure1.exists_subwalls_far_apart`), apply (9.3)/(9.4), test
-flatness of the dividing subwalls via (8.1), and either obtain a `K_p`-model by (9.5) and (9.1) or
-select `s` flat dividing subwalls disjoint from `X`. -/
-theorem theorem_9_7_proof
-    {p s h : ℕ} (h2 : 2 ≤ h) (heven : Even h)
+/-- Parameterized core of **Graph Minors XIII, Algorithm (9.7)** (page 103), taking any valid
+bounds `(k₁, r₁)` for (9.3) and `(k₂, r₂)` for (9.1). -/
+theorem theorem_9_7_of_bounds
+    {p s h k₁ r₁ k₂ r₂ : ℕ} (h2 : 2 ≤ h) (heven : Even h)
     {G : Graph α β} {H : Wall α β}
     (hHG : H.graph ≤ G)
     (hHh : H.height =
-      let k₁ := Classical.choose.{1} (theorem_9_3_proof.{u, v} p)
-      let r₁ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p))
-      let k₂ := Classical.choose.{1} (theorem_9_1_proof.{u, v} p)
-      let r₂ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p))
       2 * ((s + k₁ + k₂ + p.choose 2 + 1) *
-        (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2)) :
+        (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2))
+    (h93 : ∀ {t : ℕ} {G₀ : Graph α β} {H₀ : DrawnWall α β}
+      (H_sub : Fin t → Wall α β),
+      H₀.IsFigure1 →
+      H₀.graph ≤ G₀ →
+      (∀ i : Fin t, (H_sub i).IsSubwallOf H₀.toWall) →
+      (∀ i j : Fin t, i ≠ j → r₁ ≤ wallSubgraphDist H₀ (H_sub i).graph (H_sub j).graph) →
+      HasGraphModel (GM16.completeGraph p) G₀ ∨
+        ∃ (X : Set α) (I : Finset (Fin t)),
+          X ⊆ V(G₀) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+          t - k₁ ≤ I.card ∧
+          ∀ i ∈ I, IsDividingSubwall
+            (subgraphUnion G₀ (G₀.induce (V(G₀) \ X)) H₀.graph) H₀.toWall (H_sub i))
+    (h91 : ∀ (G₀ : Graph α β) (H₀ : DrawnWall α β)
+      (H_sub : Fin k₂ → Wall α β) (P Q : Fin k₂ → Graph α β),
+      H₀.IsFigure1 →
+      IsWallIn G₀ H₀.toWall →
+      (∀ i : Fin k₂, (H_sub i).IsSubwallOf H₀.toWall) →
+      (∀ i j : Fin k₂, i ≠ j → r₂ ≤ wallSubgraphDist H₀ (H_sub i).graph (H_sub j).graph) →
+      (∀ i : Fin k₂, IsCrossOverWall G₀ (H_sub i) (P i) (Q i)) →
+      (∀ i : Fin k₂, (V(P i) ∪ V(Q i)) ∩ V(H₀.graph) ⊆ V((H_sub i).graph)) →
+      Pairwise (fun i j : Fin k₂ => Disjoint (V(P i) ∪ V(Q i)) (V(P j) ∪ V(Q j))) →
+      HasGraphModel (GM16.completeGraph p) G₀) :
     HasGraphModel (GM16.completeGraph p) G ∨
       ∃ (X : Set α) (H_flat : Fin s → Wall α β),
         X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
@@ -120,10 +123,6 @@ theorem theorem_9_7_proof
           IsFlatWallIn (subgraphUnion G (G.induce (V(G) \ X)) H.graph) (H_flat a) ∧
           IsDividingSubwall (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H (H_flat a) ∧
           Disjoint V((H_flat a).graph) X := by
-  let k₁ := Classical.choose.{1} (theorem_9_3_proof.{u, v} p)
-  let r₁ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p))
-  let k₂ := Classical.choose.{1} (theorem_9_1_proof.{u, v} p)
-  let r₂ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p))
   let t := s + k₁ + k₂ + p.choose 2
   let r := max r₁ (max r₂ 1)
   -- Construct a Fig. 1 plane drawing `H_drawn` of `H` and `t` subwalls `H_sub` of height `h`
@@ -159,8 +158,7 @@ theorem theorem_9_7_proof
     have hr_pos : 1 ≤ r := (le_max_right r₂ 1).trans (le_max_right r₁ _)
     omega
   -- Step 1: Apply (9.3) / (9.4)
-  rcases Classical.choose_spec.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p))
-      H_sub hfig hHG_drawn hsub_isSub hdist_r₁ with
+  rcases h93 H_sub hfig hHG_drawn hsub_isSub hdist_r₁ with
     hModel | ⟨X, I, hX_sub, hX_fin, hX_card, hI_card, hI_div⟩
   · exact Or.inl hModel
   · let G' := subgraphUnion G (G.induce (V(G) \ X)) H.graph
@@ -222,8 +220,7 @@ theorem theorem_9_7_proof
             (hdisj_sub (emb a) (emb b) (emb.injective.ne hab))
         exact hdisj_K.mono (hPQ_sub_K a) (hPQ_sub_K b)
       have hModel_G' : HasGraphModel (GM16.completeGraph p) G' :=
-        Classical.choose_spec.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p)) G' H_drawn
-          (fun a => H_sub (emb a)) P Q
+        h91 G' H_drawn (fun a => H_sub (emb a)) P Q
           hfig hHG'_drawn
           (fun a => hsub_isSub (emb a))
           (fun a b hab => hdist_r₂ (emb a) (emb b) (emb.injective.ne hab))
@@ -253,6 +250,84 @@ theorem theorem_9_7_proof
           hI_div' (emb a) ha_I,
           ha_good.2⟩
 
+/-- **Graph Minors XIII, Algorithm (9.7)** (page 103):
+"(9.7) Algorithm.
+*Input:* A graph $G$, and a wall $H$ in $G$ of height $h'$.
+*Output:* Either
+(i) a model of $K_p$ in $G$, or
+(ii) a subset $X \subseteq V(G)$ with $|X| < \binom{p}{2}$ and $s$ subwalls $H_1, \dots, H_s$ of $H$
+of height $h$, mutually vertex-disjoint, and each flat and dividing in $(G \setminus X) \cup H$, and
+each disjoint from $X$."
+
+Given `(k₁, r₁)` from (9.3) (`theorem_9_3_proof p`) and `(k₂, r₂)` from (9.1) (`theorem_9_1_proof p`), for any
+wall `H` in `G` of height
+`h' = 2 * ((s + k₁ + k₂ + p.choose 2 + 1) * (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2)`, we construct
+a Fig. 1 plane drawing `H_drawn` of `H` (`H.exists_drawnWall_isFigure1`) and
+`t = s + k₁ + k₂ + p.choose 2` proper subwalls `H_sub` of `H` of height `h` at pairwise distance
+`≥ max r₁ (max r₂ 1)` (`DrawnWall.IsFigure1.exists_subwalls_far_apart`), apply (9.3)/(9.4), test
+flatness of the dividing subwalls via (8.1), and either obtain a `K_p`-model by (9.5) and (9.1) or
+select `s` flat dividing subwalls disjoint from `X`. -/
+theorem theorem_9_7_proof
+    {p s h : ℕ} (h2 : 2 ≤ h) (heven : Even h)
+    {G : Graph α β} {H : Wall α β}
+    (hHG : H.graph ≤ G)
+    (hHh : H.height =
+      let k₁ := Classical.choose.{1} (theorem_9_3_proof.{u, v} p)
+      let r₁ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p))
+      let k₂ := Classical.choose.{1} (theorem_9_1_proof.{u, v} p)
+      let r₂ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p))
+      2 * ((s + k₁ + k₂ + p.choose 2 + 1) *
+        (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2)) :
+    HasGraphModel (GM16.completeGraph p) G ∨
+      ∃ (X : Set α) (H_flat : Fin s → Wall α β),
+        X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+        Pairwise (fun a b : Fin s => Disjoint V((H_flat a).graph) V((H_flat b).graph)) ∧
+        ∀ a : Fin s,
+          IsProperSubwallOf (H_flat a) H ∧
+          (H_flat a).height = h ∧
+          IsFlatWallIn (subgraphUnion G (G.induce (V(G) \ X)) H.graph) (H_flat a) ∧
+          IsDividingSubwall (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H (H_flat a) ∧
+          Disjoint V((H_flat a).graph) X :=
+  theorem_9_7_of_bounds h2 heven hHG hHh
+    (Classical.choose_spec.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p)))
+    (Classical.choose_spec.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p)))
+
+/-- Explicit wall height `h'` for **Graph Minors XIII, (9.6)** (page 103), parameterized by an
+upper bound `V` on `GM07.vModel`. -/
+def theorem_9_6_boundHOf (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p s h : ℕ) : ℕ :=
+  let k₁ := theorem_9_3_boundK p
+  let r₁ := theorem_9_3_boundROf V p
+  let k₂ := theorem_9_1_boundK p
+  let r₂ := theorem_9_1_boundROf V p
+  2 * ((s + k₁ + k₂ + p.choose 2 + 1) * (h + max r₁ (max r₂ 1) + 4) + p ^ 2 + 2)
+
+/-- Explicit version of **Graph Minors XIII, (9.6)** (page 103) at exact wall height
+`theorem_9_6_boundHOf V p s h`, for any upper bound `V` on `GM07.vModel`. -/
+theorem theorem_9_6_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p s h : ℕ) (h2 : 2 ≤ h) (heven : Even h) :
+    p ^ 2 + 2 ≤ theorem_9_6_boundHOf V p s h ∧
+      Even (theorem_9_6_boundHOf V p s h) ∧
+      ∀ {α : Type u} {β : Type v} {G : Graph α β} {H : Wall α β},
+        H.graph ≤ G →
+        H.height = theorem_9_6_boundHOf V p s h →
+        HasGraphModel (GM16.completeGraph p) G ∨
+          ∃ (X : Set α) (H_flat : Fin s → Wall α β),
+            X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+            Pairwise (fun a b : Fin s => Disjoint V((H_flat a).graph) V((H_flat b).graph)) ∧
+            ∀ a : Fin s,
+              IsProperSubwallOf (H_flat a) H ∧
+              (H_flat a).height = h ∧
+              IsFlatWallIn (subgraphUnion G (G.induce (V(G) \ X)) H.graph) (H_flat a) ∧
+              IsDividingSubwall (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H (H_flat a) ∧
+              Disjoint V((H_flat a).graph) X := by
+  refine ⟨by dsimp only [theorem_9_6_boundHOf]; omega,
+    even_two_mul _, ?_⟩
+  intro α β G H hHG hHh
+  exact theorem_9_7_of_bounds h2 heven hHG hHh
+    (theorem_9_3_explicitBound.{u, v} V hV p (α := α) (β := β))
+    (theorem_9_1_explicitBound.{u, v} V hV p (α := α) (β := β))
+
 /-- **Graph Minors XIII, (9.6)** (page 103):
 "For any $p, s \ge 0$ and $h \ge 2$, even, there exists $h' \ge p^2 + 2$, even, and an algorithm as
 in (9.7) with running time $O(v\varepsilon)$ for fixed $p, s, h$." -/
@@ -272,19 +347,9 @@ theorem theorem_9_6_proof
               (H_flat a).height = h ∧
               IsFlatWallIn (subgraphUnion G (G.induce (V(G) \ X)) H.graph) (H_flat a) ∧
               IsDividingSubwall (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H (H_flat a) ∧
-              Disjoint V((H_flat a).graph) X := by
-  let k₁ := Classical.choose.{1} (theorem_9_3_proof.{u, v} p)
-  let r₁ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_3_proof.{u, v} p))
-  let k₂ := Classical.choose.{1} (theorem_9_1_proof.{u, v} p)
-  let r₂ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p))
-  let t := s + k₁ + k₂ + p.choose 2
-  let r := max r₁ (max r₂ 1)
-  let h' := 2 * ((t + 1) * (h + r + 4) + p ^ 2 + 2)
-  have hh'_ge : p ^ 2 + 2 ≤ h' := by dsimp [h']; omega
-  have hh'_even : Even h' := ⟨(t + 1) * (h + r + 4) + p ^ 2 + 2, by ring⟩
-  refine ⟨h', hh'_ge, hh'_even, ?_⟩
-  intro α β G H hHG hHh
-  exact theorem_9_7_proof h2 heven hHG hHh
+              Disjoint V((H_flat a).graph) X :=
+  ⟨theorem_9_6_boundHOf GM07.vModel p s h,
+    theorem_9_6_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p s h h2 heven⟩
 
 /-! ## Wall Society, Compass Invariance, and Graph Size Bounds for (9.8)–(9.9) -/
 

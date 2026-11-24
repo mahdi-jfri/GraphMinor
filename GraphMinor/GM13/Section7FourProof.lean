@@ -2,13 +2,15 @@ module
 
 public import GraphMinor.GM13.Section7FourWalk
 public import GraphMinor.GM13.Section7Five
+public import GraphMinor.GM07.Section4
+public import GraphMinor.GM12.Section4Theorem44
 import GraphMinor.GM07.Bridge
 import GraphMinor.GM07.CuffSlide
 import GraphMinor.GM07.Section35
 import GraphMinor.GM07.Section7
 import GraphMinor.GM09.Basic
 import GraphMinor.GM09.RuralAdd
-import GraphMinor.GM12.Section4Theorem44
+import GraphMinor.GM12.Section3ModelComplexity
 import GraphMinor.GM16.Metric
 import GraphMinor.GM16.Section3
 import GraphMinor.GM16.SphereRespectful
@@ -181,14 +183,28 @@ theorem DrawnWall.IsFigure1.dist_le {W : DrawnWall α β} (hW : W.IsFigure1) {u 
 
 /-! ## (7.4) -/
 
-/-- **(7.4)** (page 90). For every `p` there is `r` such that, for every graph `G` with a wall
-`H` drawn as in Fig. 1, `C(p, 2)` mutually vertex-disjoint `H`-paths of `G` whose ends are
-mutually at distance at least `r` give a model of `K_p` in `G`. -/
-theorem theorem_7_4_proof (p : ℕ) : ∃ r : ℕ, ∀ {α : Type u} {β : Type v},
-    Theorem74For (α := α) (β := β) p r := by
+/-- Explicit distance bound `r` for **Graph Minors XIII, (7.4)** (page 90), parameterized by an
+upper bound `V` on `GM07.vModel`. -/
+@[expose] def theorem_7_4_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  4 * GM12.theorem_4_4_bound V 0 0 p + 5
+
+/-- Explicit version of **(7.4)** (page 90) at bound `theorem_7_4_bound V p`, for any upper bound
+`V` on `GM07.vModel`. -/
+theorem theorem_7_4_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) : ∀ {α : Type u} {β : Type v},
+    Theorem74For (α := α) (β := β) p (theorem_7_4_bound V p) := by
   classical
-  obtain ⟨N, -, hspan⟩ := GM12.theorem_4_4_span GM09.isClosedSurface_sphere p
-  refine ⟨4 * N + 5, fun {α β} G H hH hHG P s t hP hPdisj hfar hst => ?_⟩
+  have he : Nonempty (OnePoint EuclideanPlane ≃ₜ SurfaceModel 0 0 0) :=
+    let ⟨e⟩ := GM12.isSphere_model_zero; ⟨e.symm⟩
+  set N := GM12.theorem_4_4_bound V 0 0 p
+  intro α β G H hH hHG P s t hP hPdisj hfar hst
+  have hspan := GM12.theorem_4_4_span_explicit V hV GM09.isClosedSurface_sphere he p
+    (α := α) (β := β)
+  change ∀ i j, i ≠ j →
+    4 * N + 5 ≤ H.dist (s i) (s j) ∧ 4 * N + 5 ≤ H.dist (s i) (t j) ∧
+    4 * N + 5 ≤ H.dist (t i) (s j) ∧ 4 * N + 5 ≤ H.dist (t i) (t j) at hfar
+  change ∀ i, 4 * N + 5 ≤ H.dist (s i) (t i) at hst
   have hαβ := H.toWall.nonempty_types
   haveI := hαβ.1
   haveI := hαβ.2
@@ -313,7 +329,33 @@ theorem theorem_7_4_proof (p : ℕ) : ∃ r : ℕ, ∀ {α : Type u} {β : Type 
     (fun i j hij => hPdisj (fun h => hij (hc h)))
   exact (hasGraphModel_of_controlsMinor (GM16.controlsMinor_of_gm12 hcm)).mono hG₀G
 
+/-- **(7.4)** (page 90). For every `p` there is `r` such that, for every graph `G` with a wall
+`H` drawn as in Fig. 1, `C(p, 2)` mutually vertex-disjoint `H`-paths of `G` whose ends are
+mutually at distance at least `r` give a model of `K_p` in `G`. -/
+theorem theorem_7_4_proof (p : ℕ) : ∃ r : ℕ, ∀ {α : Type u} {β : Type v},
+    Theorem74For (α := α) (β := β) p r :=
+  ⟨theorem_7_4_bound GM07.vModel p,
+    theorem_7_4_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
+
 /-! ## (7.5) -/
+
+/-- Explicit star-separation bound `m` for **Graph Minors XIII, (7.5)** (page 91), parameterized by
+an upper bound `V` on `GM07.vModel`. -/
+@[expose] def theorem_7_5_bound (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  2 * theorem_7_4_bound V p
+
+/-- Explicit version of **(7.5)** (page 91) at bound `theorem_7_5_bound V p`, for any upper bound
+`V` on `GM07.vModel`. -/
+theorem theorem_7_5_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) : ∀ {α : Type u} {β : Type v} (G : Graph α β)
+    (H : DrawnWall α β), H.IsFigure1 → IsWallIn G H.toWall →
+    ∀ (S : Fin (p.choose 2) → Graph α β) (v : Fin (p.choose 2) → α),
+      (∀ a, IsExternalLMStarOver G H (2 * p.choose 2 ^ 2 - p.choose 2 + 3)
+        (theorem_7_5_bound V p) (S a) (v a)) →
+      Injective v → HasGraphModel (GM16.completeGraph p) G :=
+  fun G H hH hHG S v hS hv =>
+    theorem_7_5_of_theorem_7_4 (theorem_7_4_explicitBound.{u, v} V hV p) G H hH hHG S v hS hv
 
 /-- **(7.5)** (page 91). For every `p` there are `l = 2C(p,2)² - C(p,2) + 3` and `m` such that,
 for every graph `G` with a wall `H` drawn as in Fig. 1, `C(p, 2)` external `(l, m)`-stars over
@@ -322,8 +364,8 @@ theorem theorem_7_5_proof (p : ℕ) : ∃ m : ℕ, ∀ {α : Type u} {β : Type 
     (H : DrawnWall α β), H.IsFigure1 → IsWallIn G H.toWall →
     ∀ (S : Fin (p.choose 2) → Graph α β) (v : Fin (p.choose 2) → α),
       (∀ a, IsExternalLMStarOver G H (2 * p.choose 2 ^ 2 - p.choose 2 + 3) m (S a) (v a)) →
-      Injective v → HasGraphModel (GM16.completeGraph p) G := by
-  obtain ⟨r, hr⟩ := theorem_7_4_proof.{u, v} p
-  exact ⟨2 * r, fun G H hH hHG S v hS hv => theorem_7_5_of_theorem_7_4 hr G H hH hHG S v hS hv⟩
+      Injective v → HasGraphModel (GM16.completeGraph p) G :=
+  ⟨theorem_7_5_bound GM07.vModel p,
+    theorem_7_5_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 end GraphMinor.GM13

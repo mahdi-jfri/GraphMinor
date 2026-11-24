@@ -8,7 +8,8 @@ public import GraphMinor.GM12.Bridge
 public import GraphMinor.GM12.Section4Theorem45
 public import GraphMinor.GM13.Section7
 public import GraphMinor.GM13.Section7FourProof
-import GraphMinor.GM13.Section7Six
+public import GraphMinor.GM13.Section7Six
+import GraphMinor.GM12.Section3ModelComplexity
 import GraphMinor.GM13.Section7ThreeAll
 public import GraphMinor.GM13.Section9a
 public import GraphMinor.GM13.Section9Subwalls
@@ -232,6 +233,56 @@ theorem exists_gm12_theorem_4_5_sphere (p : ℕ) :
   have h55 : GM12.GM07Theorem55Statement.{0} := GM07.gm07_theorem_5_5
   exact GM12.gm15_theorem45.{u, v, 0} S hS hConn p
 
+/-- Explicit subwall count `k` for **Graph Minors XIII, (9.1)** (page 98). -/
+def theorem_9_1_boundK (p : ℕ) : ℕ :=
+  max (GM12.theorem_4_5_kBound p) 1 + 1
+
+/-- Explicit subwall distance bound `r` for **Graph Minors XIII, (9.1)** (page 98), parameterized
+by an upper bound `V` on `GM07.vModel`. -/
+def theorem_9_1_boundROf (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  12 * (4 * GM12.theorem_4_5_NBound V 0 0 p + 32) + 26
+
+/-- Explicit version of **Graph Minors XIII, (9.1)** (page 98) at bounds `theorem_9_1_boundK p`
+and `theorem_9_1_boundROf V p`, for any upper bound `V` on `GM07.vModel`. -/
+theorem theorem_9_1_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
+      (H_sub : Fin (theorem_9_1_boundK p) → Wall α β)
+      (P Q : Fin (theorem_9_1_boundK p) → Graph α β),
+      H.IsFigure1 →
+      IsWallIn G H.toWall →
+      (∀ i : Fin (theorem_9_1_boundK p), (H_sub i).IsSubwallOf H.toWall) →
+      (∀ i j : Fin (theorem_9_1_boundK p), i ≠ j →
+        theorem_9_1_boundROf V p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      (∀ i : Fin (theorem_9_1_boundK p), IsCrossOverWall G (H_sub i) (P i) (Q i)) →
+      (∀ i : Fin (theorem_9_1_boundK p), (V(P i) ∪ V(Q i)) ∩ V(H.graph) ⊆ V((H_sub i).graph)) →
+      Pairwise (fun i j : Fin (theorem_9_1_boundK p) =>
+        Disjoint (V(P i) ∪ V(Q i)) (V(P j) ∪ V(Q j))) →
+      HasGraphModel (GM16.completeGraph p) G := by
+  have he : Nonempty (OnePoint EuclideanPlane ≃ₜ SurfaceModel 0 0 0) :=
+    let ⟨e⟩ := GM12.isSphere_model_zero; ⟨e.symm⟩
+  have hN₀_pos : 1 ≤ GM12.theorem_4_5_NBound V 0 0 p :=
+    GM12.one_le_theorem_4_5_NBound V 0 0 p
+  intro α β G H H_sub P Q hfig hHG hsub hdist hcross hinter hdisj
+  have h45 := GM12.theorem_4_5_span_explicit V hV GM09.isClosedSurface_sphere he p
+    (α := α) (β := β)
+  obtain ⟨φ, Γ₀, pos, Γ, hΓ₀, hW_U, hW_v, _, hpos_inj, hpos_bv, hΓU, hΓv, hΓe, hΓe_cl, _⟩ :=
+    hfig.exists_fig1Coords_full
+  obtain ⟨emb, hfar_s, hdist_emb⟩ :=
+    lemma_9_1_far_from_outer_region hfig.isThin (φ (fig1PlaneEquiv (-1, -1))) H_sub hdist
+  exact lemma_9_1_tangle_eyes_step p hN₀_pos
+    (fun G₀ θstar θ' Tstar Γ' η' T' d hCtrl hm hθ r' P₀ Q₀ =>
+      h45 G₀ θstar θ' Tstar Γ' η' T' d hCtrl hm hθ r' P₀ Q₀)
+    hΓ₀ hW_U hW_v hpos_inj hpos_bv hΓU hΓv hΓe hΓe_cl hHG
+    (fun a => H_sub (emb a)) (fun a => P (emb a)) (fun a => Q (emb a))
+    (fun a => hsub (emb a))
+    hfar_s
+    hdist_emb
+    (fun a => hcross (emb a))
+    (fun a => hinter (emb a))
+    (fun a b hab => hdisj (emb.injective.ne hab))
+
 /-- **Graph Minors XIII, (9.1)** (page 98):
 "For any integer $p \ge 0$ there exist $k, r \ge 0$ such that the following holds. Let $H$ be a wall
 in $G$, and let $H_1, \dots, H_k$ be subwalls of $H$ with $d(H_i, H_j) \ge r$ $(1 \le i < j \le k)$,
@@ -251,35 +302,9 @@ theorem theorem_9_1_proof (p : ℕ) :
         (∀ i : Fin k, IsCrossOverWall G (H_sub i) (P i) (Q i)) →
         (∀ i : Fin k, (V(P i) ∪ V(Q i)) ∩ V(H.graph) ⊆ V((H_sub i).graph)) →
         Pairwise (fun i j : Fin k => Disjoint (V(P i) ∪ V(Q i)) (V(P j) ∪ V(Q j))) →
-        HasGraphModel (GM16.completeGraph p) G := by
-  have h75 : GM12.GM07Theorem75Statement.{0} :=
-    GM07.gm07_theorem_7_5
-  have h51 : GM12.GM07Theorem51Statement.{0} := GM07.gm07_theorem_5_1
-  have h55 : GM12.GM07Theorem55Statement.{0} := GM07.gm07_theorem_5_5
-  obtain ⟨k₀, N₀, hN₀_pos, h45⟩ :=
-    GM12.theorem_4_5_span GM09.isClosedSurface_sphere p
-  let t := max k₀ 1
-  let θ := 4 * N₀ + 32
-  let M := θ
-  let k := t + 1
-  let r := 12 * M + 26
-  refine ⟨k, r, ?_⟩
-  intro α β G H H_sub P Q hfig hHG hsub hdist hcross hinter hdisj
-  obtain ⟨φ, Γ₀, pos, Γ, hΓ₀, hW_U, hW_v, _, hpos_inj, hpos_bv, hΓU, hΓv, hΓe, hΓe_cl, _⟩ :=
-    hfig.exists_fig1Coords_full
-  obtain ⟨emb, hfar_s, hdist_emb⟩ :=
-    lemma_9_1_far_from_outer_region hfig.isThin (φ (fig1PlaneEquiv (-1, -1))) H_sub hdist
-  exact lemma_9_1_tangle_eyes_step p hN₀_pos
-    (fun G₀ θstar θ' Tstar Γ' η' T' d hCtrl hm hθ r' P₀ Q₀ =>
-      h45 G₀ θstar θ' Tstar Γ' η' T' d hCtrl hm hθ r' P₀ Q₀)
-    hΓ₀ hW_U hW_v hpos_inj hpos_bv hΓU hΓv hΓe hΓe_cl hHG
-    (fun a => H_sub (emb a)) (fun a => P (emb a)) (fun a => Q (emb a))
-    (fun a => hsub (emb a))
-    hfar_s
-    hdist_emb
-    (fun a => hcross (emb a))
-    (fun a => hinter (emb a))
-    (fun a b hab => hdisj (emb.injective.ne hab))
+        HasGraphModel (GM16.completeGraph p) G :=
+  ⟨theorem_9_1_boundK p, theorem_9_1_boundROf GM07.vModel p,
+    theorem_9_1_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 /-- `GM13Theorem91Statement` holds unconditionally. -/
 theorem theorem_9_1_parallel : GM13Theorem91Statement.{u, v} :=
@@ -1649,35 +1674,48 @@ theorem lemma_9_2_claim_8 {H : DrawnWall α β} {n r₁ n₁ n₂ n₃ : ℕ}
           hJ_ind i (hIJ hi) i' (hIJ hi') hne
         omega
 
-/-- **Graph Minors XIII, (9.2)** (page 99):
-"For any $l \ge 3$, and $m, p \ge 0$, there exist $k, r \ge 0$ such that the following holds. Let
-$H$ be a wall with distance function $d$ in a graph $G$, and let $H_1, \dots, H_k$ be non-dividing
-subwalls of $H$, with
-$$d(H_i, H_j) \ge r \quad (1 \le i < j \le k).$$
-Then either there is an $(l, m)$-star over $H$ or $G$ has a $K_p$-minor. Moreover, there is an algorithm with running time $\le C\varepsilon(G)$, where $C$ depends only on $l, m, p$ and the height of $H$, which given such subwalls $H_1, \dots, H_k$, finds either an $(l, m)$-star over $H$ or a model of $K_p$ in $G$." -/
-theorem theorem_9_2_proof
-    (l m p : ℕ) (hl : 3 ≤ l) :
-    ∃ k r : ℕ,
-      ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
-        (H_sub : Fin k → Wall α β),
-        H.IsFigure1 →
-        IsWallIn G H.toWall →
-        (∀ i : Fin k, IsNonDividingSubwall G H.toWall (H_sub i)) →
-        (∀ i j : Fin k, i ≠ j → r ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
-        (∃ (S : Graph α β) (v : α), IsLMStarOver G H l m S v) ∨
-          HasGraphModel (GM16.completeGraph p) G := by
-  let r₀ : ℕ := Classical.choose.{1} (theorem_7_4_proof.{u, v} p)
+/-- Explicit subwall count `k` for **Graph Minors XIII, (9.2)** (page 99). -/
+def theorem_9_2_boundK (l _m p : ℕ) : ℕ :=
+  let n₁ := 3 * p.choose 2
+  let n₂ := theorem_9_1_boundK p + 1
+  let n₃ := 4 * p.choose 2 + 1
+  (n₂ + n₁ * (n₃ + 1)) * (l - 1) ^ 2
+
+/-- Explicit subwall distance bound `r` for **Graph Minors XIII, (9.2)** (page 99), parameterized
+by an upper bound `V` on `GM07.vModel`. -/
+def theorem_9_2_boundROf (V : ℕ → ℕ → ℕ → ℕ → ℕ) (_l m p : ℕ) : ℕ :=
+  let r₀ := theorem_7_4_bound V p
   let r₁ := 2 * r₀
-  let k₉₁ : ℕ := Classical.choose.{1} (theorem_9_1_proof.{u, v} p)
-  let r₉₁ : ℕ := Classical.choose.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p))
+  let r₉₁ := theorem_9_1_boundROf V p
+  max m (max (r₀ + 2 * R_s_9_2 r₁ + 4 * r_hole_9_2 r₁ + 10) (r₉₁ + 12 * r₁ + 64))
+
+/-- Explicit version of **Graph Minors XIII, (9.2)** (page 99) at bounds `theorem_9_2_boundK l m p`
+and `theorem_9_2_boundROf V l m p`, for any upper bound `V` on `GM07.vModel`. -/
+theorem theorem_9_2_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (l m p : ℕ) (hl : 3 ≤ l) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
+      (H_sub : Fin (theorem_9_2_boundK l m p) → Wall α β),
+      H.IsFigure1 →
+      IsWallIn G H.toWall →
+      (∀ i : Fin (theorem_9_2_boundK l m p), IsNonDividingSubwall G H.toWall (H_sub i)) →
+      (∀ i j : Fin (theorem_9_2_boundK l m p), i ≠ j →
+        theorem_9_2_boundROf V l m p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      (∃ (S : Graph α β) (v : α), IsLMStarOver G H l m S v) ∨
+        HasGraphModel (GM16.completeGraph p) G := by
+  let r₀ := theorem_7_4_bound V p
+  let r₁ := 2 * r₀
+  let k₉₁ := theorem_9_1_boundK p
+  let r₉₁ := theorem_9_1_boundROf V p
   let n₁ := 3 * p.choose 2
   let n₂ := k₉₁ + 1
   let n₃ := 4 * p.choose 2 + 1
   let n := n₂ + n₁ * (n₃ + 1)
-  let r := max m (max (r₀ + 2 * R_s_9_2 r₁ + 4 * r_hole_9_2 r₁ + 10) (r₉₁ + 12 * r₁ + 64))
-  let k := n * (l - 1) ^ 2
-  refine ⟨k, r, ?_⟩
+  let r := theorem_9_2_boundROf V l m p
+  let k := theorem_9_2_boundK l m p
   intro α β G H H_sub hfig hHG hnondiv hdist
+  have h74 := theorem_7_4_explicitBound.{u, v} V hV p (α := α) (β := β)
+  have h91 := theorem_9_1_explicitBound.{u, v} V hV p (α := α) (β := β)
   by_cases hp : p < 2
   · exact Or.inr (hasGraphModel_completeGraph_of_lt_two hp hHG)
   · have hrm : m ≤ r := le_max_left _ _
@@ -1735,14 +1773,13 @@ theorem theorem_9_2_proof
       · -- Claim (5)
         refine Or.inr (lemma_9_2_claim_5 hfig hHG
           (fun P s' t' hP hP_disj hfar hst' =>
-            (Classical.choose_spec.{1} (theorem_7_4_proof.{u, v} p)) G H hfig hHG P s' t' hP hP_disj hfar hst')
+            h74 G H hfig hHG P s' t' hP hP_disj hfar hst')
           Q s t hQ_path hQ_disj hs_dist_r₁ I (le_of_eq hI_card.symm) hst_ge htt_ge)
       · -- Claim (6)
         refine Or.inr (lemma_9_2_claim_6 hfig hHG hr_enlarge H_sub hsub hdist σ
           Q s t hQ_path hQ_disj hst_in_out I (le_of_eq hI_card.symm) hst_le
           (fun H' P' Q' hH'_sub hH'_far hcross hVPQ_inter hVPQ_disj =>
-            (Classical.choose_spec.{1} (Classical.choose_spec.{1} (theorem_9_1_proof.{u, v} p)))
-              G H H' P' Q' hfig hHG hH'_sub hH'_far hcross hVPQ_inter hVPQ_disj))
+            h91 G H H' P' Q' hfig hHG hH'_sub hH'_far hcross hVPQ_inter hVPQ_disj))
       · -- Claim (7)
         have ht₀_H : t i₀ ∈ V(H.graph) := (hst_in_out i₀).2.1
         have hp_pos : 0 < p.choose 2 := Nat.choose_pos (by omega)
@@ -1755,9 +1792,29 @@ theorem theorem_9_2_proof
           (le_max_left _ _).trans (le_max_right _ _)
         refine Or.inr (lemma_9_2_claim_7 hfig hHG
           (fun H' hH'_fig hH'_G P s' t' hP hP_disj hfar hst' =>
-            (Classical.choose_spec.{1} (theorem_7_4_proof.{u, v} p)) G H' hH'_fig hH'_G P s' t' hP hP_disj hfar hst')
+            h74 G H' hH'_fig hH'_G P s' t' hP hP_disj hfar hst')
           hn2 hr_far Q s t hQ_path hQ_disj hs_dist i₀ ht₀_H I hi₀_not
           (le_of_eq hI_card.symm) ht_close)
+
+/-- **Graph Minors XIII, (9.2)** (page 99):
+"For any $l \ge 3$, and $m, p \ge 0$, there exist $k, r \ge 0$ such that the following holds. Let
+$H$ be a wall with distance function $d$ in a graph $G$, and let $H_1, \dots, H_k$ be non-dividing
+subwalls of $H$, with
+$$d(H_i, H_j) \ge r \quad (1 \le i < j \le k).$$
+Then either there is an $(l, m)$-star over $H$ or $G$ has a $K_p$-minor. Moreover, there is an algorithm with running time $\le C\varepsilon(G)$, where $C$ depends only on $l, m, p$ and the height of $H$, which given such subwalls $H_1, \dots, H_k$, finds either an $(l, m)$-star over $H$ or a model of $K_p$ in $G$." -/
+theorem theorem_9_2_proof
+    (l m p : ℕ) (hl : 3 ≤ l) :
+    ∃ k r : ℕ,
+      ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
+        (H_sub : Fin k → Wall α β),
+        H.IsFigure1 →
+        IsWallIn G H.toWall →
+        (∀ i : Fin k, IsNonDividingSubwall G H.toWall (H_sub i)) →
+        (∀ i j : Fin k, i ≠ j → r ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+        (∃ (S : Graph α β) (v : α), IsLMStarOver G H l m S v) ∨
+          HasGraphModel (GM16.completeGraph p) G :=
+  ⟨theorem_9_2_boundK l m p, theorem_9_2_boundROf GM07.vModel l m p,
+    theorem_9_2_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) l m p hl⟩
 
 /-- `GM13Theorem92Statement` holds. -/
 theorem theorem_9_2_parallel :
@@ -1915,33 +1972,44 @@ theorem theorem_9_4_proof
         exact ih (s + 1) (by omega) (by omega) S' v' hstar' hv'_inj
       · exact Or.inl hModel
 
-/-- **Graph Minors XIII, (9.3)** (page 101):
-"For any $p \ge 0$ there exists $k, r \ge 0$ such that there is an algorithm as in (9.4), with
-running time $\le C\varepsilon(G)$, where $C$ depends on $p, t$, and the height of $H$." -/
-theorem theorem_9_3_proof
+/-- Explicit excluded-subwall count `k` for **Graph Minors XIII, (9.3)** (page 101). -/
+def theorem_9_3_boundK (p : ℕ) : ℕ :=
+  theorem_9_2_boundK (theorem_7_7_boundL p) 0 p
+
+/-- Explicit subwall distance bound `r` for **Graph Minors XIII, (9.3)** (page 101), parameterized
+by an upper bound `V` on `GM07.vModel`. -/
+def theorem_9_3_boundROf (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  theorem_9_2_boundROf V (theorem_7_7_boundL p) (theorem_7_7_boundMOf V p) p
+
+/-- Explicit version of **Graph Minors XIII, (9.3)** (page 101) at bounds `theorem_9_3_boundK p`
+and `theorem_9_3_boundROf V p`, for any upper bound `V` on `GM07.vModel`. -/
+theorem theorem_9_3_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
     (p : ℕ) :
-    ∃ k r : ℕ,
-      ∀ {α : Type u} {β : Type v} {t : ℕ} {G : Graph α β} {H : DrawnWall α β}
-        (H_sub : Fin t → Wall α β),
-        H.IsFigure1 →
-        H.graph ≤ G →
-        (∀ i : Fin t, (H_sub i).IsSubwallOf H.toWall) →
-        (∀ i j : Fin t, i ≠ j → r ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
-        HasGraphModel (GM16.completeGraph p) G ∨
-          ∃ (X : Set α) (I : Finset (Fin t)),
-            X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
-            t - k ≤ I.card ∧
-            ∀ i ∈ I, IsDividingSubwall
-              (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H.toWall (H_sub i) := by
+    ∀ {α : Type u} {β : Type v} {t : ℕ} {G : Graph α β} {H : DrawnWall α β}
+      (H_sub : Fin t → Wall α β),
+      H.IsFigure1 →
+      H.graph ≤ G →
+      (∀ i : Fin t, (H_sub i).IsSubwallOf H.toWall) →
+      (∀ i j : Fin t, i ≠ j →
+        theorem_9_3_boundROf V p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      HasGraphModel (GM16.completeGraph p) G ∨
+        ∃ (X : Set α) (I : Finset (Fin t)),
+          X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+          t - theorem_9_3_boundK p ≤ I.card ∧
+          ∀ i ∈ I, IsDividingSubwall
+            (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H.toWall (H_sub i) := by
+  intro α β t G H H_sub hfig hHG hsub hdist
   by_cases hp : p < 2
-  · refine ⟨0, 0, ?_⟩
-    intro α β t G H H_sub _ hHG _ _
-    exact Or.inl (hasGraphModel_completeGraph_of_lt_two hp hHG)
+  · exact Or.inl (hasGraphModel_completeGraph_of_lt_two hp hHG)
   · have hp2 : 2 ≤ p := by omega
-    obtain ⟨l, m, hl, h77_p⟩ := theorem_7_7_proof.{u, v} p hp2
-    obtain ⟨k, r, h92_p⟩ := theorem_9_2_proof.{u, v} l m p hl
-    refine ⟨k, r, ?_⟩
-    intro α β t G H H_sub hfig hHG hsub hdist
+    let l := theorem_7_7_boundL p
+    let m := theorem_7_7_boundMOf V p
+    have hl : 3 ≤ l := three_le_theorem_7_7_boundL p
+    have h77_p := theorem_7_7_explicitBound.{u, v} V hV p hp2 (α := α) (β := β)
+    have h92_p := theorem_9_2_explicitBound.{u, v} V hV l m p hl (α := α) (β := β)
+    let k := theorem_9_3_boundK p
+    let r := theorem_9_3_boundROf V p
     have h77_step : ∀ (S : Fin (p.choose 2) → Graph α β) (v : Fin (p.choose 2) → α),
         (∀ a, IsLMStarOver G H l m (S a) (v a)) →
         Function.Injective v →
@@ -1968,5 +2036,26 @@ theorem theorem_9_3_proof
     exact theorem_9_4_proof hp2 hl hHG H_sub hsub hdist h77_step h92_step
       (p.choose 2) 0 (Nat.sub_zero _) (Nat.zero_le _)
       Fin.elim0 Fin.elim0 (fun a => Fin.elim0 a) (fun a => Fin.elim0 a)
+
+/-- **Graph Minors XIII, (9.3)** (page 101):
+"For any $p \ge 0$ there exists $k, r \ge 0$ such that there is an algorithm as in (9.4), with
+running time $\le C\varepsilon(G)$, where $C$ depends on $p, t$, and the height of $H$." -/
+theorem theorem_9_3_proof
+    (p : ℕ) :
+    ∃ k r : ℕ,
+      ∀ {α : Type u} {β : Type v} {t : ℕ} {G : Graph α β} {H : DrawnWall α β}
+        (H_sub : Fin t → Wall α β),
+        H.IsFigure1 →
+        H.graph ≤ G →
+        (∀ i : Fin t, (H_sub i).IsSubwallOf H.toWall) →
+        (∀ i j : Fin t, i ≠ j → r ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+        HasGraphModel (GM16.completeGraph p) G ∨
+          ∃ (X : Set α) (I : Finset (Fin t)),
+            X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+            t - k ≤ I.card ∧
+            ∀ i ∈ I, IsDividingSubwall
+              (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H.toWall (H_sub i) :=
+  ⟨theorem_9_3_boundK p, theorem_9_3_boundROf GM07.vModel p,
+    theorem_9_3_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p⟩
 
 end GraphMinor.GM13

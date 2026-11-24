@@ -283,18 +283,34 @@ theorem theorem_7_6_proof (G : Graph α β) (H : DrawnWall α β) (hF : H.IsFigu
 
 /-! ## (7.7) -/
 
-/-- **Graph Minors XIII, (7.7)**, first assertion (Section 7, page 93): "For any $p \ge 2$ there
-are integers $l \ge 3$, $m \ge 0$ with the following property. Let $G$ be a graph and let $H$ be
-a wall in $G$, so that there are $\binom{p}{2}$ $(l, m)$-stars over $H$, with distinct centers;
-then $G$ has a $K_p$-minor." "The first assertion is clear from (7.5) and (7.6)." By (7.6) there
-is a wall `H' ≤ H` with external stars. To apply (7.5), we draw `H'` as in Fig. 1 itself; its
-distances do not change, since both drawings are drawings on cells
-(`DrawnOnCells.planeWallDist_eq`). -/
-theorem theorem_7_7_proof : GM13Theorem77Statement.{u, v} := by
-  intro p _
-  obtain ⟨m₅, h75⟩ := theorem_7_5_proof.{u, v} p
-  refine ⟨2 * p.choose 2 ^ 2 - p.choose 2 + 3, max m₅ 3 + 4 * p.choose 2, by omega, ?_⟩
+/-- Explicit star-leg bound `l` for **Graph Minors XIII, (7.7)** (page 93). -/
+def theorem_7_7_boundL (p : ℕ) : ℕ :=
+  2 * p.choose 2 ^ 2 - p.choose 2 + 3
+
+/-- Explicit star-separation bound `m` for **Graph Minors XIII, (7.7)** (page 93), parameterized by
+an upper bound `V` on `GM07.vModel`. -/
+def theorem_7_7_boundMOf (V : ℕ → ℕ → ℕ → ℕ → ℕ) (p : ℕ) : ℕ :=
+  max (theorem_7_5_bound V p) 3 + 4 * p.choose 2
+
+/-- `3 ≤ theorem_7_7_boundL p` for every `p`. -/
+theorem three_le_theorem_7_7_boundL (p : ℕ) : 3 ≤ theorem_7_7_boundL p := by
+  unfold theorem_7_7_boundL; omega
+
+/-- Explicit version of **Graph Minors XIII, (7.7)**, first assertion (Section 7, page 93), at
+bounds `theorem_7_7_boundL p` and `theorem_7_7_boundMOf V p`, for any upper bound `V` on
+`GM07.vModel`. -/
+theorem theorem_7_7_explicitBound
+    (V : ℕ → ℕ → ℕ → ℕ → ℕ) (hV : ∀ a b c k, GM07.vModel a b c k ≤ V a b c k)
+    (p : ℕ) (_hp : 2 ≤ p) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β),
+      H.IsFigure1 → IsWallIn G H.toWall →
+      ∀ (S : Fin (p.choose 2) → Graph α β) (v : Fin (p.choose 2) → α),
+        (∀ a, IsLMStarOver G H (theorem_7_7_boundL p) (theorem_7_7_boundMOf V p) (S a) (v a)) →
+        Function.Injective v →
+        HasGraphModel (GM16.completeGraph p) G := by
+  set m₅ := theorem_7_5_bound V p
   intro α β G H hF hHG S v hS hv
+  have h75 := theorem_7_5_explicitBound.{u, v} V hV p (α := α) (β := β)
   obtain ⟨φ, Γ, hΓ, hU, hP⟩ := hF
   obtain ⟨W', hle, C', hD', S', hS'⟩ :=
     theorem_7_6_cells G H hΓ hU hP hHG (le_max_right m₅ 3) S v hS
@@ -326,6 +342,18 @@ theorem theorem_7_7_proof : GM13Theorem77Statement.{u, v} := by
     omega
   rw [hdist _ (hleg i).2.2.1 _ (hleg j).2.2.1 hne]
   omega
+
+/-- **Graph Minors XIII, (7.7)**, first assertion (Section 7, page 93): "For any $p \ge 2$ there
+are integers $l \ge 3$, $m \ge 0$ with the following property. Let $G$ be a graph and let $H$ be
+a wall in $G$, so that there are $\binom{p}{2}$ $(l, m)$-stars over $H$, with distinct centers;
+then $G$ has a $K_p$-minor." "The first assertion is clear from (7.5) and (7.6)." By (7.6) there
+is a wall `H' ≤ H` with external stars. To apply (7.5), we draw `H'` as in Fig. 1 itself; its
+distances do not change, since both drawings are drawings on cells
+(`DrawnOnCells.planeWallDist_eq`). -/
+theorem theorem_7_7_proof : GM13Theorem77Statement.{u, v} :=
+  fun p hp => ⟨theorem_7_7_boundL p, theorem_7_7_boundMOf GM07.vModel p,
+    three_le_theorem_7_7_boundL p,
+    theorem_7_7_explicitBound.{u, v} GM07.vModel (fun _ _ _ _ => le_rfl) p hp⟩
 
 /-- **Graph Minors XIII, (7.4)**, first assertion, in the form `GM13Theorem74Statement` (Section 7,
 page 90): "For any $p \ge 2$ there exists $r \ge 0$ such that the following holds. Let $H$ be a
