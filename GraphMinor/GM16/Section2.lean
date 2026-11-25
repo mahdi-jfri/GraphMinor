@@ -818,6 +818,102 @@ theorem theorem_2_2_proof {ι : Type*} [Fintype ι] {G : Graph α (β ⊕ ℕ)}
   rw [← huniv_eq]
   exact hmain Finset.univ.card Finset.univ rfl huniv_tree
 
+/-- For any vertex `t₀` of a tree-decomposition `(T, τ)` of a finite graph `G : Graph α (β ⊕ ℕ)`,
+adding fresh edges over `β ⊕ ℕ` to make every adhesion set `V(τ t₀) ∩ V(τ t)` (`T.Adj t₀ t`) a
+clique yields a finite-edge torso `H'` of `graphVertexDesign T τ t₀`. -/
+theorem exists_cliqueFilledTorso_of_treeDecomposition {ι : Type*} [Fintype ι]
+    {G : Graph α (β ⊕ ℕ)} {T : SimpleGraph ι} {τ : ι → Graph α (β ⊕ ℕ)}
+    (hV : V(G).Finite) (hE : E(G).Finite)
+    (hTD : IsGraphTreeDecomposition G T τ) (t₀ : ι) :
+    ∃ H' : Graph α (β ⊕ ℕ),
+      E(H').Finite ∧
+      IsTorsoOfDesign (graphVertexDesign T τ t₀) H' ∧
+      ∀ t : ι, T.Adj t₀ t →
+        ∀ x ∈ V(τ t₀) ∩ V(τ t), ∀ y ∈ V(τ t₀) ∩ V(τ t), x ≠ y → H'.Adj x y := by
+  classical
+  have hVt₀_fin : V(τ t₀).Finite := hV.subset (hTD.le_G t₀).vertexSet_mono
+  have hEt₀_fin : E(τ t₀).Finite := hE.subset (hTD.le_G t₀).edgeSet_mono
+  let _ : Fintype V(τ t₀) := hVt₀_fin.fintype
+  have hN_fin : (Sum.inr ⁻¹' E(τ t₀) : Set ℕ).Finite :=
+    hEt₀_fin.preimage Sum.inr_injective.injOn
+  let B₀ : ℕ := hN_fin.toFinset.sup id + 1
+  have hB₀_notMem : ∀ n : ℕ, (Sum.inr (B₀ + n) : β ⊕ ℕ) ∉ E(τ t₀) := by
+    intro n hmem
+    have hn_mem : B₀ + n ∈ hN_fin.toFinset := hN_fin.mem_toFinset.mpr hmem
+    have hle : B₀ + n ≤ hN_fin.toFinset.sup id := Finset.le_sup (f := id) hn_mem
+    omega
+  let enc := Fintype.equivFin (Sym2 V(τ t₀))
+  let freshEdge (x y : V(τ t₀)) : β ⊕ ℕ := Sum.inr (B₀ + (enc s(x, y)).1)
+  have hfresh_symm : ∀ x y : V(τ t₀), freshEdge x y = freshEdge y x := by
+    intro x y; dsimp [freshEdge]; rw [Sym2.eq_swap]
+  have hfresh_notMem : ∀ x y : V(τ t₀), freshEdge x y ∉ E(τ t₀) := fun _ _ => hB₀_notMem _
+  have hfresh_inj : ∀ {x₁ y₁ x₂ y₂ : V(τ t₀)},
+      freshEdge x₁ y₁ = freshEdge x₂ y₂ ↔ s(x₁, y₁) = s(x₂, y₂) := by
+    intro x₁ y₁ x₂ y₂
+    constructor
+    · intro h
+      have h1 : B₀ + (enc s(x₁, y₁)).1 = B₀ + (enc s(x₂, y₂)).1 := Sum.inr.inj h
+      exact enc.injective (Fin.ext (Nat.add_left_cancel h1))
+    · intro h; dsimp [freshEdge]; rw [h]
+  let adhPair (x y : α) : Prop :=
+    ∃ t : ι, T.Adj t₀ t ∧ x ∈ V(τ t₀) ∩ V(τ t) ∧ y ∈ V(τ t₀) ∩ V(τ t)
+  let newEdges : Set (β ⊕ ℕ) :=
+    {e | ∃ (u v : α) (hu : u ∈ V(τ t₀)) (hv : v ∈ V(τ t₀)),
+      u ≠ v ∧ adhPair u v ∧ e = freshEdge ⟨u, hu⟩ ⟨v, hv⟩}
+  let H' : Graph α (β ⊕ ℕ) :=
+    { vertexSet := V(τ t₀)
+      edgeSet := E(τ t₀) ∪ newEdges
+      IsLink := fun e u v =>
+        (τ t₀).IsLink e u v ∨
+          ∃ (hu : u ∈ V(τ t₀)) (hv : v ∈ V(τ t₀)),
+            u ≠ v ∧ adhPair u v ∧ e = freshEdge ⟨u, hu⟩ ⟨v, hv⟩
+      isLink_symm := fun e _ => ⟨by
+        rintro u v (h | ⟨hu, hv, hne, ⟨t, hadj, hxu, hxv⟩, rfl⟩)
+        · exact Or.inl h.symm
+        · exact Or.inr ⟨hv, hu, hne.symm, ⟨t, hadj, hxv, hxu⟩, hfresh_symm ⟨u, hu⟩ ⟨v, hv⟩⟩⟩
+      eq_or_eq_of_isLink_of_isLink := by
+        rintro e u v z w (h1 | ⟨hu, hv, _, _, rfl⟩) (h2 | ⟨hz, hw, _, _, he₂⟩)
+        · exact (τ t₀).eq_or_eq_of_isLink_of_isLink h1 h2
+        · exact (hfresh_notMem ⟨z, hz⟩ ⟨w, hw⟩ (he₂ ▸ h1.edge_mem)).elim
+        · exact (hfresh_notMem ⟨u, hu⟩ ⟨v, hv⟩ h2.edge_mem).elim
+        · rcases Sym2.eq_iff.mp (hfresh_inj.mp he₂) with ⟨huz, _⟩ | ⟨huw, _⟩
+          · exact Or.inl (congrArg Subtype.val huz)
+          · exact Or.inr (congrArg Subtype.val huw)
+      edge_mem_iff_exists_isLink := fun e => by
+        constructor
+        · rintro (he | ⟨u, v, hu, hv, hne, hadh, rfl⟩)
+          · obtain ⟨u, v, h⟩ := exists_isLink_of_mem_edgeSet he
+            exact ⟨u, v, Or.inl h⟩
+          · exact ⟨u, v, Or.inr ⟨hu, hv, hne, hadh, rfl⟩⟩
+        · rintro ⟨u, v, h | ⟨hu, hv, hne, hadh, rfl⟩⟩
+          · exact Or.inl h.edge_mem
+          · exact Or.inr ⟨u, v, hu, hv, hne, hadh, rfl⟩
+      left_mem_of_isLink := by
+        rintro e u v (h | ⟨hu, _⟩)
+        · exact h.left_mem
+        · exact hu }
+  have hnew_fin : newEdges.Finite := by
+    have hsub : newEdges ⊆ Set.range (fun p : Sym2 V(τ t₀) => Sum.inr (B₀ + (enc p).1)) := by
+      rintro e ⟨u, v, hu, hv, _, _, rfl⟩
+      exact ⟨s(⟨u, hu⟩, ⟨v, hv⟩), rfl⟩
+    exact (Set.finite_range _).subset hsub
+  refine ⟨H', hEt₀_fin.union hnew_fin, ⟨rfl, ⟨subset_rfl, fun _ _ _ h => Or.inl h⟩, ?_⟩, ?_⟩
+  · rintro e ⟨heH', het₀⟩
+    have he_new : e ∈ newEdges := heH'.resolve_left het₀
+    rcases he_new with ⟨u, v, hu, hv, _, ⟨t, hadj, hxu, hxv⟩, rfl⟩
+    refine ⟨V(τ t₀) ∩ V(τ t), ⟨t, hadj, rfl⟩, ?_⟩
+    rintro w ⟨z, hlink⟩
+    rcases hlink with h | ⟨hw, hz, _, _, heq⟩
+    · exact (hfresh_notMem ⟨u, hu⟩ ⟨v, hv⟩ h.edge_mem).elim
+    · rcases Sym2.eq_iff.mp (hfresh_inj.mp heq) with ⟨hwu, _⟩ | ⟨_, hwv⟩
+      · have h : u = w := congrArg Subtype.val hwu
+        exact h ▸ hxu
+      · have h : v = w := congrArg Subtype.val hwv
+        exact h ▸ hxv
+  · intro t hadj x hx y hy hne
+    exact ⟨freshEdge ⟨x, hx.1⟩ ⟨y, hy.1⟩,
+      Or.inr ⟨hx.1, hy.1, hne, ⟨t, hadj, hx, hy⟩, rfl⟩⟩
+
 /-! ## Proof of Graph Minors XVI, (2.3) (page 48) -/
 
 /-- Every torso of a member of `𝒟^n` is a loose `(≤ n)`-vertex extension of a torso of a member of

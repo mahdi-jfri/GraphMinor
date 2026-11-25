@@ -5861,6 +5861,7 @@ public import GraphMinor.GM16.EnvelopeHorns
 public import GraphMinor.GM16.EquivUnion
 public import GraphMinor.GM16.ErdosSzekeres
 public import GraphMinor.GM16.ExceptionalCoreEdges
+public import GraphMinor.GM16.Explicit
 public import GraphMinor.GM16.FaceSubdisc
 public import GraphMinor.GM16.FiniteCircleCycle
 public import GraphMinor.GM16.FiniteDrawingUnion
