@@ -5,6 +5,7 @@ public import GraphMinor.GM16.Section1Proof
 public import GraphMinor.GM16.Section2
 public import GraphMinor.GM07.ExplicitV
 public import Mathlib.Computability.Partrec
+public import GraphMinor.GM07.ExplicitWProof
 
 import GraphMinor.GM12.Primrec
 import GraphMinor.GM12.Bridge
@@ -498,5 +499,75 @@ theorem theorem_1_3_treeDecomp_explicit_of (hW : GM07.WExplicitStatement)
               (theorem_1_3_treeDecomp_bound vB eB).2.2.2.2 :=
   theorem_1_3_treeDecomp_explicitOf.{u, v, w, u', v'} GM07.vModelExplicit
     (GM07.vModel_le_vModelExplicit_of hW) L hVL hEL hvB heB
+
+/-! ## Without hypothesis
+
+Track `wexp` proved `GM07.WExplicitStatement` (`GM07.wExplicitStatement_holds`), so the
+explicit forms hold with no hypothesis. -/
+
+/-- **Graph Minors XVI, (3.1)** (pages 49 and 54), with explicit, computable parameters
+`theorem_3_1_bound GM07.vModelExplicit vB eB`. -/
+theorem theorem_3_1_explicit_final
+    {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hVL : V(L).Finite) (hEL : E(L).Finite)
+    {vB eB : ℕ} (hvB : V(L).ncard ≤ vB) (heB : E(L).ncard ≤ eB) :
+    let res := theorem_3_1_bound GM07.vModelExplicit vB eB
+    1 ≤ res.2.2.2 ∧
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (θ_G : ℕ)
+      (T : Set (Hypergraph α β × Hypergraph α β))
+      (hT : IsGraphTangle G θ_G T),
+      res.2.2.2 ≤ θ_G → ¬ ControlsMinor G L T →
+      ∃ (Z : Set α) (S_seg : Set (Society α β))
+        (S : Type w) (_ : TopologicalSpace S) (_ : T2Space S)
+        (α_disc : Society α β → Set S) (α_pt : α → S),
+        Z ⊆ V(G) ∧ Z.ncard ≤ res.2.2.1 ∧ Z.ncard < θ_G ∧
+        IsClosedSurface S ∧ ConnectedSpace S ∧ ¬ CanBeDrawnIn S L ∧
+        IsCentralSegregation (deleteVertices G Z)
+          (deleteGraphVerticesTangle G hT.finite_V hT.finite_E Z T θ_G) S_seg ∧
+        IsSegregationOfType (deleteVertices G Z) res.2.1 res.1 S_seg ∧
+        IsProperArrangement S_seg α_disc α_pt :=
+  theorem_3_1_explicit_of.{u, v, w, u', v'} GM07.wExplicitStatement_holds L hVL hEL hvB heB
+
+/-- **Graph Minors XVI, (1.3)** (pages 46 and 51–52), with explicit, computable `r, d, w₀` given by
+`theorem_1_3_bound GM07.vModelExplicit vB eB`. -/
+theorem theorem_1_3_explicit
+    {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hVL : V(L).Finite) (hEL : E(L).Finite)
+    {vB eB : ℕ} (hvB : V(L).ncard ≤ vB) (heB : E(L).ncard ≤ eB)
+    (hNonplanar : ∀ (S : Type w) [TopologicalSpace S] [T2Space S],
+      IsSphere S → ¬ CanBeDrawnIn S L) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β), V(G).Finite → E(G).Finite →
+    ¬ IsIsoMinor L G →
+    HasTreeStructureOver
+    {H : Graph α (β ⊕ ℕ) | ∃ (S : Type w) (_ : TopologicalSpace S) (_ : T2Space S)
+      (H₀ : Graph α (β ⊕ ℕ)), IsClosedSurface S ∧ ConnectedSpace S ∧ ¬ CanBeDrawnIn S L ∧
+      IsVertexExtension (theorem_1_3_bound GM07.vModelExplicit vB eB).2.2 H H₀ ∧
+      IsOutgrowthByRings S H₀
+        (theorem_1_3_bound GM07.vModelExplicit vB eB).2.1
+        (theorem_1_3_bound GM07.vModelExplicit vB eB).1} (liftEdgeInl G) :=
+  theorem_1_3_explicit_of.{u, v, w, u', v'} GM07.wExplicitStatement_holds
+    L hVL hEL hvB heB hNonplanar
+
+/-- Bounded-adhesion tree-decomposition form of **Graph Minors XVI, (1.3)**, with explicit,
+computable `(adh, w₀, g, d, r)` given by `theorem_1_3_treeDecomp_bound vB eB`. -/
+theorem theorem_1_3_treeDecomp_explicit
+    {α' : Type u'} {β' : Type v'} (L : Graph α' β') (hVL : V(L).Finite) (hEL : E(L).Finite)
+    {vB eB : ℕ} (hvB : V(L).ncard ≤ vB) (heB : E(L).ncard ≤ eB) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β), V(G).Finite → E(G).Finite → ¬ IsIsoMinor L G →
+      ∃ (ι : Type) (_ : Fintype ι) (T : SimpleGraph ι) (τ : ι → Graph α (β ⊕ ℕ)),
+        IsGraphTreeDecomposition (liftEdgeInl G) T τ ∧
+        (∀ t t', T.Adj t t' →
+          (V(τ t) ∩ V(τ t')).ncard ≤ (theorem_1_3_treeDecomp_bound vB eB).1) ∧
+        ∀ t₀ (H' : Graph α (β ⊕ ℕ)), E(H').Finite →
+          IsTorsoOfDesign (graphVertexDesign T τ t₀) H' →
+          V(H').ncard ≤ (theorem_1_3_treeDecomp_bound vB eB).1 ∨
+          ∃ (S : Type w) (_ : TopologicalSpace S) (_ : T2Space S) (a b : ℕ)
+            (_ : Nonempty (S ≃ₜ SurfaceModel a b 0)) (H₀ : Graph α (β ⊕ ℕ)),
+            IsClosedSurface S ∧ ConnectedSpace S ∧
+            2 * a + b ≤ (theorem_1_3_treeDecomp_bound vB eB).2.2.1 ∧ ¬ CanBeDrawnIn S L ∧
+            IsVertexExtension (theorem_1_3_treeDecomp_bound vB eB).2.1 H' H₀ ∧
+            IsOutgrowthByRings S H₀
+              (theorem_1_3_treeDecomp_bound vB eB).2.2.2.1
+              (theorem_1_3_treeDecomp_bound vB eB).2.2.2.2 :=
+  theorem_1_3_treeDecomp_explicit_of.{u, v, w, u', v'} GM07.wExplicitStatement_holds
+    L hVL hEL hvB heB
 
 end GraphMinor.GM16

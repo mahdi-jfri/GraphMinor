@@ -3,6 +3,7 @@ module
 public import GraphMinor.GM22.Section3
 public import GraphMinor.GM07.ExplicitV
 public import Mathlib.Computability.Partrec
+public import GraphMinor.GM07.ExplicitWProof
 
 import GraphMinor.GM12.Primrec
 import GraphMinor.GM12.Bridge
@@ -473,5 +474,24 @@ end Computability
 /-- `hBound` is computable (in fact primitive recursive). -/
 theorem hBound_computable : Computable hBound :=
   primrec_hBound.to_comp
+
+/-! ## Without hypothesis
+
+Track `wexp` proved `GM07.WExplicitStatement` (`GM07.wExplicitStatement_holds`), so the
+explicit forms hold with no hypothesis. -/
+
+/-- **Graph Minors XXII, 3.1** (page 534) with the explicit, computable, monotone insulation bound
+`hBound p`. -/
+theorem theorem_3_1_explicit (p : ℕ) :
+    1 ≤ hBound p ∧
+      ∀ {S : Type w} [TopologicalSpace S] [T2Space S], IsSurface S →
+      ∀ {α : Type u} {β : Type v} (G Γ K L : Graph α β), V(G).Finite → E(G).Finite →
+        Γ ≤ G → K ≤ G → V(G) = V(Γ) ∪ V(K) → E(G) = E(Γ) ∪ E(K) →
+        ∀ (D : Drawing S) (ιV : S ↪ α) (ιE : Set S ↪ β), Γ = D.toEmbeddedGraph ιV ιE →
+        ∀ v₀ ∈ D.V, IsInsulated D (ιV ⁻¹' (V(Γ) ∩ V(K))) (hBound p) v₀ →
+        ∀ Z ⊆ V(K), Z.ncard ≤ p → L ≤ G →
+        ∃ L' ≤ G.deleteVerts {ιV v₀},
+          HasSameEffectOn L' L Z ∧ subgraphInter G L' K ≤ L :=
+  theorem_3_1_explicit_of.{u, v, w} GM07.wExplicitStatement_holds p
 
 end GraphMinor.GM22

@@ -5,6 +5,7 @@ public import GraphMinor.GM13.Section9b
 public import GraphMinor.GM13.Section9
 public import GraphMinor.GM07.ExplicitV
 public import Mathlib.Computability.Partrec
+public import GraphMinor.GM07.ExplicitWProof
 
 import GraphMinor.GM12.Primrec
 
@@ -417,5 +418,91 @@ theorem theorem_9_6_boundH_computable :
     (Primrec.snd.comp Primrec.snd)).to_comp
 
 end Computability
+
+/-! ## Without hypothesis
+
+Track `wexp` proved `GM07.WExplicitStatement` (`GM07.wExplicitStatement_holds`), so the
+explicit forms hold with no hypothesis. -/
+
+/-- **Graph Minors XIII, (7.7)** (page 93) with the explicit, computable bounds
+`theorem_7_7_boundL p` and `theorem_7_7_boundM p`. -/
+theorem theorem_7_7_explicit (p : ℕ) (h1 : 2 ≤ p) :
+    3 ≤ theorem_7_7_boundL p ∧ ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β),
+    H.IsFigure1 → IsWallIn G H.toWall →
+    ∀ (S : Fin (p.choose 2) → Graph α β) (v : Fin (p.choose 2) → α),
+    (∀ a, IsLMStarOver G H (theorem_7_7_boundL p) (theorem_7_7_boundM p) (S a) (v a)) →
+    Function.Injective v →
+    HasGraphModel (GM16.completeGraph p) G :=
+  theorem_7_7_explicit_of.{u, v} GM07.wExplicitStatement_holds p h1
+
+/-- **Graph Minors XIII, (9.1)** (page 98) with the explicit, computable bounds
+`theorem_9_1_boundK p` and `theorem_9_1_boundR p`. -/
+theorem theorem_9_1_explicit (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
+      (H_sub : Fin (theorem_9_1_boundK p) → Wall α β)
+      (P Q : Fin (theorem_9_1_boundK p) → Graph α β),
+      H.IsFigure1 →
+      IsWallIn G H.toWall →
+      (∀ i : Fin (theorem_9_1_boundK p), (H_sub i).IsSubwallOf H.toWall) →
+      (∀ i j : Fin (theorem_9_1_boundK p), i ≠ j →
+        theorem_9_1_boundR p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      (∀ i : Fin (theorem_9_1_boundK p), IsCrossOverWall G (H_sub i) (P i) (Q i)) →
+      (∀ i : Fin (theorem_9_1_boundK p), (V(P i) ∪ V(Q i)) ∩ V(H.graph) ⊆ V((H_sub i).graph)) →
+      Pairwise (fun i j : Fin (theorem_9_1_boundK p) =>
+        Disjoint (V(P i) ∪ V(Q i)) (V(P j) ∪ V(Q j))) →
+      HasGraphModel (GM16.completeGraph p) G :=
+  theorem_9_1_explicit_of.{u, v} GM07.wExplicitStatement_holds p
+
+/-- **Graph Minors XIII, (9.2)** (page 99) with the explicit, computable bounds
+`theorem_9_2_boundK l m p` and `theorem_9_2_boundR l m p`. -/
+theorem theorem_9_2_explicit (l m p : ℕ) (hl : 3 ≤ l) :
+    ∀ {α : Type u} {β : Type v} (G : Graph α β) (H : DrawnWall α β)
+      (H_sub : Fin (theorem_9_2_boundK l m p) → Wall α β),
+      H.IsFigure1 →
+      IsWallIn G H.toWall →
+      (∀ i : Fin (theorem_9_2_boundK l m p), IsNonDividingSubwall G H.toWall (H_sub i)) →
+      (∀ i j : Fin (theorem_9_2_boundK l m p), i ≠ j →
+        theorem_9_2_boundR l m p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      (∃ (S : Graph α β) (v : α), IsLMStarOver G H l m S v) ∨
+        HasGraphModel (GM16.completeGraph p) G :=
+  theorem_9_2_explicit_of.{u, v} GM07.wExplicitStatement_holds l m p hl
+
+/-- **Graph Minors XIII, (9.3)** (page 101) with the explicit, computable bounds
+`theorem_9_3_boundK p` and `theorem_9_3_boundR p`. -/
+theorem theorem_9_3_explicit (p : ℕ) :
+    ∀ {α : Type u} {β : Type v} {t : ℕ} {G : Graph α β} {H : DrawnWall α β}
+      (H_sub : Fin t → Wall α β),
+      H.IsFigure1 →
+      H.graph ≤ G →
+      (∀ i : Fin t, (H_sub i).IsSubwallOf H.toWall) →
+      (∀ i j : Fin t, i ≠ j →
+        theorem_9_3_boundR p ≤ wallSubgraphDist H (H_sub i).graph (H_sub j).graph) →
+      HasGraphModel (GM16.completeGraph p) G ∨
+        ∃ (X : Set α) (I : Finset (Fin t)),
+          X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+          t - theorem_9_3_boundK p ≤ I.card ∧
+          ∀ i ∈ I, IsDividingSubwall
+            (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H.toWall (H_sub i) :=
+  theorem_9_3_explicit_of.{u, v} GM07.wExplicitStatement_holds p
+
+/-- **Graph Minors XIII, (9.6)** (page 103) with the explicit, computable exact wall height
+`theorem_9_6_boundH p s h`. -/
+theorem theorem_9_6_explicit
+    (p s h : ℕ) (h2 : 2 ≤ h) (heven : Even h) :
+    p ^ 2 + 2 ≤ theorem_9_6_boundH p s h ∧ Even (theorem_9_6_boundH p s h) ∧
+    ∀ {α : Type u} {β : Type v} {G : Graph α β} {H : Wall α β},
+      H.graph ≤ G →
+      H.height = theorem_9_6_boundH p s h →
+      HasGraphModel (GM16.completeGraph p) G ∨
+        ∃ (X : Set α) (H_flat : Fin s → Wall α β),
+          X ⊆ V(G) ∧ X.Finite ∧ X.ncard < p.choose 2 ∧
+          Pairwise (fun a b : Fin s => Disjoint V((H_flat a).graph) V((H_flat b).graph)) ∧
+          ∀ a : Fin s,
+            IsProperSubwallOf (H_flat a) H ∧
+            (H_flat a).height = h ∧
+            IsFlatWallIn (subgraphUnion G (G.induce (V(G) \ X)) H.graph) (H_flat a) ∧
+            IsDividingSubwall (subgraphUnion G (G.induce (V(G) \ X)) H.graph) H (H_flat a) ∧
+            Disjoint V((H_flat a).graph) X :=
+  theorem_9_6_explicit_of.{u, v} GM07.wExplicitStatement_holds p s h h2 heven
 
 end GraphMinor.GM13
